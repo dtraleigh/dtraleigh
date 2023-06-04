@@ -3,3 +3,5 @@
 debug.txt
 static/*
 *.pyc
+archived_data/*
+buildings/geojson_files/*
