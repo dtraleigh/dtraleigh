@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Buildings by Decade</title>
+    {% load static %}
+    <link rel="shortcut icon" type="image/png" href="{% static "img/favicon.png" %}">
+
+    <!-- Bootstrap core CSS -->
+    <link href="{% static "css/bootstrap.min.css"%}" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="{% static "css/dashboard.css"%}" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+          <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+            <div>
+              <canvas id="buildingChart" width="800" height="400"></canvas>
+            </div>
+          </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="{% static "js/popper.min.js"%}"></script>
+    <script src="{% static "js/bootstrap.min.js"%}"></script>
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+    <script>
+      feather.replace()
+    </script>
+
+    <!-- Graphs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1"></script>
+    <!--
+    <script>
+    const ctx1= document.getElementById('buildingChart').getContext('2d');
+    const myChart1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: {{decades_labels|safe}},
+            datasets: [{
+                label: '# of Buildings per Decade',
+                data: {{buildings_totals|safe}},
+                backgroundColor: [
+                    'rgba(0, 202, 121, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(0, 202, 121, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    </script>-->
+  <!-- Let's just hardcode it since it'll never change.-->
+  <script>
+    const ctx1= document.getElementById('buildingChart').getContext('2d');
+    const myChart1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: ['pre-1920s', '1920s', '1930s', '1940s', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'],
+            datasets: [{
+                label: '# of Buildings per Decade',
+                data: [1182, 1856, 1421, 2630, 7210, 10432, 9694, 17510, 20715, 34579, 12676,2432],
+                backgroundColor: [
+                    'rgba(0, 202, 121, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(0, 202, 121, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+  {% extends "base.html" %}
+
+  {% block content %}
+  <body>
+    {% load leaflet_tags %}
+    {% leaflet_map "itb_map" callback="window.map_init_basic" %}
+  </body>
+  <script type="text/javascript">
+    function map_init_basic (map, options) {
+      map.setView([35.7785733,-78.6395438], 11);
+
+      function onEachFeature(feature, layer) {
+        var effective = new Date(feature.properties.EFF_DATE)
+
+        var popupContent = '<h2>'+feature.properties.OLAY_NAME+'</h2>';
+        popupContent += '<table width=400>';
+        popupContent += '<tr><td>Effective Date</td><td>'+(effective.getMonth() + 1)+'/'+effective.getDate()+'/'+effective.getFullYear()+'</td></tr>';
+        popupContent += '<tr><td>Zoning Case</td><td>'+feature.properties.ZONE_CASE+'</td></tr>';
+        popupContent += '<tr><td>Area</td><td>'+(feature.properties.SHAPE_Area/43560).toFixed(2)+' Acres</td></tr>';
+        popupContent += '</table>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      L.geoJSON(geojsonFeature, {
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+
+      // Search box
+      cloudmade = new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png').addTo(map);
+      var osmGeocoder = new L.Control.OSMGeocoder();
+      map.addControl(osmGeocoder);
+    }
+  </script>
+  <script type="text/javascript">
+    // Add geojson data here so the source is a little easier to read.
+    var geojsonFeature = {{ncod_data|safe}};
+  </script>
+  {%endblock content%}

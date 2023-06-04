@@ -1,0 +1,105 @@
+  {% extends "base.html" %}
+
+  {% block content %}
+  <style>
+    .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+  </style>
+  <body>
+    {% load leaflet_tags %}
+    {% leaflet_map "itb_map" callback="window.map_init_basic" %}
+  </body>
+  <script type="text/javascript">
+    function map_init_basic (map, options) {
+      map.setView([35.7785733,-78.6395438], 15);
+
+      function onEachFeature(feature, layer) {
+        var effective = new Date(feature.properties.EFF_DATE)
+
+        var popupContent = '<h2>'+feature.properties.ZONING+'</h2>';
+        popupContent += '<table width=400>';
+        popupContent += '<tr><td>Height</td><td>'+feature.properties.HEIGHT+'</td></tr>';
+        popupContent += '<tr><td>Effective Date</td><td>'+(effective.getMonth() + 1)+'/'+effective.getDate()+'/'+effective.getFullYear()+'</td></tr>';
+        popupContent += '</table>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      // get color depending on height value
+      function getColor(d) {
+          return d > 40 ? '#800026' :
+              d > 20  ? '#BD0026' :
+              d > 12  ? '#E31A1C' :
+              d > 7  ? '#FC4E2A' :
+              d > 5   ? '#FD8D3C' :
+              d > 4   ? '#FEB24C' :
+              d > 3   ? '#FED976' : '#FFEDA0';
+      }
+
+      function style(feature) {
+          return {
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.7,
+              fillColor: getColor(feature.properties.HEIGHT)
+          };
+      }
+
+      function highlightFeature(e) {
+          var layer = e.target;
+
+          layer.setStyle({
+              weight: 5,
+              color: '#666',
+              dashArray: '',
+              fillOpacity: 0.7
+          });
+
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+              layer.bringToFront();
+          }
+
+          info.update(layer.feature.properties);
+      }
+
+      L.geoJSON(geojsonFeature, {
+        style: style,
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+
+      // Search box
+      cloudmade = new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png').addTo(map);
+      var osmGeocoder = new L.Control.OSMGeocoder();
+      map.addControl(osmGeocoder);
+
+      // Legend
+      var legend = L.control({position: 'bottomright'});
+
+      legend.onAdd = function (map) {
+
+          var div = L.DomUtil.create('div', 'info legend');
+          var grades = [3, 4, 5, 7, 12, 20, 40];
+          var labels = [];
+          var from, to;
+
+          for (var i = 0; i < grades.length; i++) {
+              from = grades[i];
+              to = grades[i + 1];
+
+              labels.push('<i style="background:' + getColor(from + 1) + '"></i> ' + from);
+          }
+
+          div.innerHTML = labels.join('<br>');
+          return div;
+      };
+
+      legend.addTo(map);
+    }
+  </script>
+  <script type="text/javascript">
+    // Add geojson data here so the source is a little easier to read.
+    var None = null;
+    var geojsonFeature = {{dx_zoning_data|safe}};
+  </script>
+  {%endblock content%}

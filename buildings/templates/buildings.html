@@ -1,0 +1,244 @@
+{% load static %}
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
+      .leaflet-container {
+        height: 100%;
+      }
+      #legend_form{
+        background: white;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      #legend_color_cell{
+        width: 20px;
+      }
+    </style>
+    <link rel="stylesheet" href="{% static "/leaflet-control-osm-geocoder/Control.OSMGeocoder.css" %}" />
+    <title>Raleigh Buildings</title>
+    {% load leaflet_tags %}
+    {% leaflet_js %}
+    {% leaflet_css %}
+    <script src="{% static "/leaflet-control-osm-geocoder/Control.OSMGeocoder.js" %}" type="text/javascript"></script>
+  </head>
+
+  <body>
+    {% load leaflet_tags %}
+    {% leaflet_map "bldgs_map" callback="window.map_init_basic" %}
+  </body>
+  <script type="text/javascript">
+    function map_init_basic (map, options) {
+      map.setView([35.7785733,-78.6395438], 13);
+
+      var bldg_data1 = L.geoJSON(geojsonFeature1, {style: {color:'rgb(51, 34, 136)'}});
+      var bldg_data2 = L.geoJSON(geojsonFeature2, {style: {color:'rgb(102, 153, 204)',}});
+      var bldg_data3 = L.geoJSON(geojsonFeature3, {style: {color:'rgb(136, 204, 238)',}});
+      var bldg_data4 = L.geoJSON(geojsonFeature4, {style: {color:'rgb(68, 170, 153)',}});
+      var bldg_data5 = L.geoJSON(geojsonFeature5, {style: {color:'rgb(17, 119, 51)',}});
+      var bldg_data6 = L.geoJSON(geojsonFeature6, {style: {color:'rgb(153, 153, 51)',}});
+      var bldg_data7 = L.geoJSON(geojsonFeature7, {style: {color:'rgb(166, 86, 40)',}});
+      var bldg_data8 = L.geoJSON(geojsonFeature8, {style: {color:'rgb(102, 17, 0)',}});
+      var bldg_data9 = L.geoJSON(geojsonFeature9, {style: {color:'rgb(204, 102, 119)',}});
+      var bldg_data10 = L.geoJSON(geojsonFeature10, {style: {color:'rgb(136, 34, 85)',}});
+      var bldg_data11 = L.geoJSON(geojsonFeature11, {style: {color:'rgb(170, 68, 153)',}});
+      var bldg_data12 = L.geoJSON(geojsonFeature12, {style: {color:'rgb(170, 68, 102)',}});
+
+      // create the control
+      var decade_toggle = L.control({position: 'topright'});
+
+      decade_toggle.onAdd = function (map) {
+          var div = L.DomUtil.create('div', 'control');
+
+          div.innerHTML = `
+            <form id="legend_form">
+              <table>
+                <tr>
+                  <td><input id="decade1" type="checkbox"/>Pre-1920s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(51, 34, 136);">
+                </tr>
+                <tr>
+                  <td><input id="decade2" type="checkbox"/>1920s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(102, 153, 204);">
+                </tr>
+                <tr>
+                  <td><input id="decade3" type="checkbox"/>1930s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(136, 204, 238);">
+                </tr>
+                <tr>
+                  <td><input id="decade4" type="checkbox"/>1940s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(68, 170, 153);">
+                </tr>
+                <tr>
+                  <td><input id="decade5" type="checkbox"/>1950s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(17, 119, 51);">
+                </tr>
+                <tr>
+                  <td><input id="decade6" type="checkbox"/>1960s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(153, 153, 51);">
+                </tr>
+                <tr>
+                  <td><input id="decade7" type="checkbox"/>1970s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(166, 86, 40);">
+                </tr>
+                <tr>
+                  <td><input id="decade8" type="checkbox"/>1980s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(102, 17, 0);">
+                </tr>
+                <tr>
+                  <td><input id="decade9" type="checkbox"/>1990s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(204, 102, 119);">
+                </tr>
+                <tr>
+                  <td><input id="decade10" type="checkbox"/>2000s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(136, 34, 85);">
+                </tr>
+                <tr>
+                  <td><input id="decade11" type="checkbox"/>2010s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(170, 68, 153);">
+                </tr>
+                <tr>
+                  <td><input id="decade12" type="checkbox"/>2020s</td>
+                  <td id="legend_color_cell" style="background-color:rgb(170, 68, 102);">
+                </tr>
+                <tr>
+                  <td>Raleigh Borders</td>
+                  <td id="legend_color_cell" style="background-color:gray;">
+                </tr>
+              </table>
+            </form>
+          `;
+          return div;
+      };
+
+      decade_toggle.addTo(map);
+
+      // add the event handlers
+      function handleCommand1() {
+         if (this.checked) {
+           map.addLayer(bldg_data1);
+         } else {
+           map.removeLayer(bldg_data1);
+         }
+      }
+      function handleCommand2() {
+         if (this.checked) {
+           map.addLayer(bldg_data2);
+         } else {
+           map.removeLayer(bldg_data2);
+         }
+      }
+      function handleCommand3() {
+         if (this.checked) {
+           map.addLayer(bldg_data3);
+         } else {
+           map.removeLayer(bldg_data3);
+         }
+      }
+      function handleCommand4() {
+         if (this.checked) {
+           map.addLayer(bldg_data4);
+         } else {
+           map.removeLayer(bldg_data4);
+         }
+      }
+      function handleCommand5() {
+         if (this.checked) {
+           map.addLayer(bldg_data5);
+         } else {
+           map.removeLayer(bldg_data5);
+         }
+      }
+      function handleCommand6() {
+         if (this.checked) {
+           map.addLayer(bldg_data6);
+         } else {
+           map.removeLayer(bldg_data6);
+         }
+      }
+      function handleCommand7() {
+         if (this.checked) {
+           map.addLayer(bldg_data7);
+         } else {
+           map.removeLayer(bldg_data7);
+         }
+      }
+      function handleCommand8() {
+         if (this.checked) {
+           map.addLayer(bldg_data8);
+         } else {
+           map.removeLayer(bldg_data8);
+         }
+      }
+      function handleCommand9() {
+         if (this.checked) {
+           map.addLayer(bldg_data9);
+         } else {
+           map.removeLayer(bldg_data9);
+         }
+      }
+      function handleCommand10() {
+         if (this.checked) {
+           map.addLayer(bldg_data10);
+         } else {
+           map.removeLayer(bldg_data10);
+         }
+      }
+      function handleCommand11() {
+         if (this.checked) {
+           map.addLayer(bldg_data11);
+         } else {
+           map.removeLayer(bldg_data11);
+         }
+      }
+      function handleCommand12() {
+         if (this.checked) {
+           map.addLayer(bldg_data12);
+         } else {
+           map.removeLayer(bldg_data12);
+         }
+      }
+
+      document.getElementById ("decade1").addEventListener ("click", handleCommand1, false);
+      document.getElementById ("decade2").addEventListener ("click", handleCommand2, false);
+      document.getElementById ("decade3").addEventListener ("click", handleCommand3, false);
+      document.getElementById ("decade4").addEventListener ("click", handleCommand4, false);
+      document.getElementById ("decade5").addEventListener ("click", handleCommand5, false);
+      document.getElementById ("decade6").addEventListener ("click", handleCommand6, false);
+      document.getElementById ("decade7").addEventListener ("click", handleCommand7, false);
+      document.getElementById ("decade8").addEventListener ("click", handleCommand8, false);
+      document.getElementById ("decade9").addEventListener ("click", handleCommand9, false);
+      document.getElementById ("decade10").addEventListener ("click", handleCommand10, false);
+      document.getElementById ("decade11").addEventListener ("click", handleCommand11, false);
+      document.getElementById ("decade12").addEventListener ("click", handleCommand12, false);
+
+      var raleighBorders = L.geoJSON(raleighBorders_geojson, {style: {color:'gray'}});
+      map.addLayer(raleighBorders);
+    }
+
+  </script>
+  <script type="text/javascript">
+    // Add geojson data here so the source is a little easier to read.
+    var raleighBorders_geojson = {{raleigh_borders|safe}}
+
+    var geojsonFeature1 = {{bldg_data1|safe}};
+    var geojsonFeature2 = {{bldg_data2|safe}};
+    var geojsonFeature3 = {{bldg_data3|safe}};
+    var geojsonFeature4 = {{bldg_data4|safe}};
+    var geojsonFeature5 = {{bldg_data5|safe}};
+    var geojsonFeature6 = {{bldg_data6|safe}};
+    var geojsonFeature7 = {{bldg_data7|safe}};
+    var geojsonFeature8 = {{bldg_data8|safe}};
+    var geojsonFeature9 = {{bldg_data9|safe}};
+    var geojsonFeature10 = {{bldg_data10|safe}};
+    var geojsonFeature11 = {{bldg_data11|safe}};
+    var geojsonFeature12 = {{bldg_data12|safe}};
+  </script>
+</html>

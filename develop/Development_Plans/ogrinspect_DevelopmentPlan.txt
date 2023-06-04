@@ -1,0 +1,80 @@
+# This is an auto-generated Django model module created by ogrinspect.
+from django.contrib.gis.db import models
+
+
+class DevelopmentPlan(models.Model):
+    objectid = models.IntegerField()
+    devplan_id = models.IntegerField()
+    submitted = models.DateField()
+    submitted_field = models.IntegerField()
+    approved = models.DateField()
+    daystoappr = models.IntegerField()
+    plan_type = models.CharField(max_length=39)
+    status = models.CharField(max_length=18)
+    appealperi = models.DateField()
+    updated = models.DateField()
+    sunset_dat = models.DateField()
+    acreage = models.FloatField()
+    major_stre = models.CharField(max_length=32)
+    cac = models.CharField(max_length=18)
+    engineer = models.CharField(max_length=35)
+    engineer_p = models.CharField(max_length=10)
+    developer = models.CharField(max_length=48)
+    developer_field = models.CharField(max_length=13)
+    plan_name = models.CharField(max_length=55)
+    planurl = models.CharField(max_length=107)
+    planurl_ap = models.CharField(max_length=1)
+    planner = models.CharField(max_length=30)
+    lots_req = models.IntegerField()
+    lots_rec = models.IntegerField()
+    lots_apprv = models.IntegerField()
+    sq_ft_req = models.IntegerField()
+    units_appr = models.IntegerField()
+    units_req = models.IntegerField()
+    zoning = models.CharField(max_length=50)
+    plan_numbe = models.CharField(max_length=15)
+    creationda = models.DateField()
+    creator = models.CharField(max_length=12)
+    editdate = models.DateField()
+    editor = models.CharField(max_length=12)
+    geom = models.MultiPointField(srid=4326)
+
+
+# Auto-generated `LayerMapping` dictionary for DevelopmentPlan model
+developmentplan_mapping = {
+    'objectid': 'OBJECTID',
+    'devplan_id': 'devplan_id',
+    'submitted': 'submitted',
+    'submitted_field': 'submitted_',
+    'approved': 'approved',
+    'daystoappr': 'daystoappr',
+    'plan_type': 'plan_type',
+    'status': 'status',
+    'appealperi': 'appealperi',
+    'updated': 'updated',
+    'sunset_dat': 'sunset_dat',
+    'acreage': 'acreage',
+    'major_stre': 'major_stre',
+    'cac': 'cac',
+    'engineer': 'engineer',
+    'engineer_p': 'engineer_p',
+    'developer': 'developer',
+    'developer_field': 'developer_',
+    'plan_name': 'plan_name',
+    'planurl': 'planurl',
+    'planurl_ap': 'planurl_ap',
+    'planner': 'planner',
+    'lots_req': 'lots_req',
+    'lots_rec': 'lots_rec',
+    'lots_apprv': 'lots_apprv',
+    'sq_ft_req': 'sq_ft_req',
+    'units_appr': 'units_appr',
+    'units_req': 'units_req',
+    'zoning': 'zoning',
+    'plan_numbe': 'plan_numbe',
+    'creationda': 'CreationDa',
+    'creator': 'Creator',
+    'editdate': 'EditDate',
+    'editor': 'Editor',
+    'geom': 'MULTIPOINT',
+}
