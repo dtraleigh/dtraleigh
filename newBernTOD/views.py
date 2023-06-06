@@ -9,20 +9,22 @@ from newBernTOD.models import Overlay
 from develop.views import get_ncod_data
 
 
-def get_hod1_data():
+def get_hod_data():
     # General Historic Overlay Districts
-    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/7/query?outFields=*&where=1" \
-          "%3D1&f=geojson"
-
-    return requests.request("GET", url, headers={}, data={})
-
-
-def get_hod2_data():
+    gen_hod_url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/7/query?outFields" \
+                  "=*&where=1%3D1&f=geojson"
     # Streetside Historic Overlay Districts
-    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/8/query?outFields=*&where=1" \
-          "%3D1&f=geojson"
+    str_hod_url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/8/query?outFields" \
+                  "=*&where=1%3D1&f=geojson"
 
-    return requests.request("GET", url, headers={}, data={})
+    gen_hod_response = requests.request("GET", gen_hod_url, headers={}, data={})
+    str_hod_response = requests.request("GET", str_hod_url, headers={}, data={})
+
+    merged = gen_hod_response.json()
+    for feature in str_hod_response.json()["features"]:
+        merged["features"].append(feature)
+
+    return merged
 
 
 @xframe_options_exempt
@@ -30,10 +32,7 @@ def tod(request):
     ncod_response = get_ncod_data()
     ncod_data = arcgis2geojson(ncod_response.json())
 
-    hod1_response = get_hod1_data()
-    hod1_data = arcgis2geojson(hod1_response.json())
-    hod2_response = get_hod2_data()
-    hod2_data = arcgis2geojson(hod2_response.json())
+    hod_data = get_hod_data()
 
     new_bern_tod = Overlay.objects.get(name="New Bern TOD")
     output_geojson = serialize("geojson", new_bern_tod.parcels.all(),
@@ -42,5 +41,4 @@ def tod(request):
 
     return render(request, "tod.html", {"tod_zoning_data": output_geojson,
                                         "ncod_data": ncod_data,
-                                        "hod1_data": hod1_response.json(),
-                                        "hod2_data": hod2_data})
+                                        "hod_data": hod_data})
