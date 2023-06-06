@@ -23,13 +23,7 @@
 
       L.geoJSON(geojsonFeature, {
         onEachFeature: onEachFeature,
-      }).addTo(map);
-
-      // Search box
-      cloudmade = new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png').addTo(map);
-      var osmGeocoder = new L.Control.OSMGeocoder();
-      map.addControl(osmGeocoder);
-    }
+      }).addTo(map);    }
   </script>
   <script type="text/javascript">
     // Add geojson data here so the source is a little easier to read.

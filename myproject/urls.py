@@ -1,5 +1,7 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 from develop import views as develop_views
 from buildings import views as buildings_views
@@ -19,4 +21,4 @@ urlpatterns = [
     path("lv-chart/", buildings_views.bar_chart2),
     path("lv-map-test/", buildings_views.land_value_test),
     path("lv-map/", buildings_views.land_value)
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

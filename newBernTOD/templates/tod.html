@@ -13,97 +13,106 @@
     function map_init_basic (map, options) {
       map.setView([35.7785733,-78.6395438], 15);
 
-      function onEachFeature(feature, layer) {
-        var popupContent = '<p>'+feature.properties.property_address+'</p>';
-        layer.bindPopup(popupContent, { maxWidth: 600 });
-        /*
-        var effective = new Date(feature.properties.EFF_DATE)
+      // Start NCOD
+      var ncod_data = L.geoJSON(geojsonFeature_ncod, {
+        style: ncod_style,
+        onEachNCODFeature: onEachNCODFeature,
+      });
 
-        var popupContent = '<h2>'+feature.properties.ZONING+'</h2>';
-        popupContent += '<table width=400>';
-        popupContent += '<tr><td>Height</td><td>'+feature.properties.HEIGHT+'</td></tr>';
-        popupContent += '<tr><td>Effective Date</td><td>'+(effective.getMonth() + 1)+'/'+effective.getDate()+'/'+effective.getFullYear()+'</td></tr>';
-        popupContent += '</table>';
-        layer.bindPopup(popupContent, { maxWidth: 600 });*/
+      function ncod_style(feature) {
+        return {
+          color: 'rgb(170, 68, 102)',
+        };
       }
 
-      /* get color depending on height value
-      function getColor(d) {
-          return d > 40 ? '#800026' :
-              d > 20  ? '#BD0026' :
-              d > 12  ? '#E31A1C' :
-              d > 7  ? '#FC4E2A' :
-              d > 5   ? '#FD8D3C' :
-              d > 4   ? '#FEB24C' :
-              d > 3   ? '#FED976' : '#FFEDA0';
-      }*/
+      function onEachNCODFeature(feature, layer) {
+        var effective = new Date(feature.properties.EFF_DATE);
 
-      function style(feature) {
+        var popupContent_ncod = '<h2>'+feature.properties.OLAY_NAME+'</h2>';
+        popupContent_ncod += '<table width=400>';
+        popupContent_ncod += '<tr><td>Effective Date</td><td>'+(effective.getMonth() + 1)+'/'+effective.getDate()+'/'+effective.getFullYear()+'</td></tr>';
+        popupContent_ncod += '<tr><td>Zoning Case</td><td>'+feature.properties.ZONE_CASE+'</td></tr>';
+        popupContent_ncod += '<tr><td>Area</td><td>'+(feature.properties.SHAPE_Area/43560).toFixed(2)+' Acres</td></tr>';
+        popupContent_ncod += '</table>';
+        layer.bindPopup(popupContent_ncod, { maxWidth: 600 });
+      }
+
+      map.addLayer(ncod_data);
+      // End NCOD
+
+      // Start TOD
+      var tod_data = L.geoJSON(geojsonFeature, {
+        style: parcel_style,
+        onEachFeature: onEachFeature,
+      });
+
+      function parcel_style(feature) {
           return {
               weight: 2,
               opacity: 1,
               color: 'white',
               dashArray: '3',
               fillOpacity: 0.7,
-              fillColor: 'blue',
-              //fillColor: getColor(feature.properties.HEIGHT)
+              fillColor: 'green',
           };
       }
 
-      function highlightFeature(e) {
-          var layer = e.target;
-
-          layer.setStyle({
-              weight: 5,
-              color: '#666',
-              dashArray: '',
-              fillOpacity: 0.7
-          });
-
-          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-              layer.bringToFront();
-          }
-
-          info.update(layer.feature.properties);
+      function onEachFeature(feature, layer) {
+        var popupContent = '<p>'+feature.properties.property_address+'</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
       }
 
-      L.geoJSON(geojsonFeature, {
-        style: style,
-        onEachFeature: onEachFeature,
-      }).addTo(map);
+      map.addLayer(tod_data);
+      // End TOD
 
-      // Search box
-      cloudmade = new L.TileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png').addTo(map);
-      var osmGeocoder = new L.Control.OSMGeocoder();
-      map.addControl(osmGeocoder);
-
-      /* Legend
-      var legend = L.control({position: 'bottomright'});
+      // Legend
+      var legend = L.control({position: 'topright'});
 
       legend.onAdd = function (map) {
-
           var div = L.DomUtil.create('div', 'info legend');
-          var grades = [3, 4, 5, 7, 12, 20, 40];
-          var labels = [];
-          var from, to;
-
-          for (var i = 0; i < grades.length; i++) {
-              from = grades[i];
-              to = grades[i + 1];
-
-              labels.push('<i style="background:' + getColor(from + 1) + '"></i> ' + from);
-          }
-
-          div.innerHTML = labels.join('<br>');
+          div.innerHTML = `
+            <form id="legend_form">
+              <table>
+                <tr>
+                  <td><input id="newberntod" type="checkbox" checked/>New Bern TOD</td>
+                  <td id="legend_color_cell" style="background-color:green;">
+                </tr>
+                <tr>
+                  <td><input id="ncod" type="checkbox" checked/>NCODs</td>
+                  <td id="legend_color_cell" style="background-color:rgb(102, 153, 204);">
+                </tr>
+              </table>
+            </form>
+          `;
           return div;
       };
 
-      legend.addTo(map);*/
+      legend.addTo(map);
+
+      // add the event handlers
+      function handleCommand1() {
+         if (this.checked) {
+           map.addLayer(tod_data);
+         } else {
+           map.removeLayer(tod_data);
+         }
+      }
+      function handleCommand2() {
+         if (this.checked) {
+           map.addLayer(ncod_data);
+         } else {
+           map.removeLayer(ncod_data);
+         }
+      }
+
+      document.getElementById ("newberntod").addEventListener ("click", handleCommand1, false);
+      document.getElementById ("ncod").addEventListener ("click", handleCommand2, false);
     }
   </script>
   <script type="text/javascript">
     // Add geojson data here so the source is a little easier to read.
     var None = null;
     var geojsonFeature = {{tod_zoning_data|safe}};
+    var geojsonFeature_ncod = {{ncod_data|safe}};
   </script>
   {%endblock content%}

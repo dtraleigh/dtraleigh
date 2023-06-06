@@ -110,15 +110,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_URL = "/static/"
+STATIC_URL = "static/"
 if env("DJANGO_DEBUG") == "1":
     STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 else:
     STATIC_ROOT = "/home/cophead567/apps/develop_static/"
 
-STATICFILES_DIRS = (
-    "/home/cophead567/apps/develop/myproject/static/",
-)
+# STATICFILES_DIRS = (
+#     "/home/cophead567/apps/develop/myproject/static/",
+# )
 
 # MEDIA_URL = "https://develop.dtraleigh.com/static/uploads/"
 # MEDIA_ROOT = "/home/cophead567/apps/develop_static/uploads"
@@ -127,8 +127,7 @@ ADMINS = (
     ("Leo", "leo@dtraleigh.com"),
 )
 
-DEVELOP_INSTANCE = "Production"
-# DEVELOP_INSTANCE = "Develop"
+DEVELOP_INSTANCE = env("DEVELOP_INSTANCE")
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = False
