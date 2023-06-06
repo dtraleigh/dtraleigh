@@ -18,3 +18,14 @@ class Parcel(models.Model):
     def __str__(self):
         return f"{self.id} - Pin:{self.pin}"
 
+
+class Overlay(models.Model):
+    # An Overlay is a collection of Parcels
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    parcels = models.ManyToManyField("Parcel", default=None, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.id})"

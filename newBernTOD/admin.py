@@ -7,4 +7,9 @@ class ParcelAdmin(admin.OSMGeoAdmin):
     list_display = ("pin", "property_address", "curr_zoning", "prop_zoning")
 
 
+class OverlayAdmin(admin.ModelAdmin):
+    list_display = ("name", "created_date", "modified_date")
+
+
 admin.site.register(Parcel, ParcelAdmin)
+admin.site.register(Overlay, OverlayAdmin)
