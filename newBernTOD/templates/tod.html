@@ -65,6 +65,26 @@
       map.addLayer(tod_data);
       // End TOD
 
+      // Start HOD1
+      var hod_data = L.geoJSON(geojsonFeature_hod, {
+        style: hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function hod_style(feature) {
+        return {
+          color: 'orange',
+        };
+      }
+
+      function onEachHODFeature(feature, layer) {
+        var popupContent = '<p>HOD</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      map.addLayer(hod_data);
+      // End HOD
+
       // Legend
       var legend = L.control({position: 'topright'});
 
@@ -80,6 +100,10 @@
                 <tr>
                   <td><input id="ncod" type="checkbox" checked/>NCODs</td>
                   <td id="legend_color_cell" style="background-color:rgb(102, 153, 204);">
+                </tr>
+                <tr>
+                  <td><input id="hod" type="checkbox" checked/>HODs</td>
+                  <td id="legend_color_cell" style="background-color:orange;">
                 </tr>
               </table>
             </form>
@@ -104,9 +128,17 @@
            map.removeLayer(ncod_data);
          }
       }
+      function handleCommand3() {
+         if (this.checked) {
+           map.addLayer(hod_data);
+         } else {
+           map.removeLayer(hod_data);
+         }
+      }
 
       document.getElementById ("newberntod").addEventListener ("click", handleCommand1, false);
       document.getElementById ("ncod").addEventListener ("click", handleCommand2, false);
+      document.getElementById ("hod").addEventListener ("click", handleCommand3, false);
     }
   </script>
   <script type="text/javascript">
@@ -114,5 +146,6 @@
     var None = null;
     var geojsonFeature = {{tod_zoning_data|safe}};
     var geojsonFeature_ncod = {{ncod_data|safe}};
+    var geojsonFeature_hod = {{hod1_data|safe}};
   </script>
   {%endblock content%}
