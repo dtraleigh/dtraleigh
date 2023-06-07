@@ -14,6 +14,17 @@ class Parcel(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
     geom = models.PolygonField(srid=4326, null=True)
+    reid = models.CharField(max_length=20, blank=True, null=True)
+    addr1 = models.CharField(max_length=100, blank=True, null=True)
+    addr2 = models.CharField(max_length=100, blank=True, null=True)
+    addr3 = models.CharField(max_length=100, blank=True, null=True)
+    deed_acres = models.DecimalField(max_digits=11, decimal_places=6, blank=True, null=True)
+    bldg_val = models.IntegerField(blank=True, null=True)
+    land_val = models.IntegerField(blank=True, null=True)
+    total_value_assd = models.IntegerField(blank=True, null=True)
+    propdesc = models.CharField(max_length=250, blank=True, null=True)
+    year_built = models.IntegerField(blank=True, null=True)
+    totsalprice = models.DecimalField(max_digits=11, decimal_places=2, blank=True, null=True)
 
     def __str__(self):
         return f"{self.id} - Pin:{self.pin}"
