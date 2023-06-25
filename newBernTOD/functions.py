@@ -31,3 +31,57 @@ def get_parcel_fields_by_pin(pin):
     response = requests.request("GET", url, headers={}, data={})
 
     return response.json()
+
+
+def get_hod_general_overlays():
+    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/7/query?where=1%3D1&outFields" \
+          "=*&outSR=4326&f=json"
+
+    payload = {}
+    headers = {
+        'Cookie': 'AGS_ROLES="419jqfa+uOZgYod4xPOQ8Q=="'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.json()
+
+
+def get_hod_streetside_overlays():
+    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/8/query?outFields=*&where=1" \
+          "%3D1&f=geojson"
+
+    payload = {}
+    headers = {
+        'Cookie': 'AGS_ROLES="419jqfa+uOZgYod4xPOQ8Q=="'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.json()
+
+
+def get_ncod_overlays():
+    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/9/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+
+    payload = {}
+    headers = {
+        'Cookie': 'AGS_ROLES="419jqfa+uOZgYod4xPOQ8Q=="'
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.json()
+
+
+def get_parcels_around_new_bern(offset):
+    url = f"https://maps.wake.gov/arcgis/rest/services/Property/Parcels/MapServer/0/query?where=1%3D1&outFields" \
+          f"=*&geometry=-78.654%2C35.769%2C-78.580%2C35.793&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel" \
+          f"=esriSpatialRelIntersects&outSR=4326&f=json&resultOffset={str(offset)}"
+
+    payload = {}
+    headers = {}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    return response.json()

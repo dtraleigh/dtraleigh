@@ -8,7 +8,7 @@ class ParcelAdmin(admin.OSMGeoAdmin):
 
 
 class OverlayAdmin(admin.ModelAdmin):
-    list_display = ("name", "created_date", "modified_date")
+    list_display = ("OLAY_NAME", "OBJECTID", "OVERLAY", "name", "created_date", "modified_date")
 
 
 admin.site.register(Parcel, ParcelAdmin)

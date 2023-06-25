@@ -1,0 +1,335 @@
+  {% extends "tod_base.html" %}
+
+  {% block content %}
+  <style>
+    .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+  </style>
+  <body>
+    {% load leaflet_tags %}
+    {% leaflet_map "itb_map" callback="window.map_init_basic" %}
+  </body>
+  <script type="text/javascript">
+    function map_init_basic (map, options) {
+      map.setView([35.7785733,-78.6395438], 15);
+
+      // Start TOD
+      var tod_data = L.geoJSON(geojsonFeature, {
+        style: parcel_style,
+        onEachFeature: onEachFeature,
+      });
+
+      function parcel_style(feature) {
+          return {
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.7,
+              fillColor: 'green',
+          };
+      }
+
+      map.addLayer(tod_data);
+      // End TOD
+
+      // Start New Bern - Edenton NCOD
+      var nbe_ncod_data = L.geoJSON(geojsonFeature_nbe_ncod, {
+        style: nbe_ncod_style,
+        onEachFeature: onEachFeature,
+      });
+
+      function nbe_ncod_style(feature) {
+        return {
+          color: 'rgb(170, 68, 102)',
+        };
+      }
+
+      //map.addLayer(nbe_ncod_data);
+      // End New Bern - Edenton NCOD
+
+      // Start Oakwood HOD
+      var oakwood_hod_data = L.geoJSON(geojsonFeature_oakwood_hod, {
+        style: oakwood_hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function oakwood_hod_style(feature) {
+        return {
+          color: 'orange',
+        };
+      }
+
+      //map.addLayer(oakwood_hod_data);
+      // End Oakwood HOD
+	  
+	  // Start Blount Street HOD
+      var blount_hod_data = L.geoJSON(geojsonFeature_blount_hod, {
+        style: blount_hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function blount_hod_style(feature) {
+        return {
+          color: 'brown',
+        };
+      }
+
+      //map.addLayer(blount_hod_data);
+      // End Blount HOD
+	  
+	  // Start Capitol Square HOD
+      var capitol_hod_data = L.geoJSON(geojsonFeature_capitol_hod, {
+        style: capitol_hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function capitol_hod_style(feature) {
+        return {
+          color: 'blue',
+        };
+      }
+
+      //map.addLayer(capitol_hod_data);
+      // End Capitol Square HOD
+	  
+	  // Start Moore Square HOD
+      var moore_hod_data = L.geoJSON(geojsonFeature_moore_hod, {
+        style: moore_hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function moore_hod_style(feature) {
+        return {
+          color: 'purple',
+        };
+      }
+
+      //map.addLayer(moore_hod_data);
+      // End Moore Square HOD
+	  
+	  // Start Prince Hall HOD
+      var prince_hod_data = L.geoJSON(geojsonFeature_prince_hod, {
+        style: prince_hod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function prince_hod_style(feature) {
+        return {
+          color: 'teal',
+        };
+      }
+
+      //map.addLayer(prince_hod_data);
+      // End Prince Hall HOD
+	  
+	  // Start Oakwood Park NCOD
+      var oakwood_park_ncod_data = L.geoJSON(geojsonFeature_oakwood_park_ncod, {
+        style: oakwood_park_ncod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function oakwood_park_ncod_style(feature) {
+        return {
+          color: 'lightsalmon',
+        };
+      }
+
+      //map.addLayer(oakwood_park_ncod_data);
+      // End Oakwood Park NCOD
+	  
+	  // Start South Park NCOD
+      var south_park_ncod_data = L.geoJSON(geojsonFeature_south_park_ncod, {
+        style: south_park_ncod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function south_park_ncod_style(feature) {
+        return {
+          color: 'peru',
+        };
+      }
+
+      //map.addLayer(south_park_ncod_data);
+      // End South Park NCOD
+	  
+	  // Start Mordecai NCOD
+      var mordecai_ncod_data = L.geoJSON(geojsonFeature_mordecai_ncod, {
+        style: mordecai_ncod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function mordecai_ncod_style(feature) {
+        return {
+          color: 'yellowgreen',
+        };
+      }
+
+      //map.addLayer(mordecai_ncod_data);
+      // End Mordecai NCOD
+
+      function onEachFeature(feature, layer) {
+        var popupContent = '<p>'+feature.properties.property_address+'</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      function onEachHODFeature(feature, layer) {
+        var popupContent = '<p>HOD</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      // Legend
+      var legend = L.control({position: 'topright'});
+
+      legend.onAdd = function (map) {
+          var div = L.DomUtil.create('div', 'info legend');
+          div.innerHTML = `
+            <form id="legend_form">
+              <table>
+                <tr>
+                  <td><input id="newberntod" type="checkbox" checked/>Proposed New Bern TOD</td>
+                  <td id="legend_color_cell" style="background-color:green;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="nbe_ncod" type="checkbox"/>New Bern - Edenton NCOD</td>
+                  <td id="legend_color_cell" style="background-color:rgb(170, 68, 102);width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="mordecai_ncod" type="checkbox"/>Mordecai NCOD</td>
+                  <td id="legend_color_cell" style="background-color:yellowgreen;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="oakwood_park_ncod" type="checkbox"/>Oakwood Park NCOD</td>
+                  <td id="legend_color_cell" style="background-color:lightsalmon;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="south_park_ncod" type="checkbox"/>South Park NCOD</td>
+                  <td id="legend_color_cell" style="background-color:peru;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="blount_hod" type="checkbox"/>Blount Street HOD</td>
+                  <td id="legend_color_cell" style="background-color:brown;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="capitol_hod" type="checkbox"/>Capitol Square HOD</td>
+                  <td id="legend_color_cell" style="background-color:blue;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="moore_hod" type="checkbox"/>Moore Square HOD</td>
+                  <td id="legend_color_cell" style="background-color:purple;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="oakwood_hod" type="checkbox"/>Oakwood HOD</td>
+                  <td id="legend_color_cell" style="background-color:orange;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="prince_hod" type="checkbox"/>Prince Hall HOD</td>
+                  <td id="legend_color_cell" style="background-color:teal;width:20px;">
+                </tr>
+              </table>
+            </form>
+          `;
+          return div;
+      };
+
+      legend.addTo(map);
+
+      // add the event handlers
+      function handleCommand1() {
+         if (this.checked) {
+           map.addLayer(tod_data);
+         } else {
+           map.removeLayer(tod_data);
+         }
+      }
+      function handleCommand2() {
+         if (this.checked) {
+           map.addLayer(nbe_ncod_data);
+         } else {
+           map.removeLayer(nbe_ncod_data);
+         }
+      }
+      function handleCommand3() {
+         if (this.checked) {
+           map.addLayer(oakwood_hod_data);
+         } else {
+           map.removeLayer(oakwood_hod_data);
+         }
+      }
+      function handleCommand4() {
+         if (this.checked) {
+           map.addLayer(blount_hod_data);
+         } else {
+           map.removeLayer(blount_hod_data);
+         }
+      }
+      function handleCommand5() {
+         if (this.checked) {
+           map.addLayer(capitol_hod_data);
+         } else {
+           map.removeLayer(capitol_hod_data);
+         }
+      }
+      function handleCommand6() {
+         if (this.checked) {
+           map.addLayer(moore_hod_data);
+         } else {
+           map.removeLayer(moore_hod_data);
+         }
+      }
+      function handleCommand7() {
+         if (this.checked) {
+           map.addLayer(prince_hod_data);
+         } else {
+           map.removeLayer(prince_hod_data);
+         }
+      }
+      function handleCommand8() {
+         if (this.checked) {
+           map.addLayer(oakwood_park_ncod_data);
+         } else {
+           map.removeLayer(oakwood_park_ncod_data);
+         }
+      }
+      function handleCommand9() {
+         if (this.checked) {
+           map.addLayer(south_park_ncod_data);
+         } else {
+           map.removeLayer(south_park_ncod_data);
+         }
+      }
+      function handleCommand10() {
+         if (this.checked) {
+           map.addLayer(mordecai_ncod_data);
+         } else {
+           map.removeLayer(mordecai_ncod_data);
+         }
+      }
+
+      document.getElementById ("newberntod").addEventListener ("click", handleCommand1, false);
+      document.getElementById ("nbe_ncod").addEventListener ("click", handleCommand2, false);
+      document.getElementById ("oakwood_hod").addEventListener ("click", handleCommand3, false);
+      document.getElementById ("blount_hod").addEventListener ("click", handleCommand4, false);
+      document.getElementById ("capitol_hod").addEventListener ("click", handleCommand5, false);
+      document.getElementById ("moore_hod").addEventListener ("click", handleCommand6, false);
+      document.getElementById ("prince_hod").addEventListener ("click", handleCommand7, false);
+      document.getElementById ("oakwood_park_ncod").addEventListener ("click", handleCommand8, false);
+      document.getElementById ("south_park_ncod").addEventListener ("click", handleCommand9, false);
+      document.getElementById ("mordecai_ncod").addEventListener ("click", handleCommand10, false);
+    }
+  </script>
+  <script type="text/javascript">
+    // Add geojson data here so the source is a little easier to read.
+    var None = null;
+    var geojsonFeature = {{tod_zoning_data|safe}};
+    var geojsonFeature_nbe_ncod = {{nbe_ncod|safe}};
+    var geojsonFeature_oakwood_hod = {{oakwood_hod|safe}};
+	var geojsonFeature_blount_hod = {{blount_hod|safe}};
+	var geojsonFeature_capitol_hod = {{capitol_output_geojson|safe}};
+	var geojsonFeature_moore_hod = {{moore_output_geojson|safe}};
+	var geojsonFeature_prince_hod = {{prince_output_geojson|safe}};
+	var geojsonFeature_oakwood_park_ncod = {{oakwood_park_output_geojson|safe}};
+	var geojsonFeature_south_park_ncod = {{south_park_output_geojson|safe}};
+	var geojsonFeature_mordecai_ncod = {{mordecai_output_geojson|safe}};
+  </script>
+  {%endblock content%}
