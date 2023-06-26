@@ -11,7 +11,7 @@
   </body>
   <script type="text/javascript">
     function map_init_basic (map, options) {
-      map.setView([35.7785733,-78.6395438], 15);
+      map.setView([35.779935,-78.614291], 15);
 
       // Start TOD
       var tod_data = L.geoJSON(geojsonFeature, {
@@ -47,6 +47,8 @@
 
       //map.addLayer(nbe_ncod_data);
       // End New Bern - Edenton NCOD
+
+      /*
 
       // Start Oakwood HOD
       var oakwood_hod_data = L.geoJSON(geojsonFeature_oakwood_hod, {
@@ -122,6 +124,8 @@
 
       //map.addLayer(prince_hod_data);
       // End Prince Hall HOD
+
+      */
 	  
 	  // Start Oakwood Park NCOD
       var oakwood_park_ncod_data = L.geoJSON(geojsonFeature_oakwood_park_ncod, {
@@ -167,6 +171,21 @@
 
       //map.addLayer(mordecai_ncod_data);
       // End Mordecai NCOD
+	  
+	  // Start King Charles NCOD
+      var king_charles_ncod_data = L.geoJSON(geojsonFeature_king_charles_ncod, {
+        style: king_charles_ncod_style,
+        onEachHODFeature: onEachHODFeature,
+      });
+
+      function king_charles_ncod_style(feature) {
+        return {
+          color: 'lightslategrey',
+        };
+      }
+
+      //map.addLayer(king_charles_ncod_data);
+      // End King Charles NCOD
 
       function onEachFeature(feature, layer) {
         var popupContent = '<p>'+feature.properties.property_address+'</p>';
@@ -195,6 +214,10 @@
                   <td id="legend_color_cell" style="background-color:rgb(170, 68, 102);width:20px;">
                 </tr>
                 <tr>
+                  <td><input id="king_charles_ncod" type="checkbox"/>King Charles NCOD</td>
+                  <td id="legend_color_cell" style="background-color:lightslategrey;width:20px;">
+                </tr>
+                <tr>
                   <td><input id="mordecai_ncod" type="checkbox"/>Mordecai NCOD</td>
                   <td id="legend_color_cell" style="background-color:yellowgreen;width:20px;">
                 </tr>
@@ -206,6 +229,7 @@
                   <td><input id="south_park_ncod" type="checkbox"/>South Park NCOD</td>
                   <td id="legend_color_cell" style="background-color:peru;width:20px;">
                 </tr>
+                <!--
                 <tr>
                   <td><input id="blount_hod" type="checkbox"/>Blount Street HOD</td>
                   <td id="legend_color_cell" style="background-color:brown;width:20px;">
@@ -226,6 +250,7 @@
                   <td><input id="prince_hod" type="checkbox"/>Prince Hall HOD</td>
                   <td id="legend_color_cell" style="background-color:teal;width:20px;">
                 </tr>
+                -->
               </table>
             </form>
           `;
@@ -305,17 +330,27 @@
            map.removeLayer(mordecai_ncod_data);
          }
       }
+      function handleCommand11() {
+         if (this.checked) {
+           map.addLayer(king_charles_ncod_data);
+         } else {
+           map.removeLayer(king_charles_ncod_data);
+         }
+      }
 
       document.getElementById ("newberntod").addEventListener ("click", handleCommand1, false);
       document.getElementById ("nbe_ncod").addEventListener ("click", handleCommand2, false);
+      document.getElementById ("oakwood_park_ncod").addEventListener ("click", handleCommand8, false);
+      document.getElementById ("south_park_ncod").addEventListener ("click", handleCommand9, false);
+      document.getElementById ("mordecai_ncod").addEventListener ("click", handleCommand10, false);
+      document.getElementById ("king_charles_ncod").addEventListener ("click", handleCommand11, false);
+      /*
       document.getElementById ("oakwood_hod").addEventListener ("click", handleCommand3, false);
       document.getElementById ("blount_hod").addEventListener ("click", handleCommand4, false);
       document.getElementById ("capitol_hod").addEventListener ("click", handleCommand5, false);
       document.getElementById ("moore_hod").addEventListener ("click", handleCommand6, false);
       document.getElementById ("prince_hod").addEventListener ("click", handleCommand7, false);
-      document.getElementById ("oakwood_park_ncod").addEventListener ("click", handleCommand8, false);
-      document.getElementById ("south_park_ncod").addEventListener ("click", handleCommand9, false);
-      document.getElementById ("mordecai_ncod").addEventListener ("click", handleCommand10, false);
+      */
     }
   </script>
   <script type="text/javascript">
@@ -323,13 +358,14 @@
     var None = null;
     var geojsonFeature = {{tod_zoning_data|safe}};
     var geojsonFeature_nbe_ncod = {{nbe_ncod|safe}};
-    var geojsonFeature_oakwood_hod = {{oakwood_hod|safe}};
-	var geojsonFeature_blount_hod = {{blount_hod|safe}};
-	var geojsonFeature_capitol_hod = {{capitol_output_geojson|safe}};
-	var geojsonFeature_moore_hod = {{moore_output_geojson|safe}};
-	var geojsonFeature_prince_hod = {{prince_output_geojson|safe}};
 	var geojsonFeature_oakwood_park_ncod = {{oakwood_park_output_geojson|safe}};
 	var geojsonFeature_south_park_ncod = {{south_park_output_geojson|safe}};
 	var geojsonFeature_mordecai_ncod = {{mordecai_output_geojson|safe}};
+	var geojsonFeature_king_charles_ncod = {{king_charles_output_geojson|safe}};
+    //var geojsonFeature_oakwood_hod = {{oakwood_hod|safe}};
+	//var geojsonFeature_blount_hod = {{blount_hod|safe}};
+	//var geojsonFeature_capitol_hod = {{capitol_output_geojson|safe}};
+	//var geojsonFeature_moore_hod = {{moore_output_geojson|safe}};
+	//var geojsonFeature_prince_hod = {{prince_output_geojson|safe}};
   </script>
   {%endblock content%}

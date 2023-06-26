@@ -8,8 +8,13 @@ class ParcelAdmin(admin.OSMGeoAdmin):
 
 
 class OverlayAdmin(admin.ModelAdmin):
-    list_display = ("OLAY_NAME", "OBJECTID", "OVERLAY", "name", "created_date", "modified_date")
+    list_display = ("olay_name", "OBJECTID", "overlay", "name", "created_date", "modified_date")
 
 
+class NCODAdmin(admin.ModelAdmin):
+    list_display = ("olay_name", "overlay", "zone_case", "objectid")
+
+
+admin.site.register(NCOD, NCODAdmin)
 admin.site.register(Parcel, ParcelAdmin)
 admin.site.register(Overlay, OverlayAdmin)

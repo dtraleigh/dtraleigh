@@ -1,0 +1,86 @@
+  {% extends "tod_base.html" %}
+
+  {% block content %}
+  <style>
+    .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+  </style>
+  <body>
+    {% load leaflet_tags %}
+    {% leaflet_map "itb_map" callback="window.map_init_basic" %}
+  </body>
+  <script type="text/javascript">
+      function map_init_basic (map, options) {
+      map.setView([35.779935,-78.614291], 15);
+
+      function onEachFeature(feature, layer) {
+        var popupContent = "<p>"+feature.properties.pin+"</p>";
+        if (feature.properties && feature.properties.popupContent) {
+          popupContent += feature.properties.popupContent;
+        }
+        layer.bindPopup(popupContent);
+      }
+
+      L.geoJSON(overlay_by_id_data_geojson, {
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+
+      L.geoJSON(all_parcels_in_the_overlay_geojson, {
+        style: overlay_parcel_style,
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+
+      L.geoJSON(tod_parcels_that_intersect_geojson, {
+        style: parcel_style,
+        onEachFeature: onEachFeature,
+      }).addTo(map);
+
+      function overlay_parcel_style(feature) {
+        return {
+          color: 'green',
+        };
+      }
+
+      function parcel_style(feature) {
+        return {
+          color: 'brown',
+        };
+      }
+
+      // Legend
+      var legend = L.control({position: 'topright'});
+
+      legend.onAdd = function (map) {
+          var div = L.DomUtil.create('div', 'info legend');
+          div.innerHTML = `
+            <form id="legend_form">
+              <table>
+                <tr>
+                  <td>Proposed New Bern TOD Overlap ({{count}} Properties)</td>
+                  <td id="legend_color_cell" style="background-color:brown;width:20px;">
+                </tr>
+                <tr>
+                  <td>Parcels inside {{overlay.olay_name}} {{overlay.overlay}}</td>
+                  <td id="legend_color_cell" style="background-color:green;width:20px;">
+                </tr>
+                <tr>
+                  <td>{{overlay.olay_name}} {{overlay.overlay}} Boundaries</td>
+                  <td id="legend_color_cell" style="background-color:blue;width:20px;">
+                </tr>
+              </table>
+            </form>
+          `;
+          return div;
+      };
+
+      legend.addTo(map);
+    }
+  </script>
+  <script type="text/javascript">
+    // Add geojson data here so the source is a little easier to read.
+    var None = null;
+    var overlay_by_id_data_geojson = {{overlay_by_id_data_geojson|safe}};
+    var all_parcels_in_the_overlay_geojson = {{all_parcels_in_the_overlay_geojson|safe}};
+    var tod_parcels_that_intersect_geojson = {{tod_parcels_that_intersect_geojson|safe}};
+  </script>
+  {%endblock content%}

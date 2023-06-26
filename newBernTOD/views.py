@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from newBernTOD.models import Overlay, Parcel
+from newBernTOD.models import Overlay, Parcel, NCOD
 from develop.views import get_ncod_data
 
 
@@ -51,49 +51,48 @@ def filter_tod(request):
                                geometry_field="geom",
                                fields=("property_address",))
 
-    nbe_ncod = Overlay.objects.get(name="Combined New Bern - Edenton NCOD")
-    # nbe_ncod_output_geojson = serialize("geojson", nbe_ncod.parcels.all(),
-    #                                     geometry_field="geom",
-    #                                     fields=("property_address",))
-    nbe_ncod_output_geojson = serialize("geojson", [nbe_ncod], geometry_field="geom")
+    nbe_ncod = NCOD.objects.filter(olay_name__icontains="New Bern - Edenton")
+    nbe_ncod_output_geojson = serialize("geojson", nbe_ncod, geometry_field="geom")
 
-    oakwood_hod = Overlay.objects.get(OLAY_NAME="Oakwood")
-    # oakwood_output_geojson = serialize("geojson", oakwood_hod.parcels.all(),
-    #                                    geometry_field="geom",
-    #                                    fields=("property_address",))
-    oakwood_output_geojson = serialize("geojson", [oakwood_hod], geometry_field="geom")
-
-    blount_street_hod = Overlay.objects.get(OLAY_NAME="Blount Street")
-    blount_street_output_geojson = serialize("geojson", [blount_street_hod], geometry_field="geom")
-
-    capitol_hod = Overlay.objects.get(OLAY_NAME="Capitol Square")
-    capitol_output_geojson = serialize("geojson", [capitol_hod], geometry_field="geom")
-
-    moore_hod = Overlay.objects.get(OLAY_NAME="Moore Square")
-    moore_output_geojson = serialize("geojson", [moore_hod], geometry_field="geom")
-
-    prince_hod = Overlay.objects.get(OLAY_NAME="Prince Hall")
-    prince_output_geojson = serialize("geojson", [prince_hod], geometry_field="geom")
-
-    oakwood_park_ncod = Overlay.objects.get(OLAY_NAME="Oakwood Park")
+    oakwood_park_ncod = NCOD.objects.get(olay_name="Oakwood Park")
     oakwood_park_output_geojson = serialize("geojson", [oakwood_park_ncod], geometry_field="geom")
 
-    south_park_ncod = Overlay.objects.get(OLAY_NAME="South Park")
+    south_park_ncod = NCOD.objects.get(olay_name="South Park")
     south_park_output_geojson = serialize("geojson", [south_park_ncod], geometry_field="geom")
 
-    mordecai_ncod = Overlay.objects.filter(OLAY_NAME__contains="Mordecai")
+    mordecai_ncod = NCOD.objects.filter(olay_name__icontains="Mordecai")
     mordecai_output_geojson = serialize("geojson", mordecai_ncod, geometry_field="geom")
+
+    king_ncod = NCOD.objects.filter(olay_name="King Charles (South)")
+    king_charles_output_geojson = serialize("geojson", king_ncod, geometry_field="geom")
+
+    # oakwood_hod = Overlay.objects.get(OLAY_NAME="Oakwood")
+    # oakwood_output_geojson = serialize("geojson", [oakwood_hod], geometry_field="geom")
+
+    # blount_street_hod = Overlay.objects.get(OLAY_NAME="Blount Street")
+    # blount_street_output_geojson = serialize("geojson", [blount_street_hod], geometry_field="geom")
+
+    # capitol_hod = Overlay.objects.get(OLAY_NAME="Capitol Square")
+    # capitol_output_geojson = serialize("geojson", [capitol_hod], geometry_field="geom")
+
+    # moore_hod = Overlay.objects.get(OLAY_NAME="Moore Square")
+    # moore_output_geojson = serialize("geojson", [moore_hod], geometry_field="geom")
+
+    # prince_hod = Overlay.objects.get(OLAY_NAME="Prince Hall")
+    # prince_output_geojson = serialize("geojson", [prince_hod], geometry_field="geom")
 
     return render(request, "filtered_tod.html", {"tod_zoning_data": output_geojson,
                                                  "nbe_ncod": nbe_ncod_output_geojson,
-                                                 "oakwood_hod": oakwood_output_geojson,
-                                                 "blount_hod": blount_street_output_geojson,
-                                                 "capitol_output_geojson": capitol_output_geojson,
-                                                 "moore_output_geojson": moore_output_geojson,
-                                                 "prince_output_geojson": prince_output_geojson,
                                                  "oakwood_park_output_geojson": oakwood_park_output_geojson,
                                                  "south_park_output_geojson": south_park_output_geojson,
-                                                 "mordecai_output_geojson": mordecai_output_geojson})
+                                                 "mordecai_output_geojson": mordecai_output_geojson,
+                                                 "king_charles_output_geojson": king_charles_output_geojson
+                                                 # "oakwood_hod": oakwood_output_geojson,
+                                                 # "blount_hod": blount_street_output_geojson,
+                                                 # "capitol_output_geojson": capitol_output_geojson,
+                                                 # "moore_output_geojson": moore_output_geojson,
+                                                 # "prince_output_geojson": prince_output_geojson
+                                                 })
 
 
 @xframe_options_exempt
@@ -104,74 +103,88 @@ def show_all_parcels(request):
 
 
 @xframe_options_exempt
-def show_overlay_by_id(request, overlay_id):
-    overlay_data = serialize("geojson", [Overlay.objects.get(id=overlay_id)],
-                             geometry_field="geom",
-                             fields=("OLAY_NAME",))
+def show_ncod_by_id(request, ncod_id):
+    ncod_overlay = NCOD.objects.prefetch_related("parcels").get(id=ncod_id)
+    tod_overlay = Overlay.objects.prefetch_related("parcels").get(name="New Bern TOD")
 
-    return render(request, "all_parcels.html", {"all_parcels": overlay_data})
+    ncod_by_id_data_geojson = serialize("geojson", [ncod_overlay],
+                                        geometry_field="geom",
+                                        fields=("olay_name", "pin",))
+
+    all_parcels_in_the_overlay_geojson = serialize("geojson", ncod_overlay.parcels.all(),
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    tod_parcels_in_overlay = [p for p in ncod_overlay.parcels.all() if p in tod_overlay.parcels.all()]
+    tod_parcels_that_intersect_geojson = serialize("geojson", tod_parcels_in_overlay,
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    return render(request, "overlay_by_id.html",
+                  {"overlay_by_id_data_geojson": ncod_by_id_data_geojson,
+                   "all_parcels_in_the_overlay_geojson": all_parcels_in_the_overlay_geojson,
+                   "tod_parcels_that_intersect_geojson": tod_parcels_that_intersect_geojson,
+                   "overlay": ncod_overlay,
+                   "count": str(len(tod_parcels_in_overlay))})
 
 
 @xframe_options_exempt
-def show_all_parcels_in_overlay(request, overlay_id):
-    overlay_to_show = Overlay.objects.get(id=overlay_id)
-    overlay_data = serialize("geojson", [p for p in overlay_to_show.parcels.all()],
-                             geometry_field="geom",
-                             fields=("OLAY_NAME",))
+def show_ncod_by_name(request, ncod_name):
+    ncod_overlay = NCOD.objects.prefetch_related("parcels").filter(olay_name=ncod_name)
+    if ncod_overlay.count() == 0:
+        ncod_overlay = Overlay.objects.prefetch_related("parcels").filter(olay_name=ncod_name)
 
-    return render(request, "all_parcels.html", {"all_parcels": overlay_data})
+    tod_overlay = Overlay.objects.prefetch_related("parcels").get(name="New Bern TOD")
+
+    ncod_by_name_data_geojson = serialize("geojson", ncod_overlay,
+                                          geometry_field="geom", fields=("olay_name", "pin",))
+
+    combined = []
+    for ncod_piece in ncod_overlay:
+        combined += [parcel for parcel in ncod_piece.parcels.all()]
+    all_parcels_in_the_overlay_geojson = serialize("geojson", combined,
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    tod_parcels_in_overlay = [p for p in combined if p in tod_overlay.parcels.all()]
+    tod_parcels_that_intersect_geojson = serialize("geojson", tod_parcels_in_overlay,
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    return render(request, "overlay_by_id.html",
+                  {"overlay_by_id_data_geojson": ncod_by_name_data_geojson,
+                   "all_parcels_in_the_overlay_geojson": all_parcels_in_the_overlay_geojson,
+                   "tod_parcels_that_intersect_geojson": tod_parcels_that_intersect_geojson,
+                   "overlay": ncod_overlay[0],
+                   "count": str(len(tod_parcels_in_overlay))})
 
 
-def get_combined_new_bern_edenton_ncod():
-    if not Overlay.objects.filter(name="Combined New Bern - Edenton NCOD").exists():
-        NBE_overlays = Overlay.objects.filter(OLAY_NAME="New Bern - Edenton")
-        geom_union = NBE_overlays[0].geom
-        geom_union = geom_union.union(NBE_overlays[1].geom)
+@xframe_options_exempt
+def show_all_parcels_in_ncod(request, ncod_id):
+    ncod_to_show = NCOD.objects.get(id=ncod_id)
+    ncod_data = serialize("geojson", [p for p in ncod_to_show.parcels.all()],
+                          geometry_field="geom",
+                          fields=("OLAY_NAME", "pin",))
 
-        all_parcels_combined = [a for a in NBE_overlays[0].parcels.all()] + [b for b in NBE_overlays[1].parcels.all()]
-
-        NBE = Overlay.objects.create(name="Combined New Bern - Edenton NCOD",
-                                     OLAY_NAME="New Bern - Edenton",
-                                     description="This overlay combines the two NCOD polygons for New-Bern Edenton",
-                                     geom=geom_union)
-        NBE.parcels.set(all_parcels_combined)
-        return Overlay.objects.get(name="Combined New Bern - Edenton NCOD")
-    else:
-        return Overlay.objects.get(name="Combined New Bern - Edenton NCOD")
+    return render(request, "all_parcels.html", {"all_parcels": ncod_data})
 
 
 @xframe_options_exempt
 def new_bern_main(request):
-    new_bern_area_overlay_names = [
-        "Oakwood",
-        "Blount Street",
-        "Capitol Square",
-        "Moore Square",
-        "Prince Hall",
-        "King Charles(South)",
-        "New Bern - Edenton",
-        "South Park",
-        "Oakwood Park",
-        # "Mordecai 1",
-        # "Mordecai 2"
-    ]
+    new_bern_area_ncod_names = ["King Charles (South)", "Oakwood Park", "South Park"]
+    new_bern_area_overlay_names = ["Mordecai", "New Bern - Edenton"]
 
-    new_bern_ncod_overlays = Overlay.objects.filter(OLAY_NAME__in=new_bern_area_overlay_names, OVERLAY="NCOD")
-
-    # Mordecai has 3 overlays. New Bern - Edenton has 2
-    new_bern_overlay_ncods = []
-    to_skip = ["New Bern - Edenton", "Mordecai 1", "Mordecai 2"]
-    for overlay in new_bern_ncod_overlays:
-        if overlay.OLAY_NAME not in to_skip:
-            new_bern_overlay_ncods.append(overlay)
-
-    new_bern_overlay_ncods.append(get_combined_new_bern_edenton_ncod())
-
-    new_bern_hod_overlays = Overlay.objects.filter(OLAY_NAME__in=new_bern_area_overlay_names, OVERLAY__contains="HOD")
+    new_bern_ncods = []
+    for ncod_name in new_bern_area_ncod_names:
+        ncods = NCOD.objects.filter(olay_name__icontains=ncod_name)
+        for ncod in ncods:
+            new_bern_ncods.append(ncod)
+    for ncod_overlay_name in new_bern_area_overlay_names:
+        ncod_overlays = Overlay.objects.filter(olay_name__icontains=ncod_overlay_name, overlay="NCOD")
+        for ncod in ncod_overlays:
+            new_bern_ncods.append(ncod)
 
     new_bern_tod = Overlay.objects.get(name="New Bern TOD")
 
-    return render(request, "new_bern_main.html", {"new_bern_ncod_overlays": new_bern_ncod_overlays,
-                                                  "new_bern_overlay_ncods": new_bern_overlay_ncods,
-                                                  "new_bern_overlay_hods": new_bern_hod_overlays,
+    return render(request, "new_bern_main.html", {"new_bern_overlay_ncods": new_bern_ncods,
                                                   "new_bern_tod": new_bern_tod})

@@ -11,10 +11,10 @@
   </body>
   <script type="text/javascript">
       function map_init_basic (map, options) {
-      map.setView([35.7785733,-78.6395438], 11);
+      map.setView([35.7785733,-78.6395438], 15);
 
       function onEachFeature(feature, layer) {
-        var popupContent = "<p>Custom Tracking Area</p>";
+        var popupContent = "<p>"+feature.properties.pin+"</p>";
         if (feature.properties && feature.properties.popupContent) {
           popupContent += feature.properties.popupContent;
         }
