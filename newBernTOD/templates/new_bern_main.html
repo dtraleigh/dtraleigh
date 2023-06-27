@@ -81,6 +81,7 @@
             <tr>
                 <th scope="col">NCOD Name</th>
                 <th scope="col">Parcels in TOD</th>
+                <th scope="col">Parcels in TOD and along arterial road</th>
                 <th scope="col">Parcels NOT in TOD</th>
                 <th scope="col">Total Parcels</th>
             </tr>
@@ -93,13 +94,13 @@
             <td>{{ncod.olay_name}}</td>
             {% endif %}
             <td>{{ncod.get_num_parcels_in_tod}}</td>
+            <td>{{ncod.get_num_parcels_in_tod_and_arterial}}</td>
             <td>{{ncod.get_num_parcels_not_in_tod}}</td>
             <td>{{ncod.get_num_parcels}}</td>
           </tr>
           {% endfor %}
         </table>
       </div>
-        <!--
       <div>
         <h2>HODs Around the Proposed New Bern TOD</h2>
         <table class="table table-striped">
@@ -107,20 +108,29 @@
             <tr>
                 <th scope="col">HOD Name</th>
                 <th scope="col">Parcels also in TOD</th>
+                <th scope="col">Parcels in TOD and along arterial road</th>
                 <th scope="col">Parcels NOT in TOD</th>
                 <th scope="col">Total Parcels</th>
             </tr>
           </thead>
           {% for hod in new_bern_overlay_hods %}
           <tr>
-            <td>{{hod.OLAY_NAME}}</td>
+            {% if hod.get_num_parcels_in_tod != 0 %}
+            <td><a href="/tod/hod/{{hod.olay_name}}">{{hod.olay_name}}</a></td>
+            {% else %}
+            <td>{{hod.olay_name}}</td>
+            {% endif %}
             <td>{{hod.get_num_parcels_in_tod}}</td>
+            <td>{{hod.get_num_parcels_in_tod_and_arterial}}</td>
             <td>{{hod.get_num_parcels_not_in_tod}}</td>
             <td>{{hod.get_num_parcels}}</td>
           </tr>
           {% endfor %}
         </table>
-      </div>-->
+      </div>
+      <div>
+          <p>NOTE: Arterial road defined as New Bern Ave, Edenton St, and Raleigh Blvd.</p>
+      </div>
 
     </main><!-- /.container -->
 

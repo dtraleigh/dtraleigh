@@ -15,6 +15,11 @@ class NCODAdmin(admin.ModelAdmin):
     list_display = ("olay_name", "overlay", "zone_case", "objectid")
 
 
-admin.site.register(NCOD, NCODAdmin)
+class HODAdmin(admin.ModelAdmin):
+    list_display = ("olay_name", "overlay", "zone_case", "objectid")
+
+
 admin.site.register(Parcel, ParcelAdmin)
 admin.site.register(Overlay, OverlayAdmin)
+admin.site.register(NCOD, NCODAdmin)
+admin.site.register(HOD, HODAdmin)

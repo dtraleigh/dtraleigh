@@ -18,6 +18,7 @@ urlpatterns = [
                   path("tod/show_all_parcels", newbern_views.show_all_parcels),
                   path("tod/ncod/<int:ncod_id>", newbern_views.show_ncod_by_id),
                   path("tod/ncod/<str:ncod_name>", newbern_views.show_ncod_by_name),
+                  path("tod/hod/<str:hod_name>", newbern_views.show_hod_by_name),
                   path("tod/ncod/parcels/<int:ncod_id>", newbern_views.show_all_parcels_in_ncod),
                   path("new_bern_main", newbern_views.new_bern_main),
                   path("buildings/", buildings_views.building_date_map),

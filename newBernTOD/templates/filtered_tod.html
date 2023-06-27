@@ -48,8 +48,6 @@
       //map.addLayer(nbe_ncod_data);
       // End New Bern - Edenton NCOD
 
-      /*
-
       // Start Oakwood HOD
       var oakwood_hod_data = L.geoJSON(geojsonFeature_oakwood_hod, {
         style: oakwood_hod_style,
@@ -124,8 +122,6 @@
 
       //map.addLayer(prince_hod_data);
       // End Prince Hall HOD
-
-      */
 	  
 	  // Start Oakwood Park NCOD
       var oakwood_park_ncod_data = L.geoJSON(geojsonFeature_oakwood_park_ncod, {
@@ -229,7 +225,6 @@
                   <td><input id="south_park_ncod" type="checkbox"/>South Park NCOD</td>
                   <td id="legend_color_cell" style="background-color:peru;width:20px;">
                 </tr>
-                <!--
                 <tr>
                   <td><input id="blount_hod" type="checkbox"/>Blount Street HOD</td>
                   <td id="legend_color_cell" style="background-color:brown;width:20px;">
@@ -250,7 +245,6 @@
                   <td><input id="prince_hod" type="checkbox"/>Prince Hall HOD</td>
                   <td id="legend_color_cell" style="background-color:teal;width:20px;">
                 </tr>
-                -->
               </table>
             </form>
           `;
@@ -344,13 +338,11 @@
       document.getElementById ("south_park_ncod").addEventListener ("click", handleCommand9, false);
       document.getElementById ("mordecai_ncod").addEventListener ("click", handleCommand10, false);
       document.getElementById ("king_charles_ncod").addEventListener ("click", handleCommand11, false);
-      /*
       document.getElementById ("oakwood_hod").addEventListener ("click", handleCommand3, false);
       document.getElementById ("blount_hod").addEventListener ("click", handleCommand4, false);
       document.getElementById ("capitol_hod").addEventListener ("click", handleCommand5, false);
       document.getElementById ("moore_hod").addEventListener ("click", handleCommand6, false);
       document.getElementById ("prince_hod").addEventListener ("click", handleCommand7, false);
-      */
     }
   </script>
   <script type="text/javascript">
@@ -362,10 +354,10 @@
 	var geojsonFeature_south_park_ncod = {{south_park_output_geojson|safe}};
 	var geojsonFeature_mordecai_ncod = {{mordecai_output_geojson|safe}};
 	var geojsonFeature_king_charles_ncod = {{king_charles_output_geojson|safe}};
-    //var geojsonFeature_oakwood_hod = {{oakwood_hod|safe}};
-	//var geojsonFeature_blount_hod = {{blount_hod|safe}};
-	//var geojsonFeature_capitol_hod = {{capitol_output_geojson|safe}};
-	//var geojsonFeature_moore_hod = {{moore_output_geojson|safe}};
-	//var geojsonFeature_prince_hod = {{prince_output_geojson|safe}};
+    var geojsonFeature_oakwood_hod = {{oakwood_hod|safe}};
+	var geojsonFeature_blount_hod = {{blount_hod|safe}};
+	var geojsonFeature_capitol_hod = {{capitol_output_geojson|safe}};
+	var geojsonFeature_moore_hod = {{moore_output_geojson|safe}};
+	var geojsonFeature_prince_hod = {{prince_output_geojson|safe}};
   </script>
   {%endblock content%}

@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from newBernTOD.models import Overlay, Parcel, NCOD
+from newBernTOD.models import Overlay, Parcel, NCOD, HOD
 from develop.views import get_ncod_data
 
 
@@ -66,32 +66,32 @@ def filter_tod(request):
     king_ncod = NCOD.objects.filter(olay_name="King Charles (South)")
     king_charles_output_geojson = serialize("geojson", king_ncod, geometry_field="geom")
 
-    # oakwood_hod = Overlay.objects.get(OLAY_NAME="Oakwood")
-    # oakwood_output_geojson = serialize("geojson", [oakwood_hod], geometry_field="geom")
+    oakwood_hod = HOD.objects.get(olay_name="Oakwood")
+    oakwood_output_geojson = serialize("geojson", [oakwood_hod], geometry_field="geom")
 
-    # blount_street_hod = Overlay.objects.get(OLAY_NAME="Blount Street")
-    # blount_street_output_geojson = serialize("geojson", [blount_street_hod], geometry_field="geom")
+    blount_street_hod = HOD.objects.get(olay_name="Blount Street")
+    blount_street_output_geojson = serialize("geojson", [blount_street_hod], geometry_field="geom")
 
-    # capitol_hod = Overlay.objects.get(OLAY_NAME="Capitol Square")
-    # capitol_output_geojson = serialize("geojson", [capitol_hod], geometry_field="geom")
+    capitol_hod = HOD.objects.get(olay_name="Capitol Square")
+    capitol_output_geojson = serialize("geojson", [capitol_hod], geometry_field="geom")
 
-    # moore_hod = Overlay.objects.get(OLAY_NAME="Moore Square")
-    # moore_output_geojson = serialize("geojson", [moore_hod], geometry_field="geom")
+    moore_hod = HOD.objects.get(olay_name="Moore Square")
+    moore_output_geojson = serialize("geojson", [moore_hod], geometry_field="geom")
 
-    # prince_hod = Overlay.objects.get(OLAY_NAME="Prince Hall")
-    # prince_output_geojson = serialize("geojson", [prince_hod], geometry_field="geom")
+    prince_hod = HOD.objects.get(olay_name="Prince Hall")
+    prince_output_geojson = serialize("geojson", [prince_hod], geometry_field="geom")
 
     return render(request, "filtered_tod.html", {"tod_zoning_data": output_geojson,
                                                  "nbe_ncod": nbe_ncod_output_geojson,
                                                  "oakwood_park_output_geojson": oakwood_park_output_geojson,
                                                  "south_park_output_geojson": south_park_output_geojson,
                                                  "mordecai_output_geojson": mordecai_output_geojson,
-                                                 "king_charles_output_geojson": king_charles_output_geojson
-                                                 # "oakwood_hod": oakwood_output_geojson,
-                                                 # "blount_hod": blount_street_output_geojson,
-                                                 # "capitol_output_geojson": capitol_output_geojson,
-                                                 # "moore_output_geojson": moore_output_geojson,
-                                                 # "prince_output_geojson": prince_output_geojson
+                                                 "king_charles_output_geojson": king_charles_output_geojson,
+                                                 "oakwood_hod": oakwood_output_geojson,
+                                                 "blount_hod": blount_street_output_geojson,
+                                                 "capitol_output_geojson": capitol_output_geojson,
+                                                 "moore_output_geojson": moore_output_geojson,
+                                                 "prince_output_geojson": prince_output_geojson
                                                  })
 
 
@@ -160,6 +160,31 @@ def show_ncod_by_name(request, ncod_name):
 
 
 @xframe_options_exempt
+def show_hod_by_name(request, hod_name):
+    hod_overlay = HOD.objects.prefetch_related("parcels").get(olay_name=hod_name)
+    tod_overlay = Overlay.objects.prefetch_related("parcels").get(name="New Bern TOD")
+
+    hod_by_name_data_geojson = serialize("geojson", [hod_overlay],
+                                         geometry_field="geom", fields=("olay_name", "pin",))
+
+    all_parcels_in_the_overlay_geojson = serialize("geojson", hod_overlay.parcels.all(),
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    tod_parcels_in_overlay = [p for p in hod_overlay.parcels.all() if p in tod_overlay.parcels.all()]
+    tod_parcels_that_intersect_geojson = serialize("geojson", tod_parcels_in_overlay,
+                                                   geometry_field="geom",
+                                                   fields=("olay_name", "pin",))
+
+    return render(request, "overlay_by_id.html",
+                  {"overlay_by_id_data_geojson": hod_by_name_data_geojson,
+                   "all_parcels_in_the_overlay_geojson": all_parcels_in_the_overlay_geojson,
+                   "tod_parcels_that_intersect_geojson": tod_parcels_that_intersect_geojson,
+                   "overlay": hod_overlay,
+                   "count": str(len(tod_parcels_in_overlay))})
+
+
+@xframe_options_exempt
 def show_all_parcels_in_ncod(request, ncod_id):
     ncod_to_show = NCOD.objects.get(id=ncod_id)
     ncod_data = serialize("geojson", [p for p in ncod_to_show.parcels.all()],
@@ -173,6 +198,7 @@ def show_all_parcels_in_ncod(request, ncod_id):
 def new_bern_main(request):
     new_bern_area_ncod_names = ["King Charles (South)", "Oakwood Park", "South Park"]
     new_bern_area_overlay_names = ["Mordecai", "New Bern - Edenton"]
+    new_bern_area_hod_names = ["Oakwood", "Prince Hall", "Moore Square", "Capitol Square", "Blount Street"]
 
     new_bern_ncods = []
     for ncod_name in new_bern_area_ncod_names:
@@ -184,7 +210,14 @@ def new_bern_main(request):
         for ncod in ncod_overlays:
             new_bern_ncods.append(ncod)
 
+    new_bern_hods = []
+    for hod_name in new_bern_area_hod_names:
+        hods = HOD.objects.filter(olay_name__icontains=hod_name)
+        for hod in hods:
+            new_bern_hods.append(hod)
+
     new_bern_tod = Overlay.objects.get(name="New Bern TOD")
 
     return render(request, "new_bern_main.html", {"new_bern_overlay_ncods": new_bern_ncods,
+                                                  "new_bern_overlay_hods": new_bern_hods,
                                                   "new_bern_tod": new_bern_tod})
