@@ -33,6 +33,26 @@
       map.addLayer(tod_data);
       // End TOD
 
+      // Start Rezoning
+      var rezoning_data = L.geoJSON(geojsonFeature_rezoning, {
+        style: rezoning_style,
+        onEachFeature: onEachFeature,
+      });
+
+      function rezoning_style(feature) {
+          return {
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.7,
+              fillColor: 'orange',
+          };
+      }
+
+      map.addLayer(rezoning_data);
+      // End Rezoning
+
       // Start New Bern - Edenton NCOD
       var nbe_ncod_data = L.geoJSON(geojsonFeature_nbe_ncod, {
         style: nbe_ncod_style,
@@ -185,6 +205,10 @@
 
       function onEachFeature(feature, layer) {
         var popupContent = '<p>'+feature.properties.property_address+'</p>';
+        popupContent += '<p>Current Zoning:</br>';
+        popupContent += feature.properties.curr_zoning+'</br>';
+        popupContent += 'Proposed Zoning:</br>';
+        popupContent += feature.properties.prop_zoning+'</p>';
         layer.bindPopup(popupContent, { maxWidth: 600 });
       }
 
@@ -204,6 +228,10 @@
                 <tr>
                   <td><input id="newberntod" type="checkbox" checked/>Proposed New Bern TOD</td>
                   <td id="legend_color_cell" style="background-color:green;width:20px;">
+                </tr>
+                <tr>
+                  <td><input id="newbernrezoning" type="checkbox" checked/>Proposed New Bern Rezoning (not TOD)</td>
+                  <td id="legend_color_cell" style="background-color:orange;width:20px;">
                 </tr>
                 <tr>
                   <td><input id="nbe_ncod" type="checkbox"/>New Bern - Edenton NCOD</td>
@@ -331,8 +359,16 @@
            map.removeLayer(king_charles_ncod_data);
          }
       }
+      function handleCommand12() {
+         if (this.checked) {
+           map.addLayer(rezoning_data);
+         } else {
+           map.removeLayer(rezoning_data);
+         }
+      }
 
       document.getElementById ("newberntod").addEventListener ("click", handleCommand1, false);
+      document.getElementById ("newbernrezoning").addEventListener ("click", handleCommand12, false);
       document.getElementById ("nbe_ncod").addEventListener ("click", handleCommand2, false);
       document.getElementById ("oakwood_park_ncod").addEventListener ("click", handleCommand8, false);
       document.getElementById ("south_park_ncod").addEventListener ("click", handleCommand9, false);
@@ -349,6 +385,7 @@
     // Add geojson data here so the source is a little easier to read.
     var None = null;
     var geojsonFeature = {{tod_zoning_data|safe}};
+    var geojsonFeature_rezoning = {{rezoning_geojson|safe}}
     var geojsonFeature_nbe_ncod = {{nbe_ncod|safe}};
 	var geojsonFeature_oakwood_park_ncod = {{oakwood_park_output_geojson|safe}};
 	var geojsonFeature_south_park_ncod = {{south_park_output_geojson|safe}};

@@ -4,6 +4,7 @@ from simple_history.models import HistoricalRecords
 
 arterial_roads = ["NEW BERN AVE", "RALEIGH BLVD", "EDENTON ST"]
 
+
 class Parcel(models.Model):
     property_address = models.CharField(max_length=400)
     pin = models.CharField(max_length=200)

@@ -49,7 +49,12 @@ def filter_tod(request):
     new_bern_tod = Overlay.objects.get(name="New Bern TOD")
     output_geojson = serialize("geojson", new_bern_tod.parcels.all(),
                                geometry_field="geom",
-                               fields=("property_address",))
+                               fields=("property_address", "curr_zoning", "prop_zoning"))
+
+    new_bern_rezoning = Overlay.objects.get(name="Not TOD but Rezoned")
+    rezoning_geojson = serialize("geojson", new_bern_rezoning.parcels.all(),
+                                 geometry_field="geom",
+                                 fields=("property_address", "curr_zoning", "prop_zoning"))
 
     nbe_ncod = NCOD.objects.filter(olay_name__icontains="New Bern - Edenton")
     nbe_ncod_output_geojson = serialize("geojson", nbe_ncod, geometry_field="geom")
@@ -82,6 +87,7 @@ def filter_tod(request):
     prince_output_geojson = serialize("geojson", [prince_hod], geometry_field="geom")
 
     return render(request, "filtered_tod.html", {"tod_zoning_data": output_geojson,
+                                                 "rezoning_geojson": rezoning_geojson,
                                                  "nbe_ncod": nbe_ncod_output_geojson,
                                                  "oakwood_park_output_geojson": oakwood_park_output_geojson,
                                                  "south_park_output_geojson": south_park_output_geojson,
