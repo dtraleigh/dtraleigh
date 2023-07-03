@@ -32,11 +32,9 @@ def get_page_content(page_link):
 class Command(BaseCommand):
     def handle(self, *args, **options):
         sr_page_link = "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases"
-        aad_page_link = "https://raleighnc.gov/SupportPages/administrative-alternate-design-cases"
         zon_page_link = "https://raleighnc.gov/SupportPages/zoning-cases"
         tc_page_link = "https://raleighnc.gov/SupportPages/text-change-cases"
         neighbor_page_link = "https://raleighnc.gov/planning/neighborhood-meetings"
-        da_page_link = "https://raleighnc.gov/SupportPages/design-alternate-cases"
         message = ""
 
         # scrape the target websites and verify that the table headers are what we expect.
@@ -67,28 +65,28 @@ class Command(BaseCommand):
                     message += "Problem with table. Please check site reviews."
 
         # AAD tables
-        aad_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
-        aad_tables = get_page_content(aad_page_link).find_all("table")
-        for aad_table in aad_tables:
-            x = PrettyTable()
-            aad_actual = []
-            table_thead = aad_table.find("thead")
-            thead_row = table_thead.find_all("td")
-
-            for header in thead_row:
-                aad_actual.append(header.get_text().strip())
-
-            if aad_actual == aad_expected:
-                pass
-            else:
-                message = "AAD Table has changed.\n"
-                try:
-                    x.add_row(aad_actual)
-                    x.add_row(aad_expected)
-                    message += str(x)
-                except Exception as e:
-                    print(e)
-                    message += "Problem with table. Please check AADs."
+        # aad_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
+        # aad_tables = get_page_content(aad_page_link).find_all("table")
+        # for aad_table in aad_tables:
+        #     x = PrettyTable()
+        #     aad_actual = []
+        #     table_thead = aad_table.find("thead")
+        #     thead_row = table_thead.find_all("td")
+        #
+        #     for header in thead_row:
+        #         aad_actual.append(header.get_text().strip())
+        #
+        #     if aad_actual == aad_expected:
+        #         pass
+        #     else:
+        #         message = "AAD Table has changed.\n"
+        #         try:
+        #             x.add_row(aad_actual)
+        #             x.add_row(aad_expected)
+        #             message += str(x)
+        #         except Exception as e:
+        #             print(e)
+        #             message += "Problem with table. Please check AADs."
 
         # TCC tables
         tcc_expected = ["Case Number", "Project Name/Location/Description", "Description", "Status", "Contact"]
@@ -174,28 +172,28 @@ class Command(BaseCommand):
                     message += "Problem with neighborhood tables, please check."
 
         # DA case tables
-        da_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
-        da_tables = get_page_content(da_page_link).find_all("table")
-        for da_table in da_tables:
-            x = PrettyTable()
-            da_actual = []
-            table_thead = da_table.find("thead")
-            thead_row = table_thead.find_all("td")
-
-            for header in thead_row:
-                da_actual.append(header.get_text().strip())
-
-            if da_actual == da_expected:
-                pass
-            else:
-                try:
-                    x.add_row(da_actual)
-                    x.add_row(da_expected)
-                    message = "DA Case Table has changed.\n"
-                    message += str(x)
-                except Exception as e:
-                    print(e)
-                    message += "Problem with da case tables, please check."
+        # da_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
+        # da_tables = get_page_content(da_page_link).find_all("table")
+        # for da_table in da_tables:
+        #     x = PrettyTable()
+        #     da_actual = []
+        #     table_thead = da_table.find("thead")
+        #     thead_row = table_thead.find_all("td")
+        #
+        #     for header in thead_row:
+        #         da_actual.append(header.get_text().strip())
+        #
+        #     if da_actual == da_expected:
+        #         pass
+        #     else:
+        #         try:
+        #             x.add_row(da_actual)
+        #             x.add_row(da_expected)
+        #             message = "DA Case Table has changed.\n"
+        #             message += str(x)
+        #         except Exception as e:
+        #             print(e)
+        #             message += "Problem with da case tables, please check."
 
         if message:
             send_email_notice(message, email_admins())

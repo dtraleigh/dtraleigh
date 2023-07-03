@@ -136,14 +136,14 @@ def difference_table_output(item):
 
 def add_debug_text(item):
     """Additional text to help with debugging. Only add this if the instance is Develop"""
-    if settings.DEVELOP_INSTANCE == "Develop":
-        try:
-            text = f"[Develop - {item._meta.verbose_name.title()}]\n"
-            return text
-        except AttributeError:
-            return ""
-    else:
-        return ""
+    # if settings.DEVELOP_INSTANCE == "Develop":
+    #     try:
+    #         text = f"[Develop - {item._meta.verbose_name.title()}]\n"
+    #         return text
+    #     except AttributeError:
+    #         return ""
+    # else:
+    return ""
 
 
 def get_submitted_year_text(item):

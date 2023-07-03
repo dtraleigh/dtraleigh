@@ -56,6 +56,8 @@ class Subscriber(models.Model):
     name = models.CharField(max_length=254)
     email = models.EmailField(unique=True)
     send_emails = models.BooleanField(default=True)
+    comments = models.CharField(max_length=100, blank=True, null=True)
+    role = models.CharField(max_length=100, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
     is_bot = models.BooleanField(default=False)

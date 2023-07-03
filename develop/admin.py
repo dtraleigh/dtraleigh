@@ -14,7 +14,7 @@ class ControlAdmin(admin.ModelAdmin):
 
 
 class SubscriberAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "created_date", "modified_date", "send_emails", "is_bot", "topic_id")
+    list_display = ("name", "email", "comments", "role", "send_emails", "is_bot", "topic_id")
 
 
 class DevelopmentPlansAdmin(admin.OSMGeoAdmin):

@@ -13,7 +13,7 @@ if env("DJANGO_DEBUG") == "1":
 else:
     DEBUG = False
 
-ALLOWED_HOSTS = ["127.0.0.1", "develop.dtraleigh.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "develop.dtraleigh.com", "dtraleigh.cophead567.opalstacked.com"]
 
 INTERNAL_IPS = [
     "127.0.0.1",
@@ -73,17 +73,9 @@ DATABASES = {
         "PASSWORD": env("DEFAULT_DB_PASS"),
         "HOST": env("DEFAULT_DB_HOST"),
         "PORT": env("DEFAULT_DB_PORT"),
-    },
-    "buildings_db": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": env("BUILDINGS_DB_NAME"),
-        "USER": env("BUILDINGS_DB_USER"),
-        "PASSWORD": env("BUILDINGS_DB_PASS"),
-        "HOST": env("BUILDINGS_DB_HOST"),
-        "PORT": env("BUILDINGS_DB_PORT"),
-    },
+    }
 }
-DATABASE_ROUTERS = ["database_routers.DBRouter.BuildingsRouter"]
+
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -114,7 +106,7 @@ STATIC_URL = "static/"
 if env("DJANGO_DEBUG") == "1":
     STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 else:
-    STATIC_ROOT = "/home/cophead567/apps/develop_static/"
+    STATIC_ROOT = "/home/cophead567/apps/dtraleigh_static/"
 
 # STATICFILES_DIRS = (
 #     "/home/cophead567/apps/develop/myproject/static/",
@@ -126,8 +118,6 @@ else:
 ADMINS = (
     ("Leo", "leo@dtraleigh.com"),
 )
-
-DEVELOP_INSTANCE = env("DEVELOP_INSTANCE")
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = False
@@ -169,8 +159,6 @@ LOGGING = {
     },
 }
 
-# DATA_UPLOAD_MAX_MEMORY_SIZE = 30485760
-# GDAL_LIBRARY_PATH = '/usr/gdal31/lib/libgdal.so.27.0.3'
 GDAL_LIBRARY_PATH = env("GDAL_LIBRARY_PATH")
 X_FRAME_OPTIONS = "SAMEORIGIN"
 

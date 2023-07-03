@@ -20,7 +20,4 @@ class TextGenTestCaseDjango(TestCase):
     def test_add_debug_text(self):
         all_test_items = SiteReviewCase.objects.all()
         for item in all_test_items:
-            if settings.DEVELOP_INSTANCE == "Develop":
-                self.assertNotEqual(add_debug_text(item), "")
-            else:
-                self.assertEqual(add_debug_text(item), "")
+            self.assertEqual(add_debug_text(item), "")

@@ -5,3 +5,4 @@ static/*
 *.pyc
 archived_data/*
 buildings/geojson_files/*
+fixtures/*
