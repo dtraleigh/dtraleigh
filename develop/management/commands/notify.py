@@ -80,13 +80,3 @@ class Command(BaseCommand):
                     if covered_items and subscriber.is_bot:
                         for item in covered_items:
                             create_new_discourse_post(subscriber, item)
-
-                    # Not using this so commenting it out for now. Feb 2022
-                    # Send emails if the subscriber is not a bot
-                    # if covered_items and not subscriber.is_bot:
-                    #     message = create_email_message(covered_items)
-                    #     email_to = [subscriber.email]
-                    #     send_email_notice(message, email_to)
-                    #
-                    #     n = datetime.now().strftime("%H:%M %m-%d-%y")
-                    #     logger.info(f"Email sent at {n}")

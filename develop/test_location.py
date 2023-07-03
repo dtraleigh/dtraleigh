@@ -29,8 +29,8 @@ class LocationSimpleTestCase(SimpleTestCase):
         self.assertEqual(parcel["PIN_NUM"], pin1)
 
     def test_get_lat_lon_by_pin(self):
-        pin1 = "1703738654"
-        self.assertEqual(get_lat_lon_by_pin(pin1), (35.76526123905713, -78.6364477714054))
+        pin1 = "1706535824"
+        self.assertEqual(get_lat_lon_by_pin(pin1), (35.84822550943202, -78.64392716406971))
 
         pin2 = "1703481885"
         self.assertEqual(get_lat_lon_by_pin(pin2), (35.779616373601435, -78.648778649107086))

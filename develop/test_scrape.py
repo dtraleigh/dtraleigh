@@ -10,9 +10,9 @@ class ScrapeTestCaseSimple(SimpleTestCase):
         """quick test to check that the sites we are scraping are returning data"""
         websites_used = [
             "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases",
-            "https://raleighnc.gov/SupportPages/administrative-alternate-design-cases",
-            "https://raleighnc.gov/SupportPages/zoning-cases",
-            "https://raleighnc.gov/SupportPages/text-change-cases",
+            # "https://raleighnc.gov/SupportPages/administrative-alternate-design-cases",
+            "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases",
+            "https://raleighnc.gov/planning/services/text-changes/text-change-cases",
             ]
 
         for url in websites_used:

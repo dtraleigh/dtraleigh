@@ -13,7 +13,7 @@ if env("DJANGO_DEBUG") == "1":
 else:
     DEBUG = False
 
-ALLOWED_HOSTS = ["127.0.0.1", "develop.dtraleigh.com", "dtraleigh.cophead567.opalstacked.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "develop.dtraleigh.com"]
 
 INTERNAL_IPS = [
     "127.0.0.1",
@@ -107,13 +107,6 @@ if env("DJANGO_DEBUG") == "1":
     STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 else:
     STATIC_ROOT = "/home/cophead567/apps/dtraleigh_static/"
-
-# STATICFILES_DIRS = (
-#     "/home/cophead567/apps/develop/myproject/static/",
-# )
-
-# MEDIA_URL = "https://develop.dtraleigh.com/static/uploads/"
-# MEDIA_ROOT = "/home/cophead567/apps/develop_static/uploads"
 
 ADMINS = (
     ("Leo", "leo@dtraleigh.com"),
