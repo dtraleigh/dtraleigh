@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path, re_path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -9,6 +9,7 @@ from newBernTOD import views as newbern_views
 
 urlpatterns = [
                   path("admin/", admin.site.urls),
+                  path("eats/", include("eats.urls")),
                   path("itb/", develop_views.itb),
                   path("ncod/", develop_views.ncod),
                   path("dx/", develop_views.dx_zoning),

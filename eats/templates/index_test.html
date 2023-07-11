@@ -1,0 +1,68 @@
+{% extends "eats_base.html" %}
+
+{% block content %}
+{% load static %}
+	<div class="jumbotron" id="header-image">
+    <h1>DT Eats</h1>
+      <p class="lead">Downtown. Eating. Drinking. List.</p>
+      <p><a class="btn btn-lg btn-success jQueryBookmark" href="/eats" title="Downtown Raleigh Eats">Bookmark me!</a></p>
+  </div>
+
+	<div class="row marketing">
+	  <div class="col-lg-9" id="listOfDistricts">
+			<div id="districtHeaderDiv">
+	      <div id="districtHeaderDivUpper">
+		    	<p class="text-center"><a id="top"></a>The Districts of</p>
+				</div>
+			    <div id="districtHeaderDivLower">
+				      <p class="text-center">Downtown Raleigh</p>
+			    </div>
+				</div>
+					<ul>
+					{% for district in district_list %}
+						  <li>
+							    <a href="#{{district.id}}" title="{{district.name}}" class="district_link">{{district.name}}</a>
+						  </li>
+					{%endfor%}
+		      </ul>
+      </div>
+    </div>
+	<div class="row marketing">
+		<p class="text-center"><button class="btn btn-lg btn-success local-toggle" title="Downtown Raleigh Eats Local">Show Local Only</a></button></p>
+		<p class="text-center notlocalyay">Showing only local Eats. (yay!)</p>
+	</div>
+
+  {%for district in district_list%}
+  <div class="col-lg-12">
+	<h3 class="text-center districtLabel"><a id="{{district.id}}"></a>{{district.name}}</h3>
+	<h5 class="businessTypeLabel">Eats</h5>
+	  <ul>
+      {%for business in business_list%}
+		{%if business.district == district and business.is_eats%}
+	      {%include "generate_list_items.html"%}
+		{%endif%}
+	  {%endfor%}
+	  </ul>
+	<h5 class="businessTypeLabel">Drinks</h5>
+	  <ul>
+      {%for business in business_list%}
+		{%if business.district == district and business.is_drinks%}
+	      {%include "generate_list_items.html"%}
+		{%endif%}
+	  {%endfor%}
+	  </ul>
+	<h5 class="businessTypeLabel">Coffees</h5>
+	  <ul>
+      {%for business in business_list%}
+		{%if business.district == district and business.is_coffee%}
+	      {%include "generate_list_items.html"%}
+		{%endif%}
+	  {%endfor%}
+	  </ul>
+	<div class="jumpBtn">
+		<p><a class="btn btn-success" href="#top" title="Back to the Districts">Back to the Districts</a></p>
+	</div>
+  </div>
+  {%endfor%}
+
+{%endblock content%}

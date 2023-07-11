@@ -28,11 +28,13 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django_extensions",
+    "widget_tweaks",
     "develop",
     "simple_history",
     "leaflet",
     "buildings",
     "newBernTOD",
+    "eats"
 ]
 
 MIDDLEWARE = [

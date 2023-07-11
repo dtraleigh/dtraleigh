@@ -1,0 +1,120 @@
+{% extends "base-admin.html" %}
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    {% if messages %}
+    <div class="alert alert-success" role="alert">
+          {% for message in messages %}
+          <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+          {% endfor %}
+    </div>
+    {% endif %}
+    <div class="col-xs-12 col-sm-6 col-lg-6">
+      <h1>Tips</h1>
+      <p><a href="#add_tip">Add new</a></p>
+      {%for district in district_list%}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h2 class="panel-title">{{district.name}}</h2>
+        </div>
+        <div class="panel-body">
+          <ul>
+            {%for tip in tip_list%}
+              {%if tip.district == district%}
+                <li>
+                  <a href="/eats/manage/tips/{{tip.id}}" class="tip-name-li">{{tip.name}}</a>
+                  {%if today < tip.open_date%}
+                    <span class="label label-info">Coming Soon</span>
+                  {%elif today >= tip.open_date%}
+                    <span class="label label-success">Now Open!</span>
+                  {%endif%}
+                  {%if tip.added%}
+                    <span class="label label-primary">Added</span>
+                  {%endif%}
+                </li>
+              {%endif%}
+            {%endfor%}
+          </ul>
+        </div>
+      </div>
+      {%empty%}
+      <p>No tips at this time.</p>
+      {%endfor%}
+    </div>
+    <div class="col-xs-12 col-sm-6 col-lg-6">
+      <a name="add_tip"></a>
+      <h1>Add a Tip</h1>
+      <form method="POST" class="tip_form">{% csrf_token %}
+        <ul class="form-style-1">
+          {% load widget_tweaks %}
+          <li>
+            {{ tip_form.name.errors }}
+            <label for="{{ tip_form.name.id_for_label }}">Name:</label>
+            {{ tip_form.name|add_class:"input-lg" }}
+          </li>
+          <li>
+            {{ tip_form.district.errors }}
+            <label for="{{ tip_form.district.id_for_label }}">District:</label>
+            {{ tip_form.district|add_class:"input-lg" }}
+          </li>
+          <li>
+            {{ tip_form.food_hall.errors }}
+            <label for="{{ tip_form.food_hall.id_for_label }}">Food Hall:</label>
+            {{ tip_form.food_hall|add_class:"input-lg" }}
+          </li>
+          <li>
+            {{ tip_form.link.errors }}
+            <label for="{{ tip_form.link.id_for_label }}">URL:</label>
+            {{ tip_form.link|add_class:"input-lg" }}
+          </li>
+          <li>
+            {{ tip_form.references.errors }}
+            <label for="{{ tip_form.references.id_for_label }}">References:</label>
+            {{ tip_form.references|add_class:"per-100-width" }}
+          </li>
+          <li>
+            {{ tip_form.description.errors }}
+            <label for="{{ tip_form.description.id_for_label }}">Description:</label>
+            {{ tip_form.description }}
+          </li>
+          <li>
+            <label for="{{ tip_form.has_outdoor_seating.id_for_label }}">Outdoor Seating:</label>
+            {{tip_form.has_outdoor_seating}}
+          </li>
+          <li>
+            <label for="{{ tip_form.is_temp_closed.id_for_label }}">Temporarily closed:</label>
+            {{tip_form.is_temp_closed}}
+          </li>
+          <li>
+            <label for="{{ tip_form.is_eats.id_for_label }}">Eats:</label>
+            {{tip_form.is_eats}}
+          </li>
+          <li>
+            <label for="{{ tip_form.is_drinks.id_for_label }}">Drinks:</label>
+            {{tip_form.is_drinks}}
+          </li>
+          <li>
+            <label for="{{ tip_form.is_coffee.id_for_label }}">Coffees:</label>
+            {{tip_form.is_coffee}}
+          </li>
+          <li>
+            <label for="{{ tip_form.is_food_hall.id_for_label }}">Is Food Hall?:</label>
+            {{tip_form.is_food_hall}}
+          </li>
+          <li>
+            <label for="{{ tip_form.not_local.id_for_label }}">Not local:</label>
+            {{tip_form.not_local}}
+          </li>
+          <li>
+            <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
+            <button type="submit" class="btn btn-lg btn-default" name="cancel-button">Cancel</button>
+          </li>
+        </ul>
+      </form>
+    </div>
+  </div>
+</div>
+
+{%endblock content%}

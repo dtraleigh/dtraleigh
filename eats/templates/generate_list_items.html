@@ -1,0 +1,62 @@
+{%load static%}
+<!-- set class if biz is not local -->
+{%if business.not_local%}
+<li class="notlocal">
+{%else%}
+<li>
+{%endif%}
+<!-- For food halls collapse/exapnd logic-->
+{%if business.is_food_hall%}
+<a href="#food_hall{{business.id}}" title="{{business.name}}" class="businessLink" data-toggle="collapse" id="food-hall{{business.id}}">{{business.name}}
+  <span class="glyphicon glyphicon-collapse-down" aria-hidden="true" id="glyphicon-foodhall{{business.id}}"></span></a>
+{%else%}
+<a href="{{business.link}}" title="{{business.name}}" class="businessLink">{{business.name}}</a>
+{%endif%}
+<!-- outdoor seating, don't track anymore
+{%if business.has_outdoor_seating%}
+	<img src="{% static "img/outdoor_seating_logo.png" %}" class="outdoorSeatingIcon" title="Outdoor Seating" alt="(Outdoor Seating)">
+{%endif%} -->
+<!-- Temporarily closed -->
+{%if business.is_temp_closed%}
+	(temp closed)
+{%endif%}
+<!-- set class if biz is not local -->
+{%if business.is_new_biz%}
+	<span class="label label-success">New!</span>
+{%elif business.is_coming_soon%}
+	<span class="label label-info">Coming Soon</span>
+{%endif%}
+<!-- Architect's hidden bar-->
+{%if "The Architect" in business.name%}
+  <img src="{% static "img/books.jpg" %}" class="books" title="Behind the bookcase" alt="Behind the bookcase" onclick="showhide_menu('btn1');">
+  </li>
+  <li id="btn1" class="btn" style="display:none;">
+    <a href="http://www.architectbar.com/the-green-light/" class="businessLink" title="The Green Light">The Green Light</a>
+  </li>
+{%endif%}
+<!-- Adding vendors to food halls-->
+{%if business.is_food_hall%}
+	<div class="collapse" id="food_hall{{business.id}}">
+	  <ul>
+	  {%for vendor in vendor_list%}
+		{%if vendor.food_hall == business%}
+		  <!-- set class if biz is not local -->
+		  {%if vendor.not_local%}
+		  <li class="notlocal">
+		  {%else%}
+		  <li>
+		  {%endif%}
+		  <!-- set class if biz is not local -->
+		  <a href="{{vendor.link}}">{{vendor.name}}</a>
+		  {%if vendor.is_new_biz%}
+		  <span class="label label-success">New!</span>
+		  {%elif vendor.is_coming_soon%}
+		  <span class="label label-info">Coming Soon</span>
+		  {%endif%}
+		  </li>
+		{%endif%}
+	  {%endfor%}
+	  </ul>
+	</div>
+{%endif%}
+</li>

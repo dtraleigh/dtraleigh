@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-XHD4YKX7EK"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+
+	  gtag('config', 'G-XHD4YKX7EK');
+	</script>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="">
+	{% load static %}
+	<link rel="shortcut icon" href="{% static "img/favicon.png" %}">
+
+	<title>Downtown Raleigh Eating. Drinking. List.</title>
+
+	<link href='https://fonts.googleapis.com/css?family=Cantata+One' rel='stylesheet' type='text/css'>
+
+	<!-- Bootstrap core CSS -->
+	<link href="{% static "eats-css/bootstrap.min.css" %}" rel="stylesheet">
+
+	<!-- Custom styles for this template -->
+	<link href="{% static "eats-css/eats-custom.css" %}" rel="stylesheet">
+	<style>
+	#header-image{
+	  background-image:url("{% static "img/ish-1.jpg" %}");
+	}
+	#header-image2{
+	  background-image:url("{% static "img/best-1.jpg" %}");
+	}
+	</style>
+</head>
+<body>
+  <div class="container">
+
+    {% block content %}{% endblock %}
+
+    <div class="footer">
+      <p>&copy; {% now "Y" %} Leo Suarez, a side project of <a href="https://dtraleigh.com" title="The Raleigh Connoisseur">The Raleigh Connoisseur</a></p>
+    </div>
+  </div> <!-- /container -->
+
+<script src="{% static "eats-js/jquery-1.11.0.min.js" %}"}></script>
+<script src="{% static "eats-js/jquery-migrate-1.2.1.min.js" %}"></script>
+<script src="{% static "eats-js/bootstrap.min.js" %}"}></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $("a.jQueryBookmark").click(function(e){
+    e.preventDefault(); // this will prevent the anchor tag from going the user off to the link
+    var bookmarkUrl = this.href;
+    var bookmarkTitle = this.title;
+
+    alert('Oopsie! Your browser can\'t bookmark me. Please do it manually.');
+    });
+  });
+</script>
+<script>
+  $(".local-toggle").click(function(){
+        $(".notlocal").toggle();
+        $(".notlocalyay").toggle();
+      });
+</script>
+<script>
+  window.showhide_menu = function(id){
+      $('.btn:not(#'+id+')').hide();
+     $("#" + id).toggle();
+  }
+</script>
+</body>
+</html>
