@@ -1,0 +1,117 @@
+import requests
+
+from django.core.management.base import BaseCommand
+from django.contrib.gis.geos import Point
+from rpd.models import *
+from rpd.functions import is_glenwood_south
+
+"""
+Notes. After scanning all incidents in downtown from beginning to today, we see:
+Crime category
+{
+    'ASSAULT',
+    'UNAUTHORIZED MOTOR VEHICLE USE',
+    'VANDALISM',
+    'ALL OTHER OFFENSES',
+    'ROBBERY',
+    'MV THEFT',
+    'KIDNAPPING',
+    'HUMAN TRAFFICKING',
+    'DISORDERLY CONDUCT',
+    'OBSCENE MATERIAL',
+    'STOLEN PROPERTY',
+    'HUMANE',
+    'EXTORTION',
+    'MURDER',
+    'TRAFFIC',
+    'FRAUD',
+    'BURGLARY/RESIDENTIAL',
+    'BURGLARY/COMMERCIAL',
+    'PROSTITUTION',
+    'SEX OFFENSES',
+    'MISCELLANEOUS',
+    'EMBEZZLEMENT',
+    'WEAPONS VIOLATION',
+    'DRUGS',
+    'ARSON',
+    'LARCENY',
+    'LARCENY FROM MV',
+    'DRUG VIOLATIONS',
+    'BRIBERY',
+    'LIQUOR LAW VIOLATIONS',
+    'JUVENILE'
+}
+
+Crime type
+{
+    '',
+    'CRIMES AGAINST SOCIETY',
+    'NULL',
+    'CRIMES AGAINST PERSONS',
+    'CRIMES AGAINST PROPERTY'
+}
+
+"""
+
+
+def get_incidents_for_month(year, month):
+    """
+    Returns the features list from the response for all incidents that have district = downtown
+    :param year: int year value
+    :param month: int month value
+    :return: json data list from query response
+    """
+    url = f"https://services.arcgis.com/v400IkDOw1ad7Yad/arcgis/rest/services/Police_Incidents/FeatureServer/0/query?where=reported_year={str(year)} and district='Downtown' and reported_month={str(month)}&outFields=*&outSR=4326&f=json"
+
+    response = requests.request("GET", url, headers={}, data={})
+    response_json = response.json()
+
+    try:
+        if response_json["exceededTransferLimit"]:
+            print(f"Exceeded response limit for {year}, month {month}")
+    except KeyError:
+        pass
+
+    return response_json["features"]
+
+
+def save_incidents_to_db(incidents):
+    for incident in incidents:
+        if not Incident.objects.filter(objectid=incident["attributes"]["OBJECTID"]).exists():
+            attrs_dict = {}
+            for key, value in Incident.incident_mapping.items():
+                attrs_dict[key] = incident["attributes"][value]
+
+            try:
+                incident_location = Point(incident["geometry"]["x"], incident["geometry"]["y"])
+            except KeyError:
+                incident_location = None
+
+            # Incident.objects.create(**attrs_dict, geom=incident_location)
+            new_incident = Incident(**attrs_dict, geom=incident_location)
+            new_incident.save()
+            new_incident.is_glenwood_south = is_glenwood_south(new_incident)
+            new_incident.save()
+
+
+class Command(BaseCommand):
+    help = "Example: scan_incidents 2020 -m 1"
+
+    def add_arguments(self, parser):
+        # Required arguments
+        parser.add_argument("scan_year", help="year to get all incidents")
+
+        # Optional arguments
+        parser.add_argument("-m", "--month", type=int, help="Optional month param")
+
+    def handle(self, *args, **options):
+        scan_year = options["scan_year"]
+        scan_month = options["month"]
+
+        if not scan_month:
+            for month in range(1, 13):
+                incidents = get_incidents_for_month(scan_year, month)
+                save_incidents_to_db(incidents)
+        else:
+            incidents = get_incidents_for_month(scan_year, scan_month)
+            save_incidents_to_db(incidents)

@@ -34,7 +34,8 @@ INSTALLED_APPS = [
     "leaflet",
     "buildings",
     "newBernTOD",
-    "eats"
+    "eats",
+    "rpd"
 ]
 
 MIDDLEWARE = [

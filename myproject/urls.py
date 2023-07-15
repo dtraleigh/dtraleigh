@@ -10,6 +10,7 @@ from newBernTOD import views as newbern_views
 urlpatterns = [
                   path("admin/", admin.site.urls),
                   path("eats/", include("eats.urls")),
+                  path("rpd/", include("rpd.urls")),
                   path("itb/", develop_views.itb),
                   path("ncod/", develop_views.ncod),
                   path("dx/", develop_views.dx_zoning),
