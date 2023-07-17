@@ -62,7 +62,8 @@ def get_hod_streetside_overlays():
 
 
 def get_ncod_overlays():
-    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/9/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+    url = "https://maps.raleighnc.gov/arcgis/rest/services/Planning/Overlays/MapServer/9/query?where=1%3D1&outFields" \
+          "=*&outSR=4326&f=json"
 
     payload = {}
     headers = {
@@ -76,7 +77,7 @@ def get_ncod_overlays():
 
 def get_parcels_around_new_bern(offset):
     url = f"https://maps.wake.gov/arcgis/rest/services/Property/Parcels/MapServer/0/query?where=1%3D1&outFields" \
-          f"=*&geometry=-78.654%2C35.769%2C-78.580%2C35.793&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel" \
+          f"=*&geometry=-78.648%2C35.754%2C-78.518%2C35.823&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel" \
           f"=esriSpatialRelIntersects&outSR=4326&f=json&resultOffset={str(offset)}"
 
     payload = {}

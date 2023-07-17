@@ -8,10 +8,11 @@ arterial_roads = ["NEW BERN AVE", "RALEIGH BLVD", "EDENTON ST"]
 class Parcel(models.Model):
     property_address = models.CharField(max_length=400)
     pin = models.CharField(max_length=200)
-    acres = models.CharField(max_length=200)
-    owner = models.CharField(max_length=200)
-    curr_zoning = models.CharField(max_length=200)
-    prop_zoning = models.CharField(max_length=200)
+    defunct_pin = models.BooleanField(default=False)
+    acres = models.CharField(max_length=200, blank=True, null=True)
+    owner = models.CharField(max_length=200, blank=True, null=True)
+    curr_zoning = models.CharField(max_length=200, blank=True, null=True)
+    prop_zoning = models.CharField(max_length=200, blank=True, null=True)
     history = HistoricalRecords()
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
@@ -26,7 +27,19 @@ class Parcel(models.Model):
     total_value_assd = models.IntegerField(blank=True, null=True)
     propdesc = models.CharField(max_length=250, blank=True, null=True)
     year_built = models.IntegerField(blank=True, null=True)
-    totsalprice = models.DecimalField(max_digits=11, decimal_places=2, blank=True, null=True)
+    totsalprice = models.DecimalField(max_digits=11, decimal_places=2, blank=True, null=True, verbose_name="Sale Price")
+    sale_date = models.BigIntegerField(blank=True, null=True, verbose_name="Sale Date")
+    type_and_use = models.CharField(max_length=100, blank=True, null=True)
+    type_use_decode = models.CharField(max_length=100, blank=True, null=True)
+    designstyl = models.CharField(max_length=100, blank=True, null=True)
+    design_style_decode = models.CharField(max_length=100, blank=True, null=True)
+    units = models.DecimalField(max_digits=11, decimal_places=2, blank=True, null=True)
+    totstructs = models.IntegerField(blank=True, null=True, verbose_name="Total Structures")
+    totunits = models.IntegerField(blank=True, null=True, verbose_name="Total Units")
+    site = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["modified_date"]
 
     def __str__(self):
         return f"{self.id} - Pin:{self.pin}"
