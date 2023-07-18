@@ -4,8 +4,8 @@ from decimal import Decimal
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.management.base import BaseCommand
 
-from newBernTOD.functions import get_parcels_around_new_bern, get_parcel_fields_by_pin
-from newBernTOD.models import Parcel, Overlay
+from newBernTOD.functions import get_parcels_around_new_bern
+from newBernTOD.models import Parcel
 
 logger = logging.getLogger("django")
 
@@ -70,18 +70,24 @@ def create_update_parcels(new_bern_parcels):
     parcels_updated = []
 
     for parcel_json in new_bern_parcels:
+        # Debug
+        # debug = False
+        # if parcel_json["attributes"]["PIN_NUM"] == "1713675460":
+        #     debug = True
+        #     print(f"On pin 1713675460.")
         # If parcel does not exist, add it
         if not Parcel.objects.filter(pin=parcel_json["attributes"]["PIN_NUM"]).exists():
             parcel_geom = GEOSGeometry(
                 '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
             try:
                 Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                                      reid=parcel_json["attributes"]["REID"],
                                       owner=parcel_json["attributes"]["OWNER"],
                                       geom=parcel_geom,
                                       addr1=parcel_json["attributes"]["ADDR1"],
                                       addr2=parcel_json["attributes"]["ADDR2"],
                                       addr3=parcel_json["attributes"]["ADDR3"],
-                                      deed_acres=parcel_json["attributes"]["DEED_ACRES"],
+                                      deed_acres=Decimal(parcel_json["attributes"]["DEED_ACRES"]).quantize(Decimal("1.000000")),
                                       bldg_val=parcel_json["attributes"]["BLDG_VAL"],
                                       land_val=parcel_json["attributes"]["LAND_VAL"],
                                       total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
@@ -117,6 +123,8 @@ def create_update_parcels(new_bern_parcels):
                         item_from_json = Decimal(parcel_data["DEED_ACRES"]).quantize(Decimal("1.000000"))
 
                     if difference_exists(item_from_json, item_from_db):
+                        # if debug:
+                        #     print(f"{item_from_json} : {item_from_db}")
                         setattr(parcel, field.lower(), parcel_data[field])
                         num_changes += 1
                 # Need to add a geom check
