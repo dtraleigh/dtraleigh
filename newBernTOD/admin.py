@@ -4,7 +4,7 @@ from newBernTOD.models import *
 
 
 class ParcelAdmin(admin.OSMGeoAdmin):
-    list_display = ("pin", "property_address", "curr_zoning", "prop_zoning")
+    list_display = ("pin", "property_address", "curr_zoning", "prop_zoning", "created_date", "modified_date")
 
 
 class OverlayAdmin(admin.ModelAdmin):

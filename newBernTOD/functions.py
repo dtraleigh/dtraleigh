@@ -1,5 +1,17 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from django.contrib.gis.geos import GEOSGeometry
+
+
+def query_url_with_retries(url):
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+
+    return session.get(url)
 
 
 def get_geometry_by_parcel_pin(pin):
@@ -80,9 +92,7 @@ def get_parcels_around_new_bern(offset):
           f"=*&geometry=-78.648%2C35.754%2C-78.518%2C35.823&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel" \
           f"=esriSpatialRelIntersects&outSR=4326&f=json&resultOffset={str(offset)}"
 
-    payload = {}
-    headers = {}
-
-    response = requests.request("GET", url, headers=headers, data=payload)
+    # response = requests.request("GET", url, headers={}, data={})
+    response = query_url_with_retries(url)
 
     return response.json()

@@ -34,7 +34,11 @@ fields_to_track = [
 
 
 class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument("-t", "--test", action="store_true", help="Run a test without making any changes.")
+
     def handle(self, *args, **options):
+        test = options["test"]
         offset = 0
         num_parcels_updated = 0
         num_parcels_created = 0
@@ -44,13 +48,16 @@ class Command(BaseCommand):
         while offset < 35000:
             print(str(offset))
             onek_parcels = get_parcels_around_new_bern(offset)
-            num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned = create_update_parcels(onek_parcels["features"])
+            num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned = create_update_parcels(
+                onek_parcels["features"], test)
             num_parcels_created += num_parcels_created_returned
             num_parcels_updated += num_parcels_updated_returned
             parcels_with_issues.append(parcels_with_issues_returned)
             parcels_updated.append(parcels_updated_returned)
             offset += 1000
 
+        if test:
+            print("Test Results:")
         print(f"{str(num_parcels_created)} parcels created.")
         print(f"{str(num_parcels_updated)} parcels updated.")
         print(f"Parcels updated: {parcels_updated}")
@@ -63,7 +70,7 @@ def difference_exists(item1, item2):
     return True
 
 
-def create_update_parcels(new_bern_parcels):
+def create_update_parcels(new_bern_parcels, test):
     num_parcels_updated = 0
     num_parcels_created = 0
     parcels_with_issues = []
@@ -80,29 +87,31 @@ def create_update_parcels(new_bern_parcels):
             parcel_geom = GEOSGeometry(
                 '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
             try:
-                Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
-                                      reid=parcel_json["attributes"]["REID"],
-                                      owner=parcel_json["attributes"]["OWNER"],
-                                      geom=parcel_geom,
-                                      addr1=parcel_json["attributes"]["ADDR1"],
-                                      addr2=parcel_json["attributes"]["ADDR2"],
-                                      addr3=parcel_json["attributes"]["ADDR3"],
-                                      deed_acres=Decimal(parcel_json["attributes"]["DEED_ACRES"]).quantize(Decimal("1.000000")),
-                                      bldg_val=parcel_json["attributes"]["BLDG_VAL"],
-                                      land_val=parcel_json["attributes"]["LAND_VAL"],
-                                      total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
-                                      propdesc=parcel_json["attributes"]["PROPDESC"],
-                                      year_built=parcel_json["attributes"]["YEAR_BUILT"],
-                                      totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
-                                      sale_date=parcel_json["attributes"]["SALE_DATE"],
-                                      type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
-                                      type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
-                                      designstyl=parcel_json["attributes"]["DESIGNSTYL"],
-                                      design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
-                                      units=parcel_json["attributes"]["UNITS"],
-                                      totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
-                                      totunits=parcel_json["attributes"]["TOTUNITS"],
-                                      site=parcel_json["attributes"]["SITE"])
+                if not test:
+                    Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                                          reid=parcel_json["attributes"]["REID"],
+                                          owner=parcel_json["attributes"]["OWNER"],
+                                          geom=parcel_geom,
+                                          addr1=parcel_json["attributes"]["ADDR1"],
+                                          addr2=parcel_json["attributes"]["ADDR2"],
+                                          addr3=parcel_json["attributes"]["ADDR3"],
+                                          deed_acres=Decimal(parcel_json["attributes"]["DEED_ACRES"]).quantize(
+                                              Decimal("1.000000")),
+                                          bldg_val=parcel_json["attributes"]["BLDG_VAL"],
+                                          land_val=parcel_json["attributes"]["LAND_VAL"],
+                                          total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
+                                          propdesc=parcel_json["attributes"]["PROPDESC"],
+                                          year_built=parcel_json["attributes"]["YEAR_BUILT"],
+                                          totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
+                                          sale_date=parcel_json["attributes"]["SALE_DATE"],
+                                          type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
+                                          type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
+                                          designstyl=parcel_json["attributes"]["DESIGNSTYL"],
+                                          design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
+                                          units=parcel_json["attributes"]["UNITS"],
+                                          totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
+                                          totunits=parcel_json["attributes"]["TOTUNITS"],
+                                          site=parcel_json["attributes"]["SITE"])
                 num_parcels_created += 1
             except Exception as e:
                 print(e)
@@ -129,7 +138,8 @@ def create_update_parcels(new_bern_parcels):
                         num_changes += 1
                 # Need to add a geom check
                 if num_changes > 0:
-                    parcel.save()
+                    if not test:
+                        parcel.save()
                     num_parcels_updated += 1
 
                     print(f"Updated {parcel}")
