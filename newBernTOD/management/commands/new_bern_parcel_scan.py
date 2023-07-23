@@ -1,7 +1,9 @@
 import logging
+from datetime import datetime
 from decimal import Decimal
 
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
 from newBernTOD.functions import get_parcels_around_new_bern
@@ -48,7 +50,7 @@ class Command(BaseCommand):
         while offset < 35000:
             print(str(offset))
             onek_parcels = get_parcels_around_new_bern(offset)
-            num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned = create_update_parcels(
+            num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned, output_message = create_update_parcels(
                 onek_parcels["features"], test)
             num_parcels_created += num_parcels_created_returned
             num_parcels_updated += num_parcels_updated_returned
@@ -57,11 +59,14 @@ class Command(BaseCommand):
             offset += 1000
 
         if test:
-            print("Test Results:")
-        print(f"{str(num_parcels_created)} parcels created.")
-        print(f"{str(num_parcels_updated)} parcels updated.")
-        print(f"Parcels updated: {parcels_updated}")
-        print(f"Check these parcels: {parcels_with_issues}")
+            output_message += "Test Results:\n"
+        output_message += f"{str(num_parcels_created)} parcels created.\n"
+        output_message += f"{str(num_parcels_updated)} parcels updated.\n"
+        output_message += f"Parcels updated: {parcels_updated}\n"
+        output_message += f"Check these parcels: {parcels_with_issues}\n"
+
+        print(output_message)
+        send_email_notice(output_message, ["leo@dtraleigh.com"])
 
 
 def difference_exists(item1, item2):
@@ -75,6 +80,7 @@ def create_update_parcels(new_bern_parcels, test):
     num_parcels_created = 0
     parcels_with_issues = []
     parcels_updated = []
+    output_message = ""
 
     for parcel_json in new_bern_parcels:
         # Debug
@@ -114,9 +120,10 @@ def create_update_parcels(new_bern_parcels, test):
                                           site=parcel_json["attributes"]["SITE"])
                 num_parcels_created += 1
             except Exception as e:
-                print(e)
-                print(f"Issue with this feature")
-                print(parcel_json)
+                logger.exception(e)
+                output_message += f"{e}\n"
+                output_message += f"Issue with this feature\n"
+                output_message += f"{parcel_json}\n"
         # Else, check if there is an update to the parcel and update a tracked field
         else:
             try:
@@ -142,11 +149,26 @@ def create_update_parcels(new_bern_parcels, test):
                         parcel.save()
                     num_parcels_updated += 1
 
-                    print(f"Updated {parcel}")
+                    output_message += f"Updated {parcel}\n"
                     parcels_updated.append(parcel)
             except Exception as e:
-                # print(parcel)
-                print(e)
+                logger.exception(e)
+                output_message += f"{e}\n"
                 parcels_with_issues.append(parcel)
 
-    return num_parcels_created, num_parcels_updated, parcels_with_issues, parcels_updated
+    return num_parcels_created, num_parcels_updated, parcels_with_issues, parcels_updated, output_message
+
+
+def send_email_notice(message, email_to):
+    subject = "Message from New Bern TOD"
+
+    email_from = "leo@cophead567.opalstacked.com"
+    send_mail(
+        subject,
+        message,
+        email_from,
+        email_to,
+        fail_silently=False,
+    )
+    n = datetime.now()
+    logger.info("Email sent at " + n.strftime("%H:%M %m-%d-%y"))
