@@ -60,8 +60,9 @@ def glenwood(request):
     yesterday = f"{yesterday_dt.strftime('%b')} {yesterday_dt.day}, {yesterday_dt.year}"
     gs_incidents_full_years = Incident.objects.filter(
         Q(reported_year__gt=2014), Q(reported_year__lt=datetime.today().year), Q(is_glenwood_south=True))
-    gs_incidents_ytd = Incident.objects.filter(Q(reported_year__gt=2014), Q(reported_month__lte=yesterday_dt.month),
-                                               Q(reported_day__lte=yesterday_dt.day), Q(is_glenwood_south=True))
+
+    gs_incidents = Incident.objects.filter(is_glenwood_south=True)
+    gs_incidents_ytd = [incident for incident in gs_incidents if incident.is_year_to_date()]
 
     full_years = [str(year) for year in range(2015, datetime.today().year)]
     ytd_years = [str(year) for year in range(2015, datetime.today().year + 1)]
@@ -103,8 +104,9 @@ def glenwood_test(request):
     yesterday = f"{yesterday_dt.strftime('%b')} {yesterday_dt.day}, {yesterday_dt.year}"
     gs_incidents_full_years = Incident.objects.filter(
         Q(reported_year__gt=2014), Q(reported_year__lt=datetime.today().year), Q(is_glenwood_south=True))
-    gs_incidents_ytd = Incident.objects.filter(Q(reported_year__gt=2014), Q(reported_month__lte=yesterday_dt.month),
-                                               Q(reported_day__lte=yesterday_dt.day), Q(is_glenwood_south=True))
+
+    gs_incidents = Incident.objects.filter(is_glenwood_south=True)
+    gs_incidents_ytd = [incident for incident in gs_incidents if incident.is_year_to_date()]
 
     full_years = [str(year) for year in range(2015, datetime.today().year)]
     ytd_years = [str(year) for year in range(2015, datetime.today().year + 1)]

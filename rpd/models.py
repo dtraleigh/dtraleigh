@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models
 from django.contrib.gis.db import models
 
@@ -82,3 +84,18 @@ class Incident(models.Model):
         "latitude": "latitude",
         "longitude": "longitude"
     }
+
+    def get_datetime_object(self):
+        return datetime(self.reported_year, self.reported_month, self.reported_day)
+
+    def is_year_to_date(self):
+        # Return true if this incident is between Jan 1 and less than today, regardless of year
+        todays_month = datetime.today().month
+        todays_day = datetime.today().day
+
+        if self.reported_month == todays_month and self.reported_day < todays_day:
+            return True
+        elif self.reported_month < todays_month:
+            return True
+        else:
+            return False
