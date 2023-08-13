@@ -3,10 +3,9 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.contrib.gis.geos import GEOSGeometry
-from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 
-from newBernTOD.functions import get_parcels_around_new_bern
+from newBernTOD.functions import get_parcels_around_new_bern, send_email_notice
 from newBernTOD.models import Parcel
 
 logger = logging.getLogger("django")
@@ -66,7 +65,9 @@ class Command(BaseCommand):
         output_message += f"Check these parcels: {parcels_with_issues}\n"
 
         print(output_message)
-        send_email_notice(output_message, ["leo@dtraleigh.com"])
+        subject = "Message from New Bern TOD"
+
+        send_email_notice(subject, output_message, ["leo@dtraleigh.com"])
 
 
 def difference_exists(item1, item2):
@@ -157,18 +158,3 @@ def create_update_parcels(new_bern_parcels, test):
                 parcels_with_issues.append(parcel)
 
     return num_parcels_created, num_parcels_updated, parcels_with_issues, parcels_updated, output_message
-
-
-def send_email_notice(message, email_to):
-    subject = "Message from New Bern TOD"
-
-    email_from = "leo@cophead567.opalstacked.com"
-    send_mail(
-        subject,
-        message,
-        email_from,
-        email_to,
-        fail_silently=False,
-    )
-    n = datetime.now()
-    logger.info("Email sent at " + n.strftime("%H:%M %m-%d-%y"))

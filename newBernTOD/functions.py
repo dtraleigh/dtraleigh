@@ -2,7 +2,11 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.mail import send_mail
+from datetime import datetime
+import logging
 
+logger = logging.getLogger("django")
 
 def query_url_with_retries(url):
     session = requests.Session()
@@ -96,3 +100,16 @@ def get_parcels_around_new_bern(offset):
     response = query_url_with_retries(url)
 
     return response.json()
+
+
+def send_email_notice(subject, message, email_to):
+    email_from = "leo@cophead567.opalstacked.com"
+    send_mail(
+        subject,
+        message,
+        email_from,
+        email_to,
+        fail_silently=False,
+    )
+    n = datetime.now()
+    logger.info(f'{subject} - Email sent at {n.strftime("%H:%M %m-%d-%y")}')

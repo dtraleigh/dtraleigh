@@ -54,14 +54,16 @@ Crime type
 """
 
 
-def get_incidents_for_month(year, month):
+def get_downtown_incidents_for_month(year, month):
     """
     Returns the features list from the response for all incidents that have district = downtown
     :param year: int year value
     :param month: int month value
     :return: json data list from query response
     """
-    url = f"https://services.arcgis.com/v400IkDOw1ad7Yad/arcgis/rest/services/Police_Incidents/FeatureServer/0/query?where=reported_year={str(year)} and district='Downtown' and reported_month={str(month)}&outFields=*&outSR=4326&f=json"
+    url = (f"https://services.arcgis.com/v400IkDOw1ad7Yad/arcgis/rest/services/Police_Incidents/"
+           f"FeatureServer/0/query?where=reported_year={str(year)}"
+           f"and district='Downtown' and reported_month={str(month)}&outFields=*&outSR=4326&f=json")
 
     response = requests.request("GET", url, headers={}, data={})
     response_json = response.json()
@@ -76,6 +78,9 @@ def get_incidents_for_month(year, month):
 
 
 def save_incidents_to_db(incidents):
+    new_downtown_incidents = []
+    new_glenwood_south_incidents = []
+
     for incident in incidents:
         if not Incident.objects.filter(objectid=incident["attributes"]["OBJECTID"]).exists():
             attrs_dict = {}
@@ -92,6 +97,12 @@ def save_incidents_to_db(incidents):
             new_incident.save()
             new_incident.is_glenwood_south = is_glenwood_south(new_incident)
             new_incident.save()
+            new_downtown_incidents.append(new_incident)
+
+            if new_incident.is_glenwood_south:
+                new_glenwood_south_incidents.append(new_incident)
+
+    return new_downtown_incidents, new_glenwood_south_incidents
 
 
 class Command(BaseCommand):
@@ -110,8 +121,8 @@ class Command(BaseCommand):
 
         if not scan_month:
             for month in range(1, 13):
-                incidents = get_incidents_for_month(scan_year, month)
+                incidents = get_downtown_incidents_for_month(scan_year, month)
                 save_incidents_to_db(incidents)
         else:
-            incidents = get_incidents_for_month(scan_year, scan_month)
+            incidents = get_downtown_incidents_for_month(scan_year, scan_month)
             save_incidents_to_db(incidents)
