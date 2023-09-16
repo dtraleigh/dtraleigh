@@ -7,6 +7,7 @@ arterial_roads = ["NEW BERN AVE", "RALEIGH BLVD", "EDENTON ST"]
 
 class Parcel(models.Model):
     property_address = models.CharField(max_length=400)
+    objectid = models.IntegerField()
     pin = models.CharField(max_length=200)
     defunct_pin = models.BooleanField(default=False)
     acres = models.CharField(max_length=200, blank=True, null=True)
@@ -16,6 +17,7 @@ class Parcel(models.Model):
     history = HistoricalRecords()
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=False)
     geom = models.PolygonField(srid=4326, null=True)
     reid = models.CharField(max_length=20, blank=True, null=True)
     addr1 = models.CharField(max_length=100, blank=True, null=True)

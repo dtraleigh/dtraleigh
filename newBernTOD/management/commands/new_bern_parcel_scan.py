@@ -12,6 +12,7 @@ logger = logging.getLogger("django")
 
 fields_to_track = [
     "REID",
+    "OBJECTID",
     "ADDR1",
     "ADDR2",
     "ADDR3",
@@ -48,6 +49,8 @@ class Command(BaseCommand):
         parcels_updated = []
         num_parcels = get_parcels_around_new_bern("", True)["count"]
 
+        Parcel.objects.filter(pin=None)
+
         print(f"Found {num_parcels} parcels total in the scan area.\n")
         while offset < num_parcels:
             print(f"Getting parcels {offset + 1} to {offset + increment}")
@@ -79,6 +82,11 @@ def difference_exists(item1, item2):
     return True
 
 
+def set_parcel_to_active(parcel):
+    parcel.is_active = True
+    parcel.save()
+
+
 def create_update_parcels(new_bern_parcels, test):
     num_parcels_updated = 0
     num_parcels_created = 0
@@ -99,6 +107,7 @@ def create_update_parcels(new_bern_parcels, test):
             try:
                 if not test:
                     Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                                          objectid=parcel_json["attributes"]["OBJECTID"],
                                           reid=parcel_json["attributes"]["REID"],
                                           owner=parcel_json["attributes"]["OWNER"],
                                           geom=parcel_geom,
@@ -121,7 +130,8 @@ def create_update_parcels(new_bern_parcels, test):
                                           units=parcel_json["attributes"]["UNITS"],
                                           totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
                                           totunits=parcel_json["attributes"]["TOTUNITS"],
-                                          site=parcel_json["attributes"]["SITE"])
+                                          site=parcel_json["attributes"]["SITE"],
+                                          is_active=True)
                 num_parcels_created += 1
             except Exception as e:
                 logger.exception(e)
@@ -133,6 +143,7 @@ def create_update_parcels(new_bern_parcels, test):
             try:
                 parcel = Parcel.objects.get(pin=parcel_json["attributes"]["PIN_NUM"])
                 parcel_data = parcel_json["attributes"]
+                set_parcel_to_active(parcel)
 
                 num_changes = 0
                 for field in fields_to_track:
