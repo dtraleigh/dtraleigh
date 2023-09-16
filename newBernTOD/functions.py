@@ -91,10 +91,10 @@ def get_ncod_overlays():
     return response.json()
 
 
-def get_parcels_around_new_bern(offset):
+def get_parcels_around_new_bern(offset, count_only=False):
     url = f"https://maps.wake.gov/arcgis/rest/services/Property/Parcels/MapServer/0/query?where=1%3D1&outFields" \
           f"=*&geometry=-78.648%2C35.754%2C-78.518%2C35.823&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel" \
-          f"=esriSpatialRelIntersects&outSR=4326&f=json&resultOffset={str(offset)}"
+          f"=esriSpatialRelIntersects&outSR=4326&f=json&resultOffset={str(offset)}&returnCountOnly={str(count_only).lower()}"
 
     # response = requests.request("GET", url, headers={}, data={})
     response = query_url_with_retries(url)

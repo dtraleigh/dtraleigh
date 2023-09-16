@@ -43,11 +43,14 @@ class Command(BaseCommand):
         offset = 0
         num_parcels_updated = 0
         num_parcels_created = 0
+        increment = 1000
         parcels_with_issues = []
         parcels_updated = []
+        num_parcels = get_parcels_around_new_bern("", True)["count"]
 
-        while offset < 35000:
-            print(str(offset))
+        print(f"Found {num_parcels} parcels total in the scan area.\n")
+        while offset < num_parcels:
+            print(f"Getting parcels {offset + 1} to {offset + increment}")
             onek_parcels = get_parcels_around_new_bern(offset)
             num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned, output_message = create_update_parcels(
                 onek_parcels["features"], test)
@@ -55,7 +58,7 @@ class Command(BaseCommand):
             num_parcels_updated += num_parcels_updated_returned
             parcels_with_issues.append(parcels_with_issues_returned)
             parcels_updated.append(parcels_updated_returned)
-            offset += 1000
+            offset += increment
 
         if test:
             output_message += "Test Results:\n"
