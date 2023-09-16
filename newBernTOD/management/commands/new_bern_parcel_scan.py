@@ -87,6 +87,43 @@ def set_parcel_to_active(parcel):
     parcel.save()
 
 
+def create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object):
+    Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                          objectid=parcel_json["attributes"]["OBJECTID"],
+                          reid=parcel_json["attributes"]["REID"],
+                          owner=parcel_json["attributes"]["OWNER"],
+                          geom=parcel_GEOSGeometry_object,
+                          addr1=parcel_json["attributes"]["ADDR1"],
+                          addr2=parcel_json["attributes"]["ADDR2"],
+                          addr3=parcel_json["attributes"]["ADDR3"],
+                          deed_acres=Decimal(parcel_json["attributes"]["DEED_ACRES"]).quantize(
+                              Decimal("1.000000")),
+                          bldg_val=parcel_json["attributes"]["BLDG_VAL"],
+                          land_val=parcel_json["attributes"]["LAND_VAL"],
+                          total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
+                          propdesc=parcel_json["attributes"]["PROPDESC"],
+                          year_built=parcel_json["attributes"]["YEAR_BUILT"],
+                          totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
+                          sale_date=parcel_json["attributes"]["SALE_DATE"],
+                          type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
+                          type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
+                          designstyl=parcel_json["attributes"]["DESIGNSTYL"],
+                          design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
+                          units=parcel_json["attributes"]["UNITS"],
+                          totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
+                          totunits=parcel_json["attributes"]["TOTUNITS"],
+                          site=parcel_json["attributes"]["SITE"],
+                          is_active=True)
+
+
+def update_geom_if_changed(parcel, parcel_GEOSGeometry_object):
+    if parcel.geom.json != parcel_GEOSGeometry_object.json:
+        parcel.geom = parcel_GEOSGeometry_object.json
+        parcel.save()
+        return True
+    return False
+
+
 def create_update_parcels(new_bern_parcels, test):
     num_parcels_updated = 0
     num_parcels_created = 0
@@ -95,43 +132,12 @@ def create_update_parcels(new_bern_parcels, test):
     output_message = ""
 
     for parcel_json in new_bern_parcels:
-        # Debug
-        # debug = False
-        # if parcel_json["attributes"]["PIN_NUM"] == "1713675460":
-        #     debug = True
-        #     print(f"On pin 1713675460.")
+        parcel_GEOSGeometry_object = GEOSGeometry(
+            '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
         # If parcel does not exist, add it
         if not Parcel.objects.filter(pin=parcel_json["attributes"]["PIN_NUM"]).exists():
-            parcel_geom = GEOSGeometry(
-                '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
             try:
-                if not test:
-                    Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
-                                          objectid=parcel_json["attributes"]["OBJECTID"],
-                                          reid=parcel_json["attributes"]["REID"],
-                                          owner=parcel_json["attributes"]["OWNER"],
-                                          geom=parcel_geom,
-                                          addr1=parcel_json["attributes"]["ADDR1"],
-                                          addr2=parcel_json["attributes"]["ADDR2"],
-                                          addr3=parcel_json["attributes"]["ADDR3"],
-                                          deed_acres=Decimal(parcel_json["attributes"]["DEED_ACRES"]).quantize(
-                                              Decimal("1.000000")),
-                                          bldg_val=parcel_json["attributes"]["BLDG_VAL"],
-                                          land_val=parcel_json["attributes"]["LAND_VAL"],
-                                          total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
-                                          propdesc=parcel_json["attributes"]["PROPDESC"],
-                                          year_built=parcel_json["attributes"]["YEAR_BUILT"],
-                                          totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
-                                          sale_date=parcel_json["attributes"]["SALE_DATE"],
-                                          type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
-                                          type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
-                                          designstyl=parcel_json["attributes"]["DESIGNSTYL"],
-                                          design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
-                                          units=parcel_json["attributes"]["UNITS"],
-                                          totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
-                                          totunits=parcel_json["attributes"]["TOTUNITS"],
-                                          site=parcel_json["attributes"]["SITE"],
-                                          is_active=True)
+                if not test: create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object)
                 num_parcels_created += 1
             except Exception as e:
                 logger.exception(e)
@@ -154,14 +160,14 @@ def create_update_parcels(new_bern_parcels, test):
                         item_from_json = Decimal(parcel_data["DEED_ACRES"]).quantize(Decimal("1.000000"))
 
                     if difference_exists(item_from_json, item_from_db):
-                        # if debug:
-                        #     print(f"{item_from_json} : {item_from_db}")
                         setattr(parcel, field.lower(), parcel_data[field])
                         num_changes += 1
-                # Need to add a geom check
+
+                parcel_geom_has_changed = update_geom_if_changed(parcel, parcel_GEOSGeometry_object)
+                if parcel_geom_has_changed: num_changes += 1
+
                 if num_changes > 0:
-                    if not test:
-                        parcel.save()
+                    if not test: parcel.save()
                     num_parcels_updated += 1
 
                     output_message += f"Updated {parcel}\n"

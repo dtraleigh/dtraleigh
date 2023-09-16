@@ -44,7 +44,7 @@ class Parcel(models.Model):
         ordering = ["modified_date"]
 
     def __str__(self):
-        return f"{self.id} - Pin:{self.pin}"
+        return f"{self.id} - Pin:{self.pin}, objectid: {self.objectid}"
 
 
 class Overlay(models.Model):
