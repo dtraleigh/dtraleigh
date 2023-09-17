@@ -5,8 +5,8 @@ from decimal import Decimal
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.management.base import BaseCommand
 
-from newBernTOD.functions import get_parcels_around_new_bern, send_email_notice
-from parcels.functions_scan import update_parcel_is_active
+from newBernTOD.functions import get_parcels_around_new_bern
+from parcels.functions_scan import update_parcel_is_active, scan_results_email
 from newBernTOD.models import Parcel
 
 logger = logging.getLogger("django")
@@ -53,17 +53,15 @@ class Command(BaseCommand):
         parcels_updated = []
         num_parcels = get_parcels_around_new_bern("", True)["count"]
 
-        Parcel.objects.filter(pin=None)
-
         print(f"Found {num_parcels} parcels total in the scan area.\n")
-        while offset < num_parcels:
+        while offset < 2000:
             print(f"Getting parcels {offset + 1} to {offset + increment}")
             onek_parcels = get_parcels_around_new_bern(offset)
 
             (num_parcels_created_returned, num_parcels_updated_returned,
              parcels_with_issues_returned, parcels_updated_returned, output_message) = create_update_parcels(
                 onek_parcels["features"], test)
-            self.update_objectids_list(onek_parcels["features"])
+            update_objectids_list(onek_parcels["features"])
 
             num_parcels_created += num_parcels_created_returned
             num_parcels_updated += num_parcels_updated_returned
@@ -83,11 +81,7 @@ class Command(BaseCommand):
         print(output_message)
         subject = "Message from New Bern TOD"
 
-        send_email_notice(subject, output_message, ["leo@dtraleigh.com"])
-
-    def update_objectids_list(self, parcel_json):
-        for parcel in parcel_json:
-            list_of_objectids_scanned.append(parcel["attributes"]["OBJECTID"])
+        scan_results_email(subject, output_message)
 
 
 def difference_exists(item1, item2):
@@ -149,7 +143,7 @@ def create_update_parcels(new_bern_parcels, test):
         parcel_GEOSGeometry_object = GEOSGeometry(
             '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
         # If parcel does not exist, add it
-        if not Parcel.objects.filter(pin=parcel_json["attributes"]["PIN_NUM"]).exists():
+        if not Parcel.objects.filter(objectid=parcel_json["attributes"]["OBJECTID"]).exists():
             try:
                 if not test: create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object)
                 num_parcels_created += 1
@@ -161,7 +155,7 @@ def create_update_parcels(new_bern_parcels, test):
         # Else, check if there is an update to the parcel and update a tracked field
         else:
             try:
-                parcel = Parcel.objects.get(pin=parcel_json["attributes"]["PIN_NUM"])
+                parcel = Parcel.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
                 parcel_data = parcel_json["attributes"]
                 set_parcel_to_active(parcel)
 
@@ -172,7 +166,7 @@ def create_update_parcels(new_bern_parcels, test):
 
                     # Rare but it happens
                     if field == "DEED_ACRES" and parcel_data["DEED_ACRES"] is None:
-                        item_from_json = 0
+                        item_from_json = None
                     elif field == "DEED_ACRES":
                         item_from_json = Decimal(parcel_data["DEED_ACRES"]).quantize(Decimal("1.000000"))
 
@@ -195,3 +189,8 @@ def create_update_parcels(new_bern_parcels, test):
                 parcels_with_issues.append(parcel)
 
     return num_parcels_created, num_parcels_updated, parcels_with_issues, parcels_updated, output_message
+
+
+def update_objectids_list(parcel_json):
+    for parcel in parcel_json:
+        list_of_objectids_scanned.append(parcel["attributes"]["OBJECTID"])
