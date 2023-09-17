@@ -6,6 +6,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.management.base import BaseCommand
 
 from newBernTOD.functions import get_parcels_around_new_bern, send_email_notice
+from parcels.functions_scan import update_parcel_is_active
 from newBernTOD.models import Parcel
 
 logger = logging.getLogger("django")
@@ -34,8 +35,11 @@ fields_to_track = [
     "SITE"
 ]
 
+list_of_objectids_scanned = []
+
 
 class Command(BaseCommand):
+
     def add_arguments(self, parser):
         parser.add_argument("-t", "--test", action="store_true", help="Run a test without making any changes.")
 
@@ -55,13 +59,19 @@ class Command(BaseCommand):
         while offset < num_parcels:
             print(f"Getting parcels {offset + 1} to {offset + increment}")
             onek_parcels = get_parcels_around_new_bern(offset)
-            num_parcels_created_returned, num_parcels_updated_returned, parcels_with_issues_returned, parcels_updated_returned, output_message = create_update_parcels(
+
+            (num_parcels_created_returned, num_parcels_updated_returned,
+             parcels_with_issues_returned, parcels_updated_returned, output_message) = create_update_parcels(
                 onek_parcels["features"], test)
+            self.update_objectids_list(onek_parcels["features"])
+
             num_parcels_created += num_parcels_created_returned
             num_parcels_updated += num_parcels_updated_returned
             parcels_with_issues.append(parcels_with_issues_returned)
             parcels_updated.append(parcels_updated_returned)
             offset += increment
+
+        update_parcel_is_active(list_of_objectids_scanned, Parcel.objects.filter(is_active=True))
 
         if test:
             output_message += "Test Results:\n"
@@ -74,6 +84,10 @@ class Command(BaseCommand):
         subject = "Message from New Bern TOD"
 
         send_email_notice(subject, output_message, ["leo@dtraleigh.com"])
+
+    def update_objectids_list(self, parcel_json):
+        for parcel in parcel_json:
+            list_of_objectids_scanned.append(parcel["attributes"]["OBJECTID"])
 
 
 def difference_exists(item1, item2):
@@ -156,7 +170,10 @@ def create_update_parcels(new_bern_parcels, test):
                     item_from_json = parcel_data[field]
                     item_from_db = getattr(parcel, field.lower())
 
-                    if field == "DEED_ACRES":
+                    # Rare but it happens
+                    if field == "DEED_ACRES" and parcel_data["DEED_ACRES"] is None:
+                        item_from_json = 0
+                    elif field == "DEED_ACRES":
                         item_from_json = Decimal(parcel_data["DEED_ACRES"]).quantize(Decimal("1.000000"))
 
                     if difference_exists(item_from_json, item_from_db):
