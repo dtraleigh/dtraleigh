@@ -35,7 +35,8 @@ INSTALLED_APPS = [
     "buildings",
     "newBernTOD",
     "eats",
-    "rpd"
+    "rpd",
+    "parcels"
 ]
 
 MIDDLEWARE = [
@@ -68,6 +69,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "myproject.wsgi.application"
 
+DATABASE_ROUTERS = ["myproject.db_routers.ParcelRouter"]
+
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -76,6 +79,14 @@ DATABASES = {
         "PASSWORD": env("DEFAULT_DB_PASS"),
         "HOST": env("DEFAULT_DB_HOST"),
         "PORT": env("DEFAULT_DB_PORT"),
+    },
+    "parcels": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": env("PARCELS_DB_NAME"),
+        "USER": env("PARCELS_DB_USER"),
+        "PASSWORD": env("PARCELS_DB_PASS"),
+        "HOST": env("PARCELS_DB_HOST"),
+        "PORT": env("PARCELS_DB_PORT"),
     }
 }
 
