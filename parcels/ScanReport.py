@@ -39,3 +39,12 @@ class ScanReport:
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.output_message)
+
+    def increment_num_parcels_created(self):
+        self.num_parcels_created += 1
+
+    def increment_num_changes(self):
+        self.num_changes += 1
+
+    def increment_num_parcels_updated(self):
+        self.num_parcels_updated += 1
