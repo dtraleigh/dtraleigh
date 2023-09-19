@@ -1,11 +1,12 @@
-from django.test import SimpleTestCase
 from django.test import TestCase
 
-from newBernTOD.management.commands.update_existing_parcels import difference_exists
-from newBernTOD.models import Parcel
+from newBernTOD.models import NewBernParcel
+from parcels.functions_scan import difference_exists, update_parcel_is_active
 
 
 class TODTestCase(TestCase):
+    databases = "__all__"
+
     def test_difference_exists(self):
         self.assertFalse(difference_exists("Address 1", "Address 1"))
         self.assertFalse(difference_exists(1, 1))
@@ -14,7 +15,8 @@ class TODTestCase(TestCase):
         self.assertTrue(difference_exists(1, 2))
         self.assertTrue(difference_exists(1.0, 1.1))
 
-        test_parcel = Parcel.objects.create(
+        test_parcel = NewBernParcel.objects.create(
+            objectid=0,
             property_address="123 Test Street",
             bldg_val=100,
             totsalprice=150.15
@@ -27,4 +29,25 @@ class TODTestCase(TestCase):
         self.assertTrue(difference_exists(test_parcel.bldg_val, 115))
         self.assertTrue(difference_exists(test_parcel.totsalprice, 165.44))
 
-        test_parcel.delete()
+    def test_update_parcel_is_active(self):
+        test_parcel1 = NewBernParcel.objects.create(
+            objectid=0,
+            property_address="123 Test Street",
+            bldg_val=100,
+            totsalprice=150.15,
+            is_active=True
+        )
+        active_parcels = NewBernParcel.objects.filter(is_active=True)
+        active_parcels_objectids = [p.objectid for p in active_parcels]
+
+        test_parcel2 = NewBernParcel.objects.create(
+            objectid=1,
+            property_address="456 Test Street",
+            bldg_val=100,
+            totsalprice=150.15,
+            is_active=True
+        )
+
+        update_parcel_is_active(active_parcels_objectids, NewBernParcel.objects.filter(is_active=True))
+        test_parcel2.refresh_from_db()
+        self.assertFalse(test_parcel2.is_active, f"test_parcel2.is_active = {test_parcel2.is_active}")

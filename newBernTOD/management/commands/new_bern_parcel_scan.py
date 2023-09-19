@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from newBernTOD.functions import get_parcels_around_new_bern
 from parcels.ScanReport import ScanReport
 from parcels.functions_scan import update_parcel_is_active, create_update_parcels
-from newBernTOD.models import Parcel
+from newBernTOD.models import NewBernParcel
 
 list_of_objectids_scanned = []
 
@@ -21,15 +21,14 @@ class Command(BaseCommand):
         scan_report.total_parcels_in_dataset = get_parcels_around_new_bern("", True)["count"]
 
         print(f"Found {scan_report.total_parcels_in_dataset} parcels total in the scan area.\n")
-        # while offset < scan_report.total_parcels_in_dataset:
-        while offset < 3000:
+        while offset < scan_report.total_parcels_in_dataset:
             print(f"Getting parcels {offset + 1} to {offset + increment}")
             onek_parcels = get_parcels_around_new_bern(offset)
-            create_update_parcels(onek_parcels["features"], scan_report)
+            create_update_parcels(onek_parcels["features"], scan_report, NewBernParcel)
             self.update_objectids_list(onek_parcels["features"])
             offset += increment
 
-        update_parcel_is_active(list_of_objectids_scanned, Parcel.objects.filter(is_active=True))
+        update_parcel_is_active(list_of_objectids_scanned, NewBernParcel.objects.filter(is_active=True))
         scan_report.send_output_message()
         print(scan_report.output_message)
 

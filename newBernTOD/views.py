@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from newBernTOD.models import Overlay, Parcel, NCOD, HOD
+from newBernTOD.models import Overlay, NewBernParcel, NCOD, HOD
 from develop.views import get_ncod_data
 
 
@@ -103,7 +103,7 @@ def filter_tod(request):
 
 @xframe_options_exempt
 def show_all_parcels(request):
-    all_parcels = serialize("geojson", Parcel.objects.all(), geometry_field="geom")
+    all_parcels = serialize("geojson", NewBernParcel.objects.all(), geometry_field="geom")
 
     return render(request, "all_parcels.html", {"all_parcels": all_parcels})
 

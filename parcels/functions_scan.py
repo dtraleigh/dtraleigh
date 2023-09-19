@@ -7,7 +7,6 @@ from _decimal import Decimal
 from django.contrib.gis.geos import GEOSGeometry
 
 from newBernTOD.functions import send_email_notice
-from newBernTOD.models import Parcel
 
 env = environ.Env(DEBUG=(bool, False))
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -61,35 +60,35 @@ def set_parcel_to_active(parcel):
     parcel.save()
 
 
-def create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object):
+def create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object, parcel_model):
     deed_acres_value = parcel_json["attributes"]["DEED_ACRES"]
     deed_acres_translate = handle_deed_acres_special_case(deed_acres_value)
 
-    Parcel.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
-                          objectid=parcel_json["attributes"]["OBJECTID"],
-                          reid=parcel_json["attributes"]["REID"],
-                          owner=parcel_json["attributes"]["OWNER"],
-                          geom=parcel_GEOSGeometry_object,
-                          addr1=parcel_json["attributes"]["ADDR1"],
-                          addr2=parcel_json["attributes"]["ADDR2"],
-                          addr3=parcel_json["attributes"]["ADDR3"],
-                          deed_acres=deed_acres_translate,
-                          bldg_val=parcel_json["attributes"]["BLDG_VAL"],
-                          land_val=parcel_json["attributes"]["LAND_VAL"],
-                          total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
-                          propdesc=parcel_json["attributes"]["PROPDESC"],
-                          year_built=parcel_json["attributes"]["YEAR_BUILT"],
-                          totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
-                          sale_date=parcel_json["attributes"]["SALE_DATE"],
-                          type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
-                          type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
-                          designstyl=parcel_json["attributes"]["DESIGNSTYL"],
-                          design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
-                          units=parcel_json["attributes"]["UNITS"],
-                          totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
-                          totunits=parcel_json["attributes"]["TOTUNITS"],
-                          site=parcel_json["attributes"]["SITE"],
-                          is_active=True)
+    parcel_model.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                                objectid=parcel_json["attributes"]["OBJECTID"],
+                                reid=parcel_json["attributes"]["REID"],
+                                owner=parcel_json["attributes"]["OWNER"],
+                                geom=parcel_GEOSGeometry_object,
+                                addr1=parcel_json["attributes"]["ADDR1"],
+                                addr2=parcel_json["attributes"]["ADDR2"],
+                                addr3=parcel_json["attributes"]["ADDR3"],
+                                deed_acres=deed_acres_translate,
+                                bldg_val=parcel_json["attributes"]["BLDG_VAL"],
+                                land_val=parcel_json["attributes"]["LAND_VAL"],
+                                total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
+                                propdesc=parcel_json["attributes"]["PROPDESC"],
+                                year_built=parcel_json["attributes"]["YEAR_BUILT"],
+                                totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
+                                sale_date=parcel_json["attributes"]["SALE_DATE"],
+                                type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
+                                type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
+                                designstyl=parcel_json["attributes"]["DESIGNSTYL"],
+                                design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
+                                units=parcel_json["attributes"]["UNITS"],
+                                totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
+                                totunits=parcel_json["attributes"]["TOTUNITS"],
+                                site=parcel_json["attributes"]["SITE"],
+                                is_active=True)
 
 
 def update_geom_if_changed(parcel, parcel_GEOSGeometry_object):
@@ -111,14 +110,14 @@ def create_GEOSGeometry_object(parcel_json):
         '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
 
 
-def create_update_parcels(parcels_scanned, scan_report):
+def create_update_parcels(parcels_scanned, scan_report, parcel_model):
     for parcel_json in parcels_scanned:
         parcel_GEOSGeometry_object = create_GEOSGeometry_object(parcel_json)
 
         # If parcel does not exist, add it
-        if not Parcel.objects.filter(objectid=parcel_json["attributes"]["OBJECTID"]).exists():
+        if not parcel_model.objects.filter(objectid=parcel_json["attributes"]["OBJECTID"]).exists():
             try:
-                if not scan_report.is_test: create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object)
+                if not scan_report.is_test: create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object, parcel_model)
                 scan_report.increment_num_parcels_created()
             except Exception as e:
                 logger.exception(e)
@@ -126,7 +125,7 @@ def create_update_parcels(parcels_scanned, scan_report):
         # Else, check if there is an update to the parcel and update a tracked field
         else:
             try:
-                parcel = Parcel.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
+                parcel = parcel_model.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
                 parcel_data = parcel_json["attributes"]
                 set_parcel_to_active(parcel)
 

@@ -1,11 +1,10 @@
-from django.db import models
 from django.contrib.gis.db import models
 from simple_history.models import HistoricalRecords
 
 arterial_roads = ["NEW BERN AVE", "RALEIGH BLVD", "EDENTON ST"]
 
 
-class Parcel(models.Model):
+class NewBernParcel(models.Model):
     property_address = models.CharField(max_length=400)
     objectid = models.IntegerField()
     pin = models.CharField(max_length=200)
@@ -57,7 +56,7 @@ class Overlay(models.Model):
     ORDINANCE = models.CharField(max_length=250, blank=True, null=True)
     EFF_DATE = models.BigIntegerField(blank=True, null=True)
     geom = models.PolygonField(srid=4326, null=True, blank=True)
-    parcels = models.ManyToManyField("Parcel", default=None, blank=True)
+    parcels = models.ManyToManyField("NewBernParcel", default=None, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
@@ -113,7 +112,7 @@ class NCOD(models.Model):
     shape_leng = models.FloatField()
     shape_area = models.FloatField()
     geom = models.MultiPolygonField(srid=4326)
-    parcels = models.ManyToManyField("Parcel", default=None, blank=True)
+    parcels = models.ManyToManyField("NewBernParcel", default=None, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
@@ -169,7 +168,7 @@ class HOD(models.Model):
     shape_leng = models.FloatField()
     shape_area = models.FloatField()
     geom = models.MultiPolygonField(srid=4326)
-    parcels = models.ManyToManyField("Parcel", default=None, blank=True)
+    parcels = models.ManyToManyField("NewBernParcel", default=None, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
