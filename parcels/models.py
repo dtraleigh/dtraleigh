@@ -36,6 +36,8 @@ class Parcel(models.Model):
     totstructs = models.IntegerField(blank=True, null=True, verbose_name="Total Structures")
     totunits = models.IntegerField(blank=True, null=True, verbose_name="Total Units")
     site = models.IntegerField(blank=True, null=True)
+    city = models.CharField(max_length=8, blank=True, null=True)
+    city_decode = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         ordering = ["modified_date"]

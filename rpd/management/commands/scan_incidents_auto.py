@@ -28,6 +28,6 @@ class Command(BaseCommand):
         report += f"    * New Downtown Incidents: {len(new_downtown_incidents)}\n"
         report += f"    * New Glenwood Incidents: {len(new_glenwood_south_incidents)}\n"
 
-        subject = "Message from RPD"
-        send_email_notice(subject, report, ["leo@dtraleigh.com"])
+        # subject = "Message from RPD"
+        # send_email_notice(subject, report, ["leo@dtraleigh.com"])
         refresh_is_glenwood_south()
