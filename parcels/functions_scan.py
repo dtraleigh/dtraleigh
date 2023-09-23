@@ -64,35 +64,70 @@ def set_parcel_to_active(parcel):
     parcel.save()
 
 
-def create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object, parcel_model):
+def create_a_new_parcel(parcel_json, parcel_model, scan_report):
     deed_acres_value = parcel_json["attributes"]["DEED_ACRES"]
     deed_acres_translate = handle_deed_acres_special_case(deed_acres_value)
 
-    parcel_model.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
-                                objectid=parcel_json["attributes"]["OBJECTID"],
-                                reid=parcel_json["attributes"]["REID"],
-                                owner=parcel_json["attributes"]["OWNER"],
-                                geom=parcel_GEOSGeometry_object,
-                                addr1=parcel_json["attributes"]["ADDR1"],
-                                addr2=parcel_json["attributes"]["ADDR2"],
-                                addr3=parcel_json["attributes"]["ADDR3"],
-                                deed_acres=deed_acres_translate,
-                                bldg_val=parcel_json["attributes"]["BLDG_VAL"],
-                                land_val=parcel_json["attributes"]["LAND_VAL"],
-                                total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
-                                propdesc=parcel_json["attributes"]["PROPDESC"],
-                                year_built=parcel_json["attributes"]["YEAR_BUILT"],
-                                totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
-                                sale_date=parcel_json["attributes"]["SALE_DATE"],
-                                type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
-                                type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
-                                designstyl=parcel_json["attributes"]["DESIGNSTYL"],
-                                design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
-                                units=parcel_json["attributes"]["UNITS"],
-                                totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
-                                totunits=parcel_json["attributes"]["TOTUNITS"],
-                                site=parcel_json["attributes"]["SITE"],
-                                is_active=True)
+    try:
+        if not scan_report.is_test:
+            parcel_model.objects.create(pin=parcel_json["attributes"]["PIN_NUM"],
+                                        objectid=parcel_json["attributes"]["OBJECTID"],
+                                        reid=parcel_json["attributes"]["REID"],
+                                        owner=parcel_json["attributes"]["OWNER"],
+                                        geom=create_GEOSGeometry_object(parcel_json),
+                                        addr1=parcel_json["attributes"]["ADDR1"],
+                                        addr2=parcel_json["attributes"]["ADDR2"],
+                                        addr3=parcel_json["attributes"]["ADDR3"],
+                                        deed_acres=deed_acres_translate,
+                                        bldg_val=parcel_json["attributes"]["BLDG_VAL"],
+                                        land_val=parcel_json["attributes"]["LAND_VAL"],
+                                        total_value_assd=parcel_json["attributes"]["TOTAL_VALUE_ASSD"],
+                                        propdesc=parcel_json["attributes"]["PROPDESC"],
+                                        year_built=parcel_json["attributes"]["YEAR_BUILT"],
+                                        totsalprice=parcel_json["attributes"]["TOTSALPRICE"],
+                                        sale_date=parcel_json["attributes"]["SALE_DATE"],
+                                        type_and_use=parcel_json["attributes"]["TYPE_AND_USE"],
+                                        type_use_decode=parcel_json["attributes"]["TYPE_USE_DECODE"],
+                                        designstyl=parcel_json["attributes"]["DESIGNSTYL"],
+                                        design_style_decode=parcel_json["attributes"]["DESIGN_STYLE_DECODE"],
+                                        units=parcel_json["attributes"]["UNITS"],
+                                        totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
+                                        totunits=parcel_json["attributes"]["TOTUNITS"],
+                                        site=parcel_json["attributes"]["SITE"],
+                                        is_active=True)
+        scan_report.increment_num_parcels_created()
+    except Exception as e:
+        logger.exception(e)
+        scan_report.add_parcel_json_issue(parcel_json, e)
+
+
+def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
+    try:
+        parcel = parcel_model.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
+        parcel_data = parcel_json["attributes"]
+        set_parcel_to_active(parcel)
+
+        for field in fields_to_track:
+            item_from_json = parcel_data[field]
+            item_from_db = getattr(parcel, field.lower())
+            if field == "DEED_ACRES": item_from_json = handle_deed_acres_special_case(parcel_data["DEED_ACRES"])
+
+            if difference_exists(item_from_json, item_from_db):
+                setattr(parcel, field.lower(), parcel_data[field])
+                scan_report.increment_num_changes()
+
+        parcel_GEOSGeometry_object = create_GEOSGeometry_object(parcel_json)
+        parcel_geom_has_changed = update_geom_if_changed(parcel, parcel_GEOSGeometry_object)
+        if parcel_geom_has_changed: scan_report.increment_num_changes()
+
+        if scan_report.num_changes > 0:
+            if not scan_report.is_test: parcel.save()
+            scan_report.increment_num_parcels_updated()
+
+            scan_report.output_message += f"Updated {parcel}\n"
+            scan_report.parcels_updated.append(parcel)
+    except Exception as e:
+        scan_report.add_parcel_issue(parcel, e)
 
 
 def update_geom_if_changed(parcel, parcel_GEOSGeometry_object):
@@ -127,43 +162,3 @@ def truncate_list_for_printing(target_list):
 
     return target_list
 
-
-def create_update_parcels(parcels_scanned, scan_report, parcel_model):
-    for parcel_json in parcels_scanned:
-        parcel_GEOSGeometry_object = create_GEOSGeometry_object(parcel_json)
-
-        # If parcel does not exist, add it
-        if not parcel_model.objects.filter(objectid=parcel_json["attributes"]["OBJECTID"]).exists():
-            try:
-                if not scan_report.is_test: create_a_new_parcel(parcel_json, parcel_GEOSGeometry_object, parcel_model)
-                scan_report.increment_num_parcels_created()
-            except Exception as e:
-                logger.exception(e)
-                scan_report.add_parcel_json_issue(parcel_json, e)
-        # Else, check if there is an update to the parcel and update a tracked field
-        else:
-            try:
-                parcel = parcel_model.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
-                parcel_data = parcel_json["attributes"]
-                set_parcel_to_active(parcel)
-
-                for field in fields_to_track:
-                    item_from_json = parcel_data[field]
-                    item_from_db = getattr(parcel, field.lower())
-                    if field == "DEED_ACRES": item_from_json = handle_deed_acres_special_case(parcel_data["DEED_ACRES"])
-
-                    if difference_exists(item_from_json, item_from_db):
-                        setattr(parcel, field.lower(), parcel_data[field])
-                        scan_report.increment_num_changes()
-
-                parcel_geom_has_changed = update_geom_if_changed(parcel, parcel_GEOSGeometry_object)
-                if parcel_geom_has_changed: scan_report.increment_num_changes()
-
-                if scan_report.num_changes > 0:
-                    if not scan_report.is_test: parcel.save()
-                    scan_report.increment_num_parcels_updated()
-
-                    scan_report.output_message += f"Updated {parcel}\n"
-                    scan_report.parcels_updated.append(parcel)
-            except Exception as e:
-                scan_report.add_parcel_issue(parcel, e)
