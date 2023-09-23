@@ -28,7 +28,7 @@ class Command(BaseCommand):
             self.update_objectids_list(onek_parcels["features"])
             offset += increment
 
-        update_parcel_is_active(list_of_objectids_scanned, NewBernParcel.objects.filter(is_active=True))
+        update_parcel_is_active(list_of_objectids_scanned, NewBernParcel.objects.filter(is_active=True), options["test"])
         scan_report.send_output_message()
         print(scan_report.output_message)
 

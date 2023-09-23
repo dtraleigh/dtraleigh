@@ -39,13 +39,14 @@ fields_to_track = [
 ]
 
 
-def update_parcel_is_active(list_of_objectids_scanned, parcel_query_is_active_true):
+def update_parcel_is_active(list_of_objectids_scanned, parcel_query_is_active_true, test):
     # Take parcels in the DB that have been marked active. If they aren't part of the scan, change them to False.
-    print("Updating is_active for all parcels based on the recent scan.\n")
-    for parcel in parcel_query_is_active_true:
-        if parcel.objectid not in list_of_objectids_scanned:
-            parcel.is_active = False
-            parcel.save()
+    if not test:
+        print("Updating is_active for all parcels based on the recent scan.\n")
+        for parcel in parcel_query_is_active_true:
+            if parcel.objectid not in list_of_objectids_scanned:
+                parcel.is_active = False
+                parcel.save()
 
 
 def scan_results_email(subject, output_message):
@@ -111,6 +112,20 @@ def handle_deed_acres_special_case(deed_acres_value):
 def create_GEOSGeometry_object(parcel_json):
     return GEOSGeometry(
         '{ "type": "Polygon", "coordinates": ' + str(parcel_json["geometry"]["rings"]) + ' }')
+
+
+def truncate_list_for_printing(target_list):
+    # size desired
+    count = 20
+
+    target_list_length = len(target_list)
+    for _ in range(0, target_list_length - count):
+        target_list.pop()
+
+    if target_list_length > count:
+        target_list.append("...truncated list")
+
+    return target_list
 
 
 def create_update_parcels(parcels_scanned, scan_report, parcel_model):

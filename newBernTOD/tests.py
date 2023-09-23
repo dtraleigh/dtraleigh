@@ -48,6 +48,6 @@ class TODTestCase(TestCase):
             is_active=True
         )
 
-        update_parcel_is_active(active_parcels_objectids, NewBernParcel.objects.filter(is_active=True))
+        update_parcel_is_active(active_parcels_objectids, NewBernParcel.objects.filter(is_active=True), False)
         test_parcel2.refresh_from_db()
         self.assertFalse(test_parcel2.is_active, f"test_parcel2.is_active = {test_parcel2.is_active}")

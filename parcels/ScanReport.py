@@ -1,6 +1,6 @@
 import logging
 
-from parcels.functions_scan import scan_results_email
+from parcels.functions_scan import scan_results_email, truncate_list_for_printing
 
 logger = logging.getLogger("django")
 
@@ -30,12 +30,15 @@ class ScanReport:
         self.parcels_with_issues.append(parcel)
 
     def send_output_message(self):
+        parcels_updated_print = truncate_list_for_printing(self.parcels_updated)
+        parcels_with_issues_print = truncate_list_for_printing(self.parcels_with_issues)
+
         if self.is_test:
             self.output_message += "Test Results:\n"
         self.output_message += f"{str(self.num_parcels_created)} parcels created.\n"
         self.output_message += f"{str(self.num_parcels_updated)} parcels updated.\n"
-        self.output_message += f"Parcels updated: {self.parcels_updated}\n"
-        self.output_message += f"Check these parcels: {self.parcels_with_issues}\n"
+        self.output_message += f"Parcels updated: {parcels_updated_print}\n"
+        self.output_message += f"Check these parcels: {parcels_with_issues_print}\n"
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.output_message)
