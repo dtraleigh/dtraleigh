@@ -94,7 +94,9 @@ def create_a_new_parcel(parcel_json, parcel_model, scan_report):
                                         totstructs=parcel_json["attributes"]["TOTSTRUCTS"],
                                         totunits=parcel_json["attributes"]["TOTUNITS"],
                                         site=parcel_json["attributes"]["SITE"],
-                                        is_active=True)
+                                        is_active=True,
+                                        city=parcel_json["attributes"]["CITY"],
+                                        city_decode=parcel_json["attributes"]["CITY_DECODE"])
         scan_report.increment_num_parcels_created()
     except Exception as e:
         logger.exception(e)
@@ -102,38 +104,59 @@ def create_a_new_parcel(parcel_json, parcel_model, scan_report):
 
 
 def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
+    num_parcel_changes = 0
+    update_fields = []
+
     try:
+        # From the database
         parcel = parcel_model.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
+
+        # From the scan
         parcel_data = parcel_json["attributes"]
         set_parcel_to_active(parcel)
 
         for field in fields_to_track:
-            item_from_json = parcel_data[field]
+            if field == "DEED_ACRES":
+                item_from_json = handle_deed_acres_special_case(parcel_data["DEED_ACRES"])
+            else:
+                item_from_json = parcel_data[field]
+
             item_from_db = getattr(parcel, field.lower())
-            if field == "DEED_ACRES": item_from_json = handle_deed_acres_special_case(parcel_data["DEED_ACRES"])
 
             if difference_exists(item_from_json, item_from_db):
+                logger.info(f"Difference found with {parcel} and field {field}")
+                logger.info(f"item_from_json: {item_from_json}, type {type(item_from_json)}")
+                logger.info(f"item_from_db: {item_from_db}, type {type(item_from_db)}")
                 setattr(parcel, field.lower(), parcel_data[field])
-                scan_report.increment_num_changes()
+                update_fields.append(field.lower())
+                num_parcel_changes += 1
 
         parcel_GEOSGeometry_object = create_GEOSGeometry_object(parcel_json)
-        parcel_geom_has_changed = update_geom_if_changed(parcel, parcel_GEOSGeometry_object)
-        if parcel_geom_has_changed: scan_report.increment_num_changes()
+        parcel_geom_has_changed = geom_has_changed(parcel, parcel_GEOSGeometry_object)
+        if parcel_geom_has_changed:
+            parcel.geom = parcel_GEOSGeometry_object.json
+            update_fields.append("geom")
+            num_parcel_changes += 1
 
-        if scan_report.num_changes > 0:
-            if not scan_report.is_test: parcel.save()
+        if num_parcel_changes > 0:
+            if not scan_report.is_test:
+                parcel.save(update_fields=update_fields)
+            scan_report.num_changes += 1
             scan_report.increment_num_parcels_updated()
 
-            scan_report.output_message += f"Updated {parcel}\n"
+            log_update_info(parcel, update_fields)
             scan_report.parcels_updated.append(parcel)
     except Exception as e:
         scan_report.add_parcel_issue(parcel, e)
 
 
-def update_geom_if_changed(parcel, parcel_GEOSGeometry_object):
+def log_update_info(parcel, update_fields):
+    logger.info(f"Updated {parcel}\n")
+    logger.info(f"Fields updated: {update_fields}")
+
+
+def geom_has_changed(parcel, parcel_GEOSGeometry_object):
     if parcel.geom.json != parcel_GEOSGeometry_object.json:
-        parcel.geom = parcel_GEOSGeometry_object.json
-        parcel.save()
         return True
     return False
 

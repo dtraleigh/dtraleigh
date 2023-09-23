@@ -14,7 +14,7 @@ class Command(BaseCommand):
         parser.add_argument("-t", "--test", action="store_true", help="Run a test without making any changes.")
 
     def handle(self, *args, **options):
-        scan_report = ScanReport("Wake Scan Report", options["test"])
+        scan_report = ScanReport("New Bern Scan Report", options["test"])
         all_known_parcels = [p.objectid for p in NewBernParcel.objects.all()]
 
         offset = 0
@@ -22,8 +22,7 @@ class Command(BaseCommand):
         scan_report.total_parcels_in_dataset = get_parcels_around_new_bern("", True)["count"]
 
         print(f"Found {scan_report.total_parcels_in_dataset} parcels total in the scan area.\n")
-        # while offset < scan_report.total_parcels_in_dataset:
-        while offset < 10000:
+        while offset < scan_report.total_parcels_in_dataset:
             print(f"Getting parcels {offset + 1} to {offset + increment}")
             onek_parcels = get_parcels_around_new_bern(offset)
 
