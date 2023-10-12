@@ -344,6 +344,9 @@ def text_changes_cases(page_content):
                     description = get_generic_text(row_tds[2])
                     status = get_generic_text(row_tds[3])
 
+                    if case_number == "No active cases":
+                        break
+
                     # Found a case where the TC name was not a link. We'll set it to something generic in the mean time.
                     if not case_url:
                         case_url = "NA"
