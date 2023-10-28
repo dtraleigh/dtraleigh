@@ -1,5 +1,25 @@
 <html>
 <body>
-This is where the lat lon form will go.
+    <div class="container">
+      <div class="row">
+        <h1 class="text-center">Add a point</h1>
+        <form action="?" method="get">
+          <label for="lat_input">Lat:</label>
+          <input id="lat_input"
+                   type="text"
+                   name="lat_input"
+                   value="{{ lat_input }}">
+          <label for="lon_input">Lon:</label>
+          <input id="lon_input"
+                   type="text"
+                   name="lon_input"
+                   value="{{ lon_input }}">
+          <input type="submit" value="Submit">
+        </form>
+      </div>
+      <div>
+        {{ main_parcels }}
+      </div>
+    </div>
 </body>
 </html>
