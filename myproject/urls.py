@@ -31,4 +31,5 @@ urlpatterns = [
     path("new_bern_main/", newbern_views.new_bern_main),
     path("filter_tod/", newbern_views.filter_tod),
     path("tod/", include("newBernTOD.urls")),
+    path("parcels/", include("parcels.urls")),
   ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
