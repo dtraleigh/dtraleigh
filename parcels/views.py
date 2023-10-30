@@ -24,19 +24,17 @@ def main(request):
     all_parcel_data = []
 
     for parcel in target_parcels:
-        parcel_ind_data = [parcel]
+        parcel_history = parcel.history.all()
+        parcel_history_diffs_list = get_parcel_history_diffs(parcel_history)
 
-        # parcel_history = parcel.history.all()
-        # parcel_history_diffs_list = get_parcel_history_diffs(parcel_history)
-        #
-        # parcel_history_table_headers = get_parcel_history_table_headers(parcel_history_diffs_list)
-        # parcel_history_table_headers.insert(0, "created_date")
-        #
-        # parcel_history_table_data = get_parcel_history_table_data(parcel_history_diffs_list,
-        #                                                           parcel_history_table_headers)
-        table = ParcelHistoryTable(target_parcels[0].history.all(), extra_columns=[("land_val", Column())])
-        parcel_ind_data.append(table)
-        all_parcel_data.append(parcel_ind_data)
+        parcel_history_table_headers = get_parcel_history_table_headers(parcel_history_diffs_list)
+        table_headers_add_list = [(header_name, Column()) for header_name in parcel_history_table_headers]
+        if table_headers_add_list:
+            table = ParcelHistoryTable(target_parcels[0].history.all(), extra_columns=table_headers_add_list)
+        else:
+            table = None
+
+        all_parcel_data.append([parcel, table])
 
     return render(request, "parcel_main.html", {"all_parcel_data": all_parcel_data})
 

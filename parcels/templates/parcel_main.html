@@ -24,7 +24,11 @@
     </div>
     <div class="col">
       <h2>{{parcel.0.addr1}}</h2>
-      {% render_table parcel.1 %}
+      {% if parcel.1 %}
+        {% render_table parcel.1 %}
+      {% else %}
+        <p>No changes to the property.</p>
+      {% endif %}
     </div>
   </div>
   {% endfor %}
