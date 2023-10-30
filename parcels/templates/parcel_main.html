@@ -1,25 +1,35 @@
-<html>
-<body>
-    <div class="container">
-      <div class="row">
-        <h1 class="text-center">Add a point</h1>
-        <form action="?" method="get">
-          <label for="lat_input">Lat:</label>
-          <input id="lat_input"
-                   type="text"
-                   name="lat_input"
-                   value="{{ lat_input }}">
-          <label for="lon_input">Lon:</label>
-          <input id="lon_input"
-                   type="text"
-                   name="lon_input"
-                   value="{{ lon_input }}">
-          <input type="submit" value="Submit">
-        </form>
-      </div>
-      <div>
-        {{ main_parcels }}
-      </div>
+{% extends "generic_base.html" %}
+{% load render_table from django_tables2 %}
+{% block content %}
+<div class="container">
+  <div class="row">
+    <form action="?" method="get">
+      <label for="lat_input">Lat:</label>
+      <input id="lat_input"
+               type="text"
+               name="lat_input"
+               value="{{ lat_input }}">
+      <label for="lon_input">Lon:</label>
+      <input id="lon_input"
+               type="text"
+               name="lon_input"
+               value="{{ lon_input }}">
+      <input type="submit" value="Submit">
+    </form>
+  </div>
+  {% for parcel in all_parcel_data %}
+  <div class="row">
+    <div class="col">
+      <p>Map goes here.</p>
     </div>
-</body>
-</html>
+    <div class="col">
+      <h2>{{parcel.0.addr1}}</h2>
+      {% render_table parcel.1 %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="row">
+    {{all_parcel_data}}
+  </div>
+</div>
+{%endblock content%}

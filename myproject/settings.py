@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     "newBernTOD",
     "eats",
     "rpd",
-    "parcels"
+    "parcels",
+    "django_tables2"
 ]
 
 MIDDLEWARE = [
