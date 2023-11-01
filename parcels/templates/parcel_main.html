@@ -35,18 +35,19 @@
     </div>
   </div>
   {% endfor %}
+  <!-- Debug data
   <div class="row">
     {{all_parcel_data}}
-  </div>
+  </div> -->
 </div>
 {% for parcel in all_parcel_data %}
 <script type="text/javascript">
-  var parcel_geojson = {{parcel.0.geom.geojson|safe}};
+  var parcel_geojson{{parcel.0.id}} = {{parcel.0.geom.geojson|safe}};
 </script>
 <script type="text/javascript">
     function map_init_basic (map, options) {
       map.setView([{{parcel.0.geom.centroid.y}},{{parcel.0.geom.centroid.x}}], 18);
-      var parcel_data = L.geoJSON(parcel_geojson, {style: {color:'orange'}});
+      var parcel_data = L.geoJSON(parcel_geojson{{parcel.0.id}}, {style: {color:'orange'}});
       map.addLayer(parcel_data);
     }
 </script>
