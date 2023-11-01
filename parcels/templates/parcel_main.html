@@ -1,4 +1,4 @@
-{% extends "generic_base.html" %}
+{% extends "generic_map_base.html" %}
 {% load render_table from django_tables2 %}
 {% block content %}
 <div class="container">
@@ -8,21 +8,24 @@
       <input id="lat_input"
                type="text"
                name="lat_input"
+               placeholder=""
                value="{{ lat_input }}">
       <label for="lon_input">Lon:</label>
       <input id="lon_input"
                type="text"
                name="lon_input"
+               placeholder=""
                value="{{ lon_input }}">
       <input type="submit" value="Submit">
     </form>
   </div>
   {% for parcel in all_parcel_data %}
   <div class="row">
-    <div class="col">
-      <p>Map goes here.</p>
+    <div class="col border bg-light p-2">
+      {% load leaflet_tags %}
+      {% leaflet_map "parcel_map" callback="window.map_init_basic" %}
     </div>
-    <div class="col">
+    <div class="col border bg-light p-2">
       <h2>{{parcel.0.addr1}}</h2>
       {% if parcel.1 %}
         {% render_table parcel.1 %}
@@ -36,4 +39,16 @@
     {{all_parcel_data}}
   </div>
 </div>
+{% for parcel in all_parcel_data %}
+<script type="text/javascript">
+  var parcel_geojson = {{parcel.0.geom.geojson|safe}};
+</script>
+<script type="text/javascript">
+    function map_init_basic (map, options) {
+      map.setView([{{parcel.0.geom.centroid.y}},{{parcel.0.geom.centroid.x}}], 18);
+      var parcel_data = L.geoJSON(parcel_geojson, {style: {color:'orange'}});
+      map.addLayer(parcel_data);
+    }
+</script>
+{% endfor %}
 {%endblock content%}

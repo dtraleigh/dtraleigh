@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from django.views.generic import ListView
 from django_tables2 import SingleTableView, Column
 
 from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers, get_parcel_history_table_data
 from parcels.location import get_parcels_from_point
 from parcels.models import Parcel
 from parcels.tables import ParcelHistoryTable
+
+page_title = "Parcel Tracking"
 
 
 def main(request):
@@ -36,7 +37,10 @@ def main(request):
 
         all_parcel_data.append([parcel, table])
 
-    return render(request, "parcel_main.html", {"all_parcel_data": all_parcel_data})
+    return render(request, "parcel_main.html", {"page_title": page_title,
+                                                "lat_input": lat,
+                                                "lon_input": lon,
+                                                "all_parcel_data": all_parcel_data})
 
 
 class ParcelHistoryView(SingleTableView):
