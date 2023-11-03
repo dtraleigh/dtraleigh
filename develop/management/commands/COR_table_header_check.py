@@ -47,7 +47,9 @@ class Command(BaseCommand):
             x = PrettyTable()
             sr_actual = []
             table_thead = sr_table.find("thead")
-            thead_row = table_thead.find_all("td")
+            thead_row = table_thead.find_all("th")
+            if not thead_row:
+                thead_row = table_thead.find_all("td")
 
             for header in thead_row:
                 sr_actual.append(header.get_text().strip())
@@ -120,7 +122,9 @@ class Command(BaseCommand):
         x = PrettyTable()
         zon_actual = []
         table_thead = zon_tables[0].find("thead")
-        thead_row = table_thead.find_all("td")
+        thead_row = table_thead.find_all("th")
+        if not thead_row:
+            thead_row = table_thead.find_all("td")
 
         for header in thead_row:
             zon_actual.append(header.get_text().strip().replace("\n", ""))
