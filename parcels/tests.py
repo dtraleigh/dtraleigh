@@ -1,8 +1,12 @@
-# from django.test import TestCase
-#
-#
-# class ScanTestCase(TestCase):
-#     fixtures = ["sept_18_2023_NewBernParcels.json"]
-#
-#     def test_something(self):
-#         self.assertEqual(1, 1)
+from django.test import TestCase
+
+from parcels.models import Parcel
+
+
+class ParcelTestCase(TestCase):
+    databases = "__all__"
+    fixtures = ["parcels_test_data"]
+
+    def test_something(self):
+        house = Parcel.objects.get(addr1="208 FREEMAN ST")
+        self.assertEqual(house.owner, "SUAREZ, LEO S. SUAREZ, JENNIFER S.")
