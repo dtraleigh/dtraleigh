@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django_tables2 import SingleTableView, Column
 
-from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers, get_parcel_history_table_data
+from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers
 from parcels.location import get_parcels_from_point
 from parcels.models import Parcel
 from parcels.tables import ParcelHistoryTable
