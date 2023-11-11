@@ -27,7 +27,12 @@
       {% leaflet_map "parcel_map" callback="window.map_init_basic" %}
     </div>
     <div class="col border bg-light p-2">
-      <h2>{{parcel.0.addr1}}</h2>
+      <h4>{{parcel.0.propdesc}}</h4>
+      <ul>
+        <li>{{parcel.0.addr1}}</li>
+        <li>{{parcel.0.addr2}}</li>
+        <li>{{parcel.0.addr3}}</li>
+      </ul>
       {% if parcel.1 %}
         {% render_table parcel.1 %}
       {% else %}
