@@ -20,6 +20,7 @@ class ScanReport:
         self.num_changes = 0
         self.start_time = datetime.now()
         self.end_time = None
+        self.known_parcel_objectids = []
 
     def add_parcel_json_issue(self, parcel_json, e):
         self.output_message += f"{e}\n"
@@ -56,3 +57,6 @@ class ScanReport:
 
     def increment_num_parcels_updated(self):
         self.num_parcels_updated += 1
+
+    def add_objectid_to_known_list(self, objectid):
+        self.known_parcel_objectids.append(objectid)

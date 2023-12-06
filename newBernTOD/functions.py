@@ -104,12 +104,18 @@ def get_parcels_around_new_bern(offset, count_only=False):
 
 def send_email_notice(subject, message, email_to):
     email_from = "leo@cophead567.opalstacked.com"
-    send_mail(
-        subject,
-        message,
-        email_from,
-        email_to,
-        fail_silently=False,
-    )
-    n = datetime.now()
-    logger.info(f'{subject} - Email sent at {n.strftime("%H:%M %m-%d-%y")}')
+    try:
+        send_mail(
+            subject,
+            message,
+            email_from,
+            email_to,
+            fail_silently=False,
+        )
+        n = datetime.now()
+        logger.info(f'{subject} - Email sent at {n.strftime("%H:%M %m-%d-%y")}')
+    except Exception as e:
+        print(e)
+        logger.info(f'{subject} - Email issue at {n.strftime("%H:%M %m-%d-%y")}')
+        logger.info(e)
+        logger.info(message)

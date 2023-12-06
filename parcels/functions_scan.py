@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import environ
 from pathlib import Path
@@ -110,7 +111,16 @@ def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
     try:
         # From the database
         parcel = parcel_model.objects.get(objectid=parcel_json["attributes"]["OBJECTID"])
+    except Exception as e:
+        print(e)
+        print(f'Attempted query = parcel_model.objects.get(objectid={parcel_json["attributes"]["OBJECTID"]})')
+        print(f'parcel_json["attributes"]["OBJECTID"] = {parcel_json["attributes"]["OBJECTID"]}')
+        logger.exception(e)
+        logger.info(f'Attempted query = parcel_model.objects.get(objectid={parcel_json["attributes"]["OBJECTID"]})')
+        logger.info(f'parcel_json["attributes"]["OBJECTID"] = {parcel_json["attributes"]["OBJECTID"]}')
+        sys.exit(1)
 
+    try:
         # From the scan
         parcel_data = parcel_json["attributes"]
         set_parcel_to_active(parcel)

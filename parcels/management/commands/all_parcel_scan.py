@@ -15,25 +15,26 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         scan_report = ScanReport("Wake Scan Report", options["test"])
-        all_known_parcels = [p.objectid for p in Parcel.objects.all()]
+        scan_report.known_parcel_objectids = [p.objectid for p in Parcel.objects.all()]
 
         offset = 0
-        increment = 1000
         scan_report.total_parcels_in_dataset = get_all_RAL_parcels("", True)["count"]
 
         print(f"Found {scan_report.total_parcels_in_dataset} parcels total in the scan area.\n")
         while offset < scan_report.total_parcels_in_dataset:
-            print(f"Getting parcels {offset + 1} to {offset + increment}")
-            onek_parcels = get_all_RAL_parcels(offset)
+            parcel_subset = get_all_RAL_parcels(offset)
+            num_features_returned = len(parcel_subset["features"])
+            print(f"Got parcels {offset} to {offset + num_features_returned}")
 
-            for parcel_json in onek_parcels["features"]:
-                if parcel_json["attributes"]["OBJECTID"] not in all_known_parcels:
+            for parcel_json in parcel_subset["features"]:
+                if parcel_json["attributes"]["OBJECTID"] not in scan_report.known_parcel_objectids:
                     create_a_new_parcel(parcel_json, Parcel, scan_report)
                 else:
                     update_parcel_if_needed(parcel_json, Parcel, scan_report)
+                scan_report.add_objectid_to_known_list(parcel_json["attributes"]["OBJECTID"])
 
-            self.update_objectids_list(onek_parcels["features"])
-            offset += increment
+            self.update_objectids_list(parcel_subset["features"])
+            offset += num_features_returned
 
         update_parcel_is_active(list_of_objectids_scanned, Parcel.objects.filter(is_active=True), options["test"])
         scan_report.send_output_message()
