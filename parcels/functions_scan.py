@@ -1,3 +1,4 @@
+import datetime
 import logging
 import sys
 
@@ -6,8 +7,10 @@ from pathlib import Path
 
 from _decimal import Decimal
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.paginator import Paginator
 
 from newBernTOD.functions import send_email_notice
+from parcels.models import Parcel
 
 env = environ.Env(DEBUG=(bool, False))
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,14 +43,37 @@ fields_to_track = [
 ]
 
 
-def update_parcel_is_active(list_of_objectids_scanned, parcel_query_is_active_true, test):
+def update_parcel_is_active(list_of_objectids_scanned, test):
     # Take parcels in the DB that have been marked active. If they aren't part of the scan, change them to False.
     if not test:
-        print("Updating is_active for all parcels based on the recent scan.\n")
-        for parcel in parcel_query_is_active_true:
-            if parcel.objectid not in list_of_objectids_scanned:
-                parcel.is_active = False
-                parcel.save()
+        message = f"{datetime.datetime.now()}: Updating is_active for all parcels based on the recent scan.\n"
+        print(message)
+        logger.info(message)
+
+        parcels_not_scanned = Parcel.objects.exclude(objectid__in=list_of_objectids_scanned)
+        result_message = f"{datetime.datetime.now()}: {len(parcels_not_scanned)} parcels need to be set to inactive."
+        print(result_message)
+        logger.info(result_message)
+        # parcels_not_scanned.update(is_active=False)
+
+        paginator = Paginator(parcels_not_scanned, 100)
+
+        for page_number in paginator.page_range:
+            page = paginator.page(page_number)
+            updates = []
+
+            for obj in page.object_list:
+                obj.is_active = False
+                updates.append(obj)
+
+            update_message = f"{datetime.datetime.now()}: Updating is_active on {len(updates)} parcels."
+            print(update_message)
+            logger.info(update_message)
+            Parcel.objects.bulk_update(updates, ["is_active"])
+
+        post_update_message = f"{datetime.datetime.now()}: Finished updating is_active."
+        print(post_update_message)
+        logger.info(post_update_message)
 
 
 def scan_results_email(subject, output_message):
@@ -118,6 +144,7 @@ def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
         logger.exception(e)
         logger.info(f'Attempted query = parcel_model.objects.get(objectid={parcel_json["attributes"]["OBJECTID"]})')
         logger.info(f'parcel_json["attributes"]["OBJECTID"] = {parcel_json["attributes"]["OBJECTID"]}')
+        logger.info(f"all_parcel_scan exited at {datetime.datetime.now()}")
         sys.exit(1)
 
     try:

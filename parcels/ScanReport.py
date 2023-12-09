@@ -9,6 +9,7 @@ logger = logging.getLogger("django")
 class ScanReport:
     def __init__(self, report_name, is_test):
         self.report_name = report_name
+        self.intro_message = ""
         self.output_message = ""
         self.num_parcels_created = 0
         self.num_parcels_updated = 0
@@ -48,6 +49,16 @@ class ScanReport:
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.output_message)
+        logger.info(self.output_message)
+        print(self.output_message)
+
+    def send_intro_message(self, is_test):
+        self.intro_message = f"All Parcel Scan starting at {self.start_time}. is_test = {str(is_test)}"
+        subject = f"Message from {self.report_name}"
+
+        scan_results_email(subject, self.intro_message)
+        logger.info(self.intro_message)
+        print(self.intro_message)
 
     def increment_num_parcels_created(self):
         self.num_parcels_created += 1
