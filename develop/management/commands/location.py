@@ -152,6 +152,12 @@ def get_lat_lon_by_pin(pin):
             message += str(response.text.encode('utf8'))
             send_email_notice(message, email_admins())
             return None, None
+        except KeyError:
+            message = "KeyError in location.get_lat_lon_by_pin()\n"
+            message += str(response.text.encode('utf8'))
+            send_email_notice(message, email_admins())
+            return None, None
+
     return None, None
 
 
