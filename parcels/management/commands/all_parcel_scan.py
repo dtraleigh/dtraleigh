@@ -44,7 +44,6 @@ class Command(BaseCommand):
 
             for parcel_json in parcel_subset["features"]:
                 if not options["update_only"]:
-                    print("performing update/creates.")
                     if parcel_json["attributes"]["OBJECTID"] not in scan_report.known_parcel_objectids:
                         create_a_new_parcel(parcel_json, Parcel, scan_report)
                     else:

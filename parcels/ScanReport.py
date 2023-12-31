@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from parcels.functions_scan import scan_results_email, truncate_list_for_printing
+from parcels.models import Parcel
 
 logger = logging.getLogger("django")
 
@@ -46,6 +47,8 @@ class ScanReport:
         self.output_message += f"{str(self.num_parcels_updated)} parcels updated.\n"
         self.output_message += f"Parcels updated: {parcels_updated_print}\n"
         self.output_message += f"Check these parcels: {parcels_with_issues_print}\n"
+        self.output_message += f"Total parcels in dataset: {self.total_parcels_in_dataset}\n"
+        self.output_message += f"Total active parcels in DB: {Parcel.objects.filter(is_active=True).count()}"
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.output_message)

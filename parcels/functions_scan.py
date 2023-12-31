@@ -124,6 +124,8 @@ def create_a_new_parcel(parcel_json, parcel_model, scan_report):
                                         is_active=True,
                                         city=parcel_json["attributes"]["CITY"],
                                         city_decode=parcel_json["attributes"]["CITY_DECODE"])
+        else:
+            print(f"Fake created objectid {parcel_json['attributes']['OBJECTID']}")
         scan_report.increment_num_parcels_created()
     except Exception as e:
         logger.exception(e)
@@ -178,6 +180,8 @@ def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
         if num_parcel_changes > 0:
             if not scan_report.is_test:
                 parcel.save(update_fields=update_fields)
+            else:
+                print(f"Fake updated {parcel}")
             scan_report.num_changes += 1
             scan_report.increment_num_parcels_updated()
 
