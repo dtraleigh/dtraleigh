@@ -21,7 +21,7 @@ class Command(BaseCommand):
                             help="Update is_active only. Skip parcel update/create steps.")
 
     def handle(self, *args, **options):
-        scan_report = ScanReport("Wake Scan Report", options["test"])
+        scan_report = ScanReport("RAL Scan Report", options["test"], Parcel)
         scan_report.send_intro_message(options["test"])
         scan_report.known_parcel_objectids = [p.objectid for p in Parcel.objects.all().iterator()]
 
@@ -55,7 +55,7 @@ class Command(BaseCommand):
             self.update_objectids_list(parcel_subset["features"])
             offset += num_features_returned
 
-        update_parcel_is_active(list_of_objectids_scanned, options["test"])
+        update_parcel_is_active(list_of_objectids_scanned, options["test"], Parcel)
         scan_report.send_output_message()
 
     def update_objectids_list(self, parcel_json):

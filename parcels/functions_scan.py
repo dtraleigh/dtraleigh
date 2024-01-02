@@ -10,7 +10,6 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.paginator import Paginator
 
 from newBernTOD.functions import send_email_notice
-from parcels.models import Parcel
 
 env = environ.Env(DEBUG=(bool, False))
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,14 +42,14 @@ fields_to_track = [
 ]
 
 
-def update_parcel_is_active(list_of_objectids_scanned, test):
+def update_parcel_is_active(list_of_objectids_scanned, test, parcel_model):
     # Take parcels in the DB that have been marked active. If they aren't part of the scan, change them to False.
     if not test:
         message = f"{datetime.datetime.now()}: Updating is_active for all parcels based on the recent scan.\n"
         print(message)
         logger.info(message)
 
-        parcels_not_scanned = Parcel.objects.exclude(objectid__in=list_of_objectids_scanned)
+        parcels_not_scanned = parcel_model.objects.exclude(objectid__in=list_of_objectids_scanned)
         result_message = f"{datetime.datetime.now()}: {len(parcels_not_scanned)} parcels need to be set to inactive."
         print(result_message)
         logger.info(result_message)
@@ -69,7 +68,7 @@ def update_parcel_is_active(list_of_objectids_scanned, test):
             update_message = f"{datetime.datetime.now()}: Updating is_active on {len(updates)} parcels."
             print(update_message)
             logger.info(update_message)
-            Parcel.objects.bulk_update(updates, ["is_active"])
+            parcel_model.objects.bulk_update(updates, ["is_active"])
 
         post_update_message = f"{datetime.datetime.now()}: Finished updating is_active."
         print(post_update_message)

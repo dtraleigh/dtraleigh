@@ -8,8 +8,9 @@ logger = logging.getLogger("django")
 
 
 class ScanReport:
-    def __init__(self, report_name, is_test):
+    def __init__(self, report_name, is_test, parcel_model):
         self.report_name = report_name
+        self.model_name = parcel_model
         self.intro_message = ""
         self.output_message = ""
         self.num_parcels_created = 0
@@ -48,7 +49,7 @@ class ScanReport:
         self.output_message += f"Parcels updated: {parcels_updated_print}\n"
         self.output_message += f"Check these parcels: {parcels_with_issues_print}\n"
         self.output_message += f"Total parcels in dataset: {self.total_parcels_in_dataset}\n"
-        self.output_message += f"Total active parcels in DB: {Parcel.objects.filter(is_active=True).count()}"
+        self.output_message += f"Total active parcels in DB: {self.model_name.objects.filter(is_active=True).count()}"
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.output_message)
@@ -56,7 +57,7 @@ class ScanReport:
         print(self.output_message)
 
     def send_intro_message(self, is_test):
-        self.intro_message = f"All Parcel Scan starting at {self.start_time}. is_test = {str(is_test)}"
+        self.intro_message = f"{self.report_name} starting at {self.start_time}. is_test = {str(is_test)}"
         subject = f"Message from {self.report_name}"
 
         scan_results_email(subject, self.intro_message)

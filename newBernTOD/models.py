@@ -5,7 +5,7 @@ arterial_roads = ["NEW BERN AVE", "RALEIGH BLVD", "EDENTON ST"]
 
 
 class NewBernParcel(models.Model):
-    property_address = models.CharField(max_length=400)
+    property_address = models.CharField(max_length=400, blank=True, null=True)
     objectid = models.IntegerField()
     pin = models.CharField(max_length=200)
     defunct_pin = models.BooleanField(default=False)
