@@ -23,7 +23,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         scan_report = ScanReport("Wake Scan Report", options["test"])
         scan_report.send_intro_message(options["test"])
-        scan_report.known_parcel_objectids = [p.objectid for p in Parcel.objects.all()]
+        scan_report.known_parcel_objectids = [p.objectid for p in Parcel.objects.all().iterator()]
 
         offset = 0
         if options["offset"]:
@@ -46,9 +46,11 @@ class Command(BaseCommand):
                 if not options["update_only"]:
                     if parcel_json["attributes"]["OBJECTID"] not in scan_report.known_parcel_objectids:
                         create_a_new_parcel(parcel_json, Parcel, scan_report)
+                        scan_report.add_objectid_to_known_list(parcel_json["attributes"]["OBJECTID"])
                     else:
                         update_parcel_if_needed(parcel_json, Parcel, scan_report)
-                scan_report.add_objectid_to_known_list(parcel_json["attributes"]["OBJECTID"])
+                else:
+                    scan_report.add_objectid_to_known_list(parcel_json["attributes"]["OBJECTID"])
 
             self.update_objectids_list(parcel_subset["features"])
             offset += num_features_returned
