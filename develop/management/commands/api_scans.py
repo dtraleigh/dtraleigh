@@ -1,4 +1,5 @@
 import logging
+import sys
 from datetime import datetime
 
 from develop.management.commands.actions import *
@@ -44,7 +45,7 @@ def development_api_scan():
                 known_dev_object.objectid = attribute_data["OBJECTID"]
                 known_dev_object.devplan_id = attribute_data["devplan_id"]
                 known_dev_object.submitted = clean_unix_date(attribute_data["submitted"])
-                known_dev_object.submitted_field = attribute_data["submitted_yr"]
+                known_dev_object.submitted_yr = attribute_data["submitted_yr"]
                 known_dev_object.approved = clean_unix_date(attribute_data["approved"])
                 known_dev_object.daystoappr = attribute_data["daystoapprove"]
                 known_dev_object.plan_type = attribute_data["plan_type"]
@@ -71,50 +72,60 @@ def development_api_scan():
                 known_dev_object.units_req = attribute_data["units_req"]
                 known_dev_object.zoning = attribute_data["zoning"]
                 known_dev_object.plan_numbe = attribute_data["plan_number"]
-                known_dev_object.creationda = clean_unix_date(attribute_data["CreationDate"])
-                known_dev_object.creator = attribute_data["Creator"]
-                known_dev_object.editdate = clean_unix_date(attribute_data["EditDate"])
-                known_dev_object.editor = attribute_data["Editor"]
+                # known_dev_object.creationda = clean_unix_date(attribute_data["CreationDate"])
+                # known_dev_object.creator = attribute_data["Creator"]
+                # known_dev_object.editdate = clean_unix_date(attribute_data["EditDate"])
+                # known_dev_object.editor = attribute_data["Editor"]
+                known_dev_object.global_id = attribute_data["GlobalID"]
+                known_dev_object.missing_middle = attribute_data["missing_middle"]
 
                 if geometry_data_point:
                     known_dev_object.geom = geometry_data_point
 
                 known_dev_object.save()
+                logger.info(f"Updating {known_dev_object}")
 
         # If we don't know about it, we need to add it
         else:
-            DevelopmentPlan.objects.create(objectid=attribute_data["OBJECTID"],
-                                           devplan_id=attribute_data["devplan_id"],
-                                           submitted=clean_unix_date(attribute_data["submitted"]),
-                                           submitted_field=attribute_data["submitted_yr"],
-                                           approved=clean_unix_date(attribute_data["approved"]),
-                                           daystoappr=attribute_data["daystoapprove"],
-                                           plan_type=attribute_data["plan_type"],
-                                           status=attribute_data["status"],
-                                           appealperi=clean_unix_date(attribute_data["appealperiodends"]),
-                                           updated=clean_unix_date(attribute_data["updated"]),
-                                           sunset_dat=clean_unix_date(attribute_data["sunset_date"]),
-                                           acreage=attribute_data["acreage"],
-                                           major_stre=attribute_data["major_street"],
-                                           cac=attribute_data["cac"],
-                                           engineer=attribute_data["engineer"],
-                                           engineer_p=attribute_data["engineer_phone"],
-                                           developer=attribute_data["developer"],
-                                           developer_field=attribute_data["developer_phone"],
-                                           plan_name=attribute_data["plan_name"],
-                                           planurl=attribute_data["planurl"],
-                                           planurl_ap=attribute_data["planurl_approved"],
-                                           planner=attribute_data["planner"],
-                                           lots_req=attribute_data["lots_req"],
-                                           lots_rec=attribute_data["lots_rec"],
-                                           lots_apprv=attribute_data["lots_apprv"],
-                                           sq_ft_req=attribute_data["sq_ft_req"],
-                                           units_appr=attribute_data["units_apprv"],
-                                           units_req=attribute_data["units_req"],
-                                           zoning=attribute_data["zoning"],
-                                           plan_numbe=attribute_data["plan_number"],
-                                           creationda=clean_unix_date(attribute_data["CreationDate"]),
-                                           creator=attribute_data["Creator"],
-                                           editdate=clean_unix_date(attribute_data["EditDate"]),
-                                           editor=attribute_data["Editor"],
-                                           geom=geometry_data_point)
+            try:
+                DevelopmentPlan.objects.create(objectid=attribute_data["OBJECTID"],
+                                               devplan_id=attribute_data["devplan_id"],
+                                               submitted=clean_unix_date(attribute_data["submitted"]),
+                                               submitted_field=attribute_data["submitted_yr"],
+                                               approved=clean_unix_date(attribute_data["approved"]),
+                                               daystoappr=attribute_data["daystoapprove"],
+                                               plan_type=attribute_data["plan_type"],
+                                               status=attribute_data["status"],
+                                               appealperi=clean_unix_date(attribute_data["appealperiodends"]),
+                                               updated=clean_unix_date(attribute_data["updated"]),
+                                               sunset_dat=clean_unix_date(attribute_data["sunset_date"]),
+                                               acreage=attribute_data["acreage"],
+                                               major_stre=attribute_data["major_street"],
+                                               cac=attribute_data["cac"],
+                                               engineer=attribute_data["engineer"],
+                                               engineer_p=attribute_data["engineer_phone"],
+                                               developer=attribute_data["developer"],
+                                               developer_field=attribute_data["developer_phone"],
+                                               plan_name=attribute_data["plan_name"],
+                                               planurl=attribute_data["planurl"],
+                                               planurl_ap=attribute_data["planurl_approved"],
+                                               planner=attribute_data["planner"],
+                                               lots_req=attribute_data["lots_req"],
+                                               lots_rec=attribute_data["lots_rec"],
+                                               lots_apprv=attribute_data["lots_apprv"],
+                                               sq_ft_req=attribute_data["sq_ft_req"],
+                                               units_appr=attribute_data["units_apprv"],
+                                               units_req=attribute_data["units_req"],
+                                               zoning=attribute_data["zoning"],
+                                               plan_numbe=attribute_data["plan_number"],
+                                               # creationda=clean_unix_date(attribute_data["CreationDate"]),
+                                               # creator=attribute_data["Creator"],
+                                               # editdate=clean_unix_date(attribute_data["EditDate"]),
+                                               # editor=attribute_data["Editor"],
+                                               global_id=attribute_data["GlobalID"],
+                                               missing_middle=attribute_data["missing_middle"],
+                                               geom=geometry_data_point)
+                logger.info(f"Creating new DevelopmentPlan, objectid: {attribute_data['OBJECTID']}")
+            except Exception as e:
+                logger.info(e)
+                logger.info(attribute_data)
