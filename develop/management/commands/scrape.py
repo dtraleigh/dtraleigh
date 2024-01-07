@@ -22,12 +22,10 @@ class Command(BaseCommand):
             n = datetime.now().strftime("%H:%M %m-%d-%y")
             logger.info(f"{n}: Web scrape started.")
 
-            sr_page_link = "https://raleighnc.gov/permits/administrative-site-review-cases"
-            # aad_page_link = "https://raleighnc.gov/SupportPages/administrative-alternate-design-cases"
-            zon_page_link = "https://raleighnc.gov/planning/rezoning-cases"
-            tc_page_link = "https://raleighnc.gov/planning/text-change-cases"
-            neighbor_page_link = "https://raleighnc.gov/planning/neighborhood-meetings"
-            # da_page_link = "https://raleighnc.gov/SupportPages/design-alternate-cases"
+            sr_page_link = "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases"
+            zon_page_link = "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases"
+            tc_page_link = "https://raleighnc.gov/planning/services/text-changes/text-change-cases"
+            neighbor_page_link = "https://raleighnc.gov/planning/services/rezoning-process/neighborhood-meetings"
 
             zoning_requests(get_page_content(zon_page_link))
             # admin_alternates(get_page_content(aad_page_link))

@@ -32,9 +32,9 @@ def get_page_content(page_link):
 class Command(BaseCommand):
     def handle(self, *args, **options):
         sr_page_link = "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases"
-        zon_page_link = "https://raleighnc.gov/SupportPages/zoning-cases"
-        tc_page_link = "https://raleighnc.gov/SupportPages/text-change-cases"
-        neighbor_page_link = "https://raleighnc.gov/planning/neighborhood-meetings"
+        zon_page_link = "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases"
+        tc_page_link = "https://raleighnc.gov/planning/services/text-changes/text-change-cases"
+        neighbor_page_link = "https://raleighnc.gov/planning/services/rezoning-process/neighborhood-meetings"
         message = ""
 
         # scrape the target websites and verify that the table headers are what we expect.
