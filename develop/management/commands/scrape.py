@@ -190,14 +190,14 @@ def site_reviews(page_content):
 
                 # If any of these variables are None, log it and move on.
                 if not case_number or not project_name:
-                    acked = ["No Case #", "ASR-0056-", "ASR-0075-2021"]
+                    acked = ["No Case #", "ASR-0056-", "ASR-0075-2021", "\xa0"]
                     if case_number not in acked:
                         scraped_info = [["row_tds", row_tds],
                                         ["case_number", case_number],
                                         ["case_url", case_url],
                                         ["project_name", project_name],
                                         ["status", status]]
-                        message = "scrape.site_reviews: Problem scraping this row"
+                        message = "scrape.site_reviews: Problem scraping this row\n"
                         message += str(scraped_info)
                         logger.info(message)
 

@@ -47,6 +47,8 @@ class Command(BaseCommand):
             x = PrettyTable()
             sr_actual = []
             table_thead = sr_table.find("thead")
+            if not table_thead:
+                continue
             thead_row = table_thead.find_all("th")
             if not thead_row:
                 thead_row = table_thead.find_all("td")
