@@ -71,7 +71,7 @@ class Subscriber(models.Model):
 class DevelopmentPlan(models.Model):
     """Mainly Zoning and Admin Site Reviews. This could replace Zoning and SiteReviewCase models"""
     objectid = models.IntegerField()
-    devplan_id = models.IntegerField(blank=True, null=True)
+    devplan_id = models.IntegerField(blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     submitted = models.DateField(blank=True, null=True)
     submitted_field = models.IntegerField(blank=True, null=True)
     approved = models.DateField(blank=True, null=True)
@@ -91,9 +91,9 @@ class DevelopmentPlan(models.Model):
     plan_name = models.CharField(max_length=200, blank=True, null=True)
     planurl = models.CharField(max_length=255, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     planurl_ap = models.CharField(max_length=255, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
-    planner = models.CharField(max_length=50, blank=True, null=True)
+    planner = models.CharField(max_length=50, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     lots_req = models.IntegerField(blank=True, null=True)
-    lots_rec = models.IntegerField(blank=True, null=True)
+    lots_rec = models.IntegerField(blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     lots_apprv = models.IntegerField(blank=True, null=True)
     sq_ft_req = models.IntegerField(blank=True, null=True)
     units_appr = models.IntegerField(blank=True, null=True)

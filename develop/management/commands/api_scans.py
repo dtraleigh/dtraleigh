@@ -43,7 +43,7 @@ def development_api_scan():
             # Enhancement oppurtunity here
             if api_object_is_different(known_dev_object, attribute_data):
                 known_dev_object.objectid = attribute_data["OBJECTID"]
-                known_dev_object.devplan_id = attribute_data["devplan_id"]
+                # known_dev_object.devplan_id = attribute_data["devplan_id"]
                 known_dev_object.submitted = clean_unix_date(attribute_data["submitted"])
                 known_dev_object.submitted_yr = attribute_data["submitted_yr"]
                 known_dev_object.approved = clean_unix_date(attribute_data["approved"])
@@ -63,9 +63,9 @@ def development_api_scan():
                 known_dev_object.plan_name = attribute_data["plan_name"]
                 # known_dev_object.planurl = attribute_data["planurl"]
                 # known_dev_object.planurl_ap = attribute_data["planurl_approved"]
-                known_dev_object.planner = attribute_data["planner"]
+                # known_dev_object.planner = attribute_data["planner"]
                 known_dev_object.lots_req = attribute_data["lots_req"]
-                known_dev_object.lots_rec = attribute_data["lots_rec"]
+                # known_dev_object.lots_rec = attribute_data["lots_rec"]
                 known_dev_object.lots_apprv = attribute_data["lots_apprv"]
                 known_dev_object.sq_ft_req = attribute_data["sq_ft_req"]
                 known_dev_object.units_appr = attribute_data["units_apprv"]
@@ -89,7 +89,7 @@ def development_api_scan():
         else:
             try:
                 DevelopmentPlan.objects.create(objectid=attribute_data["OBJECTID"],
-                                               devplan_id=attribute_data["devplan_id"],
+                                               # devplan_id=attribute_data["devplan_id"],
                                                submitted=clean_unix_date(attribute_data["submitted"]),
                                                submitted_field=attribute_data["submitted_yr"],
                                                approved=clean_unix_date(attribute_data["approved"]),
@@ -109,9 +109,9 @@ def development_api_scan():
                                                plan_name=attribute_data["plan_name"],
                                                # planurl=attribute_data["planurl"],
                                                # planurl_ap=attribute_data["planurl_approved"],
-                                               planner=attribute_data["planner"],
+                                               # planner=attribute_data["planner"],
                                                lots_req=attribute_data["lots_req"],
-                                               lots_rec=attribute_data["lots_rec"],
+                                               # lots_rec=attribute_data["lots_rec"],
                                                lots_apprv=attribute_data["lots_apprv"],
                                                sq_ft_req=attribute_data["sq_ft_req"],
                                                units_appr=attribute_data["units_apprv"],
