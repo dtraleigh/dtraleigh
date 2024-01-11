@@ -75,22 +75,22 @@ class DevelopmentPlan(models.Model):
     submitted = models.DateField(blank=True, null=True)
     submitted_field = models.IntegerField(blank=True, null=True)
     approved = models.DateField(blank=True, null=True)
-    daystoappr = models.IntegerField(blank=True, null=True)
+    daystoappr = models.IntegerField(blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     plan_type = models.CharField(max_length=50, blank=True, null=True)
     status = models.CharField(max_length=30, blank=True, null=True)
     appealperi = models.DateField(blank=True, null=True)
     updated = models.DateField(blank=True, null=True)
     sunset_dat = models.DateField(blank=True, null=True)
     acreage = models.FloatField(blank=True, null=True)
-    major_stre = models.CharField(max_length=100, blank=True, null=True)
-    cac = models.CharField(max_length=30, blank=True, null=True)
-    engineer = models.CharField(max_length=100, blank=True, null=True)
-    engineer_p = models.CharField(max_length=20, blank=True, null=True)
+    major_street = models.CharField(max_length=100, blank=True, null=True)
+    cac = models.CharField(max_length=30, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
+    engineer = models.CharField(max_length=100, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
+    engineer_p = models.CharField(max_length=20, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     developer = models.CharField(max_length=100, blank=True, null=True)
-    developer_field = models.CharField(max_length=20, blank=True, null=True)
+    developer_field = models.CharField(max_length=20, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     plan_name = models.CharField(max_length=200, blank=True, null=True)
-    planurl = models.CharField(max_length=255, blank=True, null=True)
-    planurl_ap = models.CharField(max_length=255, blank=True, null=True)
+    planurl = models.CharField(max_length=255, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
+    planurl_ap = models.CharField(max_length=255, blank=True, null=True)  # deprecated, fields no longer in the API as of Jan 2024
     planner = models.CharField(max_length=50, blank=True, null=True)
     lots_req = models.IntegerField(blank=True, null=True)
     lots_rec = models.IntegerField(blank=True, null=True)

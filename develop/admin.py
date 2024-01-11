@@ -18,7 +18,7 @@ class SubscriberAdmin(admin.ModelAdmin):
 
 
 class DevelopmentPlansAdmin(admin.OSMGeoAdmin):
-    list_display = ("objectid", "plan_type", "submitted", "status", "major_stre", "geom",
+    list_display = ("objectid", "plan_type", "submitted", "status", "major_street", "geom",
                     "plan_name", "plan_numbe", "planurl", "modified_date", "created_date")
     history_list_display = ["status"]
 

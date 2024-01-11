@@ -114,22 +114,27 @@ def api_object_is_different(known_object, item_json):
     n = datetime.now().strftime("%H:%M %m-%d-%y")
 
     # Reducing the number of fields here in order to simplify the app.
-    model_field_to_compare = ["status", "major_stre", "plan_name", "planurl", "zoning"]
+    model_field_to_compare = ["status", "major_street", "plan_name", "zoning"]
 
     for field in model_field_to_compare:
-        if not fields_are_same(str(getattr(known_object, field)),
-                               str(item_json[DevelopmentPlan.developmentplan_mapping[field]])):
-            logger.info(f"{n}: Difference found with {str(field)} on Development {str(known_object)}")
-            logger.info(f"Known_object: {str(getattr(known_object, field))}"
-                        f" ({str(type(getattr(known_object, field)))}),  item_json[{field}]: "
-                        f"{str(item_json[DevelopmentPlan.developmentplan_mapping[field]])}"
-                        f" ({str(type(item_json[DevelopmentPlan.developmentplan_mapping[field]]))})")
-            logger.info("\n")
-            logger.info("known_object------------->")
-            logger.info(known_object)
-            logger.info("\nitem_json-------------->")
+        try:
+            if not fields_are_same(str(getattr(known_object, field)),
+                                   str(item_json[DevelopmentPlan.developmentplan_mapping[field]])):
+                logger.info(f"{n}: Difference found with {str(field)} on Development {str(known_object)}")
+                logger.info(f"Known_object: {str(getattr(known_object, field))}"
+                            f" ({str(type(getattr(known_object, field)))}),  item_json[{field}]: "
+                            f"{str(item_json[DevelopmentPlan.developmentplan_mapping[field]])}"
+                            f" ({str(type(item_json[DevelopmentPlan.developmentplan_mapping[field]]))})")
+                logger.info("\n")
+                logger.info("known_object------------->")
+                logger.info(known_object)
+                logger.info("\nitem_json-------------->")
+                logger.info(item_json)
+                return True
+        except KeyError as e:
+            logger.info(e)
+            logger.info(field)
             logger.info(item_json)
-            return True
 
     # Returning false here basically means no difference was found
     return False
