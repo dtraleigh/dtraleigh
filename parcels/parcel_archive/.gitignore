@@ -1,0 +1,6 @@
+.idea
+__pycache__
+parcel_zips/*
+!parcel_zips/.gitkeep
+parcel_data/*
+!parcel_data/.gitkeep
