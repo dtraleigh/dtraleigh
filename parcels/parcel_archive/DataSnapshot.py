@@ -12,7 +12,7 @@ class DataSnapshot:
         self.shp_file_name = ""
         self.shp_col_name_list = []
         self.shp_col_name_list_aligned_w_others = []
-        self.geojson_data_file_w_path = ""
+        self.geojson_data_file_w_path = self.get_geojson_file_name_if_exists()
 
     def __repr__(self):
         return f"Snapshot files from {base_path}{self.directory_name}"
@@ -34,7 +34,6 @@ class DataSnapshot:
         if len(shp_files) == 0:
             return False
         elif len(shp_files) == 1:
-            # print(shp_files[0])
             return True
         else:
             raise Exception(f"{base_path}{self.directory_name} contains multiple .shp files, {shp_files}")
@@ -45,6 +44,13 @@ class DataSnapshot:
             self.shp_file_name = [file for file in self.get_file_list() if file.split(".")[-1] == "shp"][0]
             return self.shp_file_name
         return None
+
+    def get_geojson_file_name_if_exists(self):
+        geojson_folder_content = [file for file in os.listdir(f"{base_path}geojson_files")]
+        for filename in geojson_folder_content:
+            if self.shp_file_name in filename.split(".")[0]:
+                return f"{base_path}{filename}"
+        return ""
 
     def extract_geojson_from_shp(self):
         if self.geojson_data_file_w_path == "":

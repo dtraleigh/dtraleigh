@@ -54,9 +54,9 @@ def get_geojson_from_shp(data_snapshot):
 
 
 def create_geojson_file_from_shp(data_snapshot):
-    path_to_shp_file = f"{base_path}{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
+    path_to_shp_file = f"{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
     if path_to_shp_file:
-        print(f"Creating {path_to_shp_file} geojson file.")
+        print(f"Creating geojson file from {path_to_shp_file}.")
         gdf = geopandas.read_file(path_to_shp_file)
         geojson_file_name = f"{base_path}geojson_files\\{data_snapshot.get_shp_data_file[:-4]}.geojson"
         gdf.to_file(geojson_file_name, driver="GeoJSON")

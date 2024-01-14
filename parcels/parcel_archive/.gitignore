@@ -4,3 +4,4 @@ parcel_zips/*
 !parcel_zips/.gitkeep
 parcel_data/*
 !parcel_data/.gitkeep
+geojson_files/*

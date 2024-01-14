@@ -35,5 +35,9 @@ class Command(BaseCommand):
 
         print(results_table)
 
+        for data_snapshot in data_snapshots:
+            output = data_snapshot.extract_geojson_from_shp()
+            print(output)
+
         print(f"Start: {start_time}")
         print(f"End: {datetime.now()}")
