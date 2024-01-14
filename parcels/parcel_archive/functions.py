@@ -1,11 +1,13 @@
 import os
 import geopandas
 
+base_path = "parcels\\parcel_archive\\"
+
 
 def get_zip_files_list():
     list_of_zip_files = []
 
-    for file in os.listdir("parcel_zips"):
+    for file in os.listdir(f"{base_path}parcel_zips"):
         if file.endswith(".zip"):
             list_of_zip_files.append(file)
 
@@ -13,7 +15,7 @@ def get_zip_files_list():
 
 
 def get_parcel_data_dirs():
-    return [f.path for f in os.scandir("parcel_data") if f.is_dir()]
+    return [f.path for f in os.scandir(f"{base_path}parcel_data") if f.is_dir()]
 
 
 def get_list_of_shp_col_names(data_snapshot, alpha_sorted=False):
@@ -52,11 +54,11 @@ def get_geojson_from_shp(data_snapshot):
 
 
 def create_geojson_file_from_shp(data_snapshot):
-    path_to_shp_file = f"{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
+    path_to_shp_file = f"{base_path}{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
     if path_to_shp_file:
         print(f"Creating {path_to_shp_file} geojson file.")
         gdf = geopandas.read_file(path_to_shp_file)
-        geojson_file_name = f"geojson_files\\{data_snapshot.get_shp_data_file[:-4]}.geojson"
+        geojson_file_name = f"{base_path}geojson_files\\{data_snapshot.get_shp_data_file[:-4]}.geojson"
         gdf.to_file(geojson_file_name, driver="GeoJSON")
         return geojson_file_name
     raise Exception("path_to_shp_file is none.")

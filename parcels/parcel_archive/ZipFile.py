@@ -1,12 +1,14 @@
 import zipfile
 import os
 
+base_path = "parcels\\parcel_archive\\"
+
 
 class ZipFile:
     def __init__(self, filename):
         self.filename = filename
-        self.parent_zip_root_dir = "parcel_zips"
-        self.parent_data_dir = "parcel_data"
+        self.parent_zip_root_dir = f"{base_path}parcel_zips"
+        self.parent_data_dir = f"{base_path}parcel_data"
 
     def __repr__(self):
         return f"Data from '{self.filename}'"

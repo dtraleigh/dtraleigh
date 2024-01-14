@@ -1,6 +1,8 @@
 import os
 
-from functions import create_geojson_file_from_shp
+from parcels.parcel_archive.functions import create_geojson_file_from_shp
+
+base_path = "parcels\\parcel_archive\\"
 
 
 class DataSnapshot:
@@ -13,7 +15,7 @@ class DataSnapshot:
         self.geojson_data_file_w_path = ""
 
     def __repr__(self):
-        return f"Snapshot files from {self.directory_name}"
+        return f"Snapshot files from {base_path}{self.directory_name}"
 
     def get_file_list(self, is_test=False):
         if is_test:
@@ -35,7 +37,7 @@ class DataSnapshot:
             # print(shp_files[0])
             return True
         else:
-            raise Exception(f"{self.directory_name} contains multiple .shp files, {shp_files}")
+            raise Exception(f"{base_path}{self.directory_name} contains multiple .shp files, {shp_files}")
 
     @property
     def get_shp_data_file(self):
