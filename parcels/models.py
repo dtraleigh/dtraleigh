@@ -44,3 +44,22 @@ class Parcel(models.Model):
 
     def __str__(self):
         return f"{self.id} - Pin:{self.pin}, objectid: {self.objectid}"
+
+
+class Snapshot(models.Model):
+    name = models.CharField(max_length=200)
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Snapshot {self.name} (id:{self.id})"
+
+
+class ParcelHistorical(models.Model):
+    data_geojson = models.JSONField()
+    snapshot = models.ForeignKey(Snapshot, on_delete=models.CASCADE)
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ParcelHistorical (id:{self.id})"

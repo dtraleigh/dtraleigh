@@ -39,5 +39,20 @@ class Command(BaseCommand):
             output = data_snapshot.extract_geojson_from_shp()
             print(output)
 
+        # Go through each snapshot
+        for data_snapshot in data_snapshots:
+            pass
+            # Create a snapshot object in the database
+
+            # Get the geojson file and create a list of features
+            features = []
+
+            # Loop through the list of features
+            for feature in features:
+                pass
+
+                # Create a historical parcel for each feature
+                # associate it to the snapshot object
+
         print(f"Start: {start_time}")
         print(f"End: {datetime.now()}")
