@@ -2,10 +2,13 @@ from django.core.management.base import BaseCommand
 
 from datetime import datetime
 from prettytable import PrettyTable
+
+from parcels.models import Snapshot, ParcelHistorical
 from parcels.parcel_archive.ZipFile import ZipFile
 from parcels.parcel_archive.DataSnapshot import DataSnapshot
 
-from parcels.parcel_archive.functions import get_zip_files_list, get_parcel_data_dirs
+from parcels.parcel_archive.functions import (get_zip_files_list, get_parcel_data_dirs,
+                                              get_list_of_features_from_geojson_file)
 
 
 class Command(BaseCommand):
@@ -31,7 +34,7 @@ class Command(BaseCommand):
         for data_dir in data_dirs:
             data_snapshot = DataSnapshot(f"{data_dir}")
             data_snapshots.append(data_snapshot)
-            results_table.add_row([data_snapshot.directory_name, data_snapshot.get_shp_data_file])
+            results_table.add_row([data_snapshot.directory_path_and_name, data_snapshot.get_shp_data_file])
 
         print(results_table)
 
@@ -40,19 +43,22 @@ class Command(BaseCommand):
             print(output)
 
         # Go through each snapshot
+        print("Going through each geojson file now and creating features.")
         for data_snapshot in data_snapshots:
-            pass
-            # Create a snapshot object in the database
+            if not Snapshot.objects.filter(name=data_snapshot.directory_name).exists():
+                new_snapshot = Snapshot(name=data_snapshot.directory_name)
+                new_snapshot.save()
+                print(f"Created new snapshot, {new_snapshot}")
+            else:
+                print(f"Skipping {data_snapshot.directory_name} as it already exists in the DB.")
+                continue
 
-            # Get the geojson file and create a list of features
-            features = []
-
-            # Loop through the list of features
+            print("Getting list of features from the geojson file.")
+            features = get_list_of_features_from_geojson_file(data_snapshot)
+            print("Looping through the feature list and adding features to the DB.")
             for feature in features:
-                pass
-
-                # Create a historical parcel for each feature
-                # associate it to the snapshot object
+                ParcelHistorical.objects.create(data_geojson=feature,
+                                                snapshot=new_snapshot)
 
         print(f"Start: {start_time}")
         print(f"End: {datetime.now()}")

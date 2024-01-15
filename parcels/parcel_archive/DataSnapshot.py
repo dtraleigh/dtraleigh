@@ -7,7 +7,8 @@ base_path = "parcels\\parcel_archive\\"
 
 class DataSnapshot:
     def __init__(self, directory_path_and_name, is_test=False):
-        self.directory_name = directory_path_and_name
+        self.directory_path_and_name = directory_path_and_name
+        self.directory_name = self.directory_path_and_name.split("\\")[-1]
         self.file_list = self.get_file_list(is_test)
         self.shp_file_name = ""
         self.shp_col_name_list = []
@@ -15,12 +16,12 @@ class DataSnapshot:
         self.geojson_data_file_w_path = self.get_geojson_file_name_if_exists()
 
     def __repr__(self):
-        return f"Snapshot files from {base_path}{self.directory_name}"
+        return f"Snapshot files from {base_path}{self.directory_path_and_name}"
 
     def get_file_list(self, is_test=False):
         if is_test:
-            return self.directory_name
-        return [file for file in os.listdir(self.directory_name)]
+            return self.directory_path_and_name
+        return [file for file in os.listdir(self.directory_path_and_name)]
 
     @property
     def contains_shp_data(self):
@@ -36,7 +37,7 @@ class DataSnapshot:
         elif len(shp_files) == 1:
             return True
         else:
-            raise Exception(f"{base_path}{self.directory_name} contains multiple .shp files, {shp_files}")
+            raise Exception(f"{base_path}{self.directory_path_and_name} contains multiple .shp files, {shp_files}")
 
     @property
     def get_shp_data_file(self):
@@ -49,7 +50,7 @@ class DataSnapshot:
         geojson_folder_content = [file for file in os.listdir(f"{base_path}geojson_files")]
         for filename in geojson_folder_content:
             if self.shp_file_name in filename.split(".")[0]:
-                return f"{base_path}{filename}"
+                return f"{base_path}geojson_files\\{filename}"
         return ""
 
     def extract_geojson_from_shp(self):

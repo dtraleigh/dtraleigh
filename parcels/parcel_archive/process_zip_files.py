@@ -23,7 +23,7 @@ def create_col_names_csv(snapshots):
         reorder_lists(snapshots)
 
         for snapshot in snapshots:
-            writer.writerow([snapshot.directory_name] + snapshot.shp_col_name_list_aligned_w_others)
+            writer.writerow([snapshot.directory_path_and_name] + snapshot.shp_col_name_list_aligned_w_others)
 
 
 def get_geojson_data(snapshots):
@@ -42,7 +42,7 @@ data_snapshots = []
 for data_dir in data_dirs:
     data_snapshot = DataSnapshot(f"{data_dir}")
     data_snapshots.append(data_snapshot)
-    results_table.add_row([data_snapshot.directory_name, data_snapshot.get_shp_data_file])
+    results_table.add_row([data_snapshot.directory_path_and_name, data_snapshot.get_shp_data_file])
 
 print(results_table)
 

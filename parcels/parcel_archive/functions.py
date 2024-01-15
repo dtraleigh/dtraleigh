@@ -1,3 +1,4 @@
+import json
 import os
 import geopandas
 
@@ -19,7 +20,7 @@ def get_parcel_data_dirs():
 
 
 def get_list_of_shp_col_names(data_snapshot, alpha_sorted=False):
-    path_to_shp_file = f"{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
+    path_to_shp_file = f"{data_snapshot.directory_path_and_name}\\{data_snapshot.get_shp_data_file}"
     if path_to_shp_file:
         print(f"reading {path_to_shp_file} for column names.")
         gdf = geopandas.read_file(path_to_shp_file)
@@ -45,7 +46,7 @@ def reorder_lists(data_snapshots):
 
 
 def get_geojson_from_shp(data_snapshot):
-    path_to_shp_file = f"{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
+    path_to_shp_file = f"{data_snapshot.directory_path_and_name}\\{data_snapshot.get_shp_data_file}"
     if path_to_shp_file:
         print(f"reading {path_to_shp_file} for column names.")
         gdf = geopandas.read_file(path_to_shp_file)
@@ -54,7 +55,7 @@ def get_geojson_from_shp(data_snapshot):
 
 
 def create_geojson_file_from_shp(data_snapshot):
-    path_to_shp_file = f"{data_snapshot.directory_name}\\{data_snapshot.get_shp_data_file}"
+    path_to_shp_file = f"{data_snapshot.directory_path_and_name}\\{data_snapshot.get_shp_data_file}"
     if path_to_shp_file:
         print(f"Creating geojson file from {path_to_shp_file}.")
         gdf = geopandas.read_file(path_to_shp_file)
@@ -62,3 +63,10 @@ def create_geojson_file_from_shp(data_snapshot):
         gdf.to_file(geojson_file_name, driver="GeoJSON")
         return geojson_file_name
     raise Exception("path_to_shp_file is none.")
+
+
+def get_list_of_features_from_geojson_file(data_snapshot):
+    with open(data_snapshot.geojson_data_file_w_path, "r") as read_file:
+        data = json.load(read_file)
+
+        return data["features"]
