@@ -2,9 +2,11 @@ import shutil
 import unittest
 import os
 
-from DataSnapshot import DataSnapshot
-from ZipFile import ZipFile
-from functions import reorder_lists
+from parcels.parcel_archive.DataSnapshot import DataSnapshot
+from parcels.parcel_archive.ZipFile import ZipFile
+from parcels.parcel_archive.functions import reorder_lists
+
+base_path = "parcels\\parcel_archive\\"
 
 
 class TestZipFile(unittest.TestCase):
@@ -13,14 +15,14 @@ class TestZipFile(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        shutil.copyfile(f"test_data\\{cls.test_zip_file_name}", f"parcel_zips\\{cls.test_zip_file_name}")
+        shutil.copyfile(f"{base_path}test_data\\{cls.test_zip_file_name}", f"{base_path}parcel_zips\\{cls.test_zip_file_name}")
 
     def tearDown(self):
-        shutil.rmtree(f"parcel_data\\{self.test_zip_file_name.split('.')[0]}")
+        shutil.rmtree(f"{base_path}parcel_data\\{self.test_zip_file_name.split('.')[0]}")
 
     @classmethod
     def tearDownClass(cls):
-        os.remove(f"parcel_zips\\{cls.test_zip_file_name}")
+        os.remove(f"{base_path}parcel_zips\\{cls.test_zip_file_name}")
 
     def test_unzip_the_file1(self):
         """
@@ -28,7 +30,7 @@ class TestZipFile(unittest.TestCase):
         """
         test_zip_file = ZipFile(f"{self.test_zip_file_name}")
         test_zip_file.unzip_the_file()
-        self.assertTrue(os.path.isdir(f"parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
+        self.assertTrue(os.path.isdir(f"{base_path}parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
 
     def test_unzip_the_file2(self):
         """
@@ -36,9 +38,9 @@ class TestZipFile(unittest.TestCase):
         """
         test_zip_file = ZipFile(f"{self.test_zip_file_name}")
         self.assertTrue(test_zip_file.unzip_the_file())
-        self.assertTrue(os.path.isdir(f"parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
+        self.assertTrue(os.path.isdir(f"{base_path}parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
         self.assertFalse(test_zip_file.unzip_the_file())
-        self.assertTrue(os.path.isdir(f"parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
+        self.assertTrue(os.path.isdir(f"{base_path}parcel_data\\{self.test_zip_file_name.split('.')[0]}"))
 
 
 class TestDataSnapshot(unittest.TestCase):
@@ -46,29 +48,29 @@ class TestDataSnapshot(unittest.TestCase):
     test_dir_name = "test_dir"
 
     def setUp(self):
-        shutil.copytree(f"test_data\\{self.test_dir_name}", f"parcel_data\\{self.test_dir_name}")
+        shutil.copytree(f"{base_path}test_data\\{self.test_dir_name}", f"{base_path}parcel_data\\{self.test_dir_name}")
 
     def tearDown(self):
-        shutil.rmtree(f"parcel_data\\{self.test_dir_name}")
+        shutil.rmtree(f"{base_path}parcel_data\\{self.test_dir_name}")
 
     def test_contains_shp_data(self):
-        snapshot = DataSnapshot(f"parcel_data\\{self.test_dir_name}")
+        snapshot = DataSnapshot(f"{base_path}parcel_data\\{self.test_dir_name}")
         self.assertFalse(snapshot.contains_shp_data)
 
-        first_shp_file = open(f"parcel_data\\{self.test_dir_name}\\file1.shp", "x")
+        first_shp_file = open(f"{base_path}parcel_data\\{self.test_dir_name}\\file1.shp", "x")
         first_shp_file.close()
         self.assertTrue(snapshot.contains_shp_data)
 
-        second_shp_file = open(f"parcel_data\\{self.test_dir_name}\\file2.shp", "x")
+        second_shp_file = open(f"{base_path}parcel_data\\{self.test_dir_name}\\file2.shp", "x")
         second_shp_file.close()
         with self.assertRaises(Exception):
-            snapshot.contains_shp_data
+            snapshot.contains_shp_data()
 
     def test_get_shp_data_file(self):
-        snapshot = DataSnapshot(f"parcel_data\\{self.test_dir_name}")
+        snapshot = DataSnapshot(f"{base_path}parcel_data\\{self.test_dir_name}")
         self.assertEqual(snapshot.get_shp_data_file, None)
 
-        first_shp_file = open(f"parcel_data\\{self.test_dir_name}\\file1.shp", "x")
+        first_shp_file = open(f"{base_path}parcel_data\\{self.test_dir_name}\\file1.shp", "x")
         first_shp_file.close()
         self.assertEqual(snapshot.get_shp_data_file, "file1.shp")
 
@@ -103,9 +105,9 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_create_geojson_file_from_shp(self):
-        expected_file = "geojson_files\\Raleigh_City_Council_Districts.geojson"
+        expected_file = f"{base_path}geojson_files\\Raleigh_City_Council_Districts.geojson"
 
-        data1 = DataSnapshot("test_data")
+        data1 = DataSnapshot(f"{base_path}test_data")
         data1.extract_geojson_from_shp()
         self.assertTrue(os.path.isfile(expected_file))
         os.remove(expected_file)
