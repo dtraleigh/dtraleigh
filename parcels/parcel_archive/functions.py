@@ -70,3 +70,21 @@ def get_list_of_features_from_geojson_file(data_snapshot):
         data = json.load(read_file)
 
         return data["features"]
+
+
+def parcel_has_CITY_value(parcel):
+    try:
+        if "CITY" in parcel.data_geojson["properties"]:
+            return True
+        return False
+    except KeyError as e:
+        print(e)
+
+
+def get_list_of_all_possible_CITY_values(parcels):
+    list_of_CITY_values = []
+    for parcel in parcels:
+        if parcel.data_geojson["properties"]["CITY"] not in list_of_CITY_values:
+            list_of_CITY_values.append(parcel.data_geojson["properties"]["CITY"])
+
+    return list_of_CITY_values
