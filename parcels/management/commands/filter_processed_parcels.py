@@ -1,6 +1,7 @@
 # After running process_archive_zip_files, this command is used to remove parcels that are not in Raleigh.
 # To-do: After this works, merge it into process_archive_zip_files to not create the parcel at all.
 import sys
+from datetime import datetime
 
 from django.core.management.base import BaseCommand
 from django.core.paginator import Paginator
@@ -15,7 +16,11 @@ class Command(BaseCommand):
         pass
 
     def handle(self, *args, **options):
-        paginator = Paginator(ParcelHistorical.objects.all(), 10000)
+        start_time = datetime.now()
+        # Set as needed
+        parcel_subset = ParcelHistorical.objects.filter(created_date__month=2, created_date__year=2024)
+
+        paginator = Paginator(parcel_subset, 10000)
         parcel_historical_ids_to_delete = []
 
         print(f"{paginator.num_pages} pages with {paginator.count} parcels total.")
@@ -27,7 +32,7 @@ class Command(BaseCommand):
             print(f"{page_number}", sep=" ", end=" ", flush=True)
 
             # Validate that the parcels can be filtered by checking a variety of methods
-            # Method 1: Parcel geojson contains a CITY field = RAL or some other similar indicator
+            # Method 1: Parcel geojson contains a CITY field = RAL
             for parcel in page.object_list:
                 # Check that the parcel even has the field
                 if not parcel_has_CITY_value(parcel):
@@ -35,8 +40,6 @@ class Command(BaseCommand):
                     sys.exit(1)
                 if parcel.data_geojson["properties"]["CITY"] != "RAL":
                     parcel_historical_ids_to_delete.append(parcel.id)
-                    print(parcel)
-                    sys.exit(1)
 
             all_CITY_values_found = all_CITY_values_found + get_list_of_all_possible_CITY_values(page.object_list)
             all_CITY_values_found = list(set(all_CITY_values_found))
@@ -46,4 +49,8 @@ class Command(BaseCommand):
         print('Deleting parcels where parcel.data_geojson["properties"]["CITY"] != "RAL"')
         ParcelHistorical.objects.filter(id__in=parcel_historical_ids_to_delete).delete()
 
-        print(f"Parcels left: {ParcelHistorical.objects.count()}")
+        print(f"After filter, subset is down to: {parcel_subset.count()}")
+        print(f"Parcels in the DB: {ParcelHistorical.objects.count()}")
+
+        print(f"Start: {start_time}")
+        print(f"End: {datetime.now()}")
