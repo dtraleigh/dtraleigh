@@ -64,9 +64,11 @@ def get_itb_items(items_that_changed):
                 try:
                     address_lat, address_lon = get_lat_lon_by_address(piece)
                 except TypeError as e:
-                    logger.info(e)
-                    logger.info(f"piece: {piece}")
-                    logger.info(f"item.project_name: {item.project_name}")
+                    message = f"{e}\n"
+                    message += f"piece: {piece}\n"
+                    message += f"item.project_name: {item.project_name}\n"
+                    logger.info(message)
+                    send_email_notice(message, email_admins())
                 if address_lat and address_lon:
                     # If anything hits True, add it.
                     if is_itb(address_lat, address_lon):
