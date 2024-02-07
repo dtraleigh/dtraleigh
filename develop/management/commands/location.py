@@ -61,7 +61,12 @@ def get_itb_items(items_that_changed):
         else:
             project_name_parts = split_up_project_name(item.project_name)
             for piece in project_name_parts:
-                address_lat, address_lon = get_lat_lon_by_address(piece)
+                try:
+                    address_lat, address_lon = get_lat_lon_by_address(piece)
+                except TypeError as e:
+                    logger.info(e)
+                    logger.info(f"piece: {piece}")
+                    logger.info(f"item.project_name: {item.project_name}")
                 if address_lat and address_lon:
                     # If anything hits True, add it.
                     if is_itb(address_lat, address_lon):
