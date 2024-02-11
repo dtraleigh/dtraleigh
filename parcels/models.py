@@ -66,3 +66,15 @@ class ParcelHistorical(models.Model):
 
     def __str__(self):
         return f"ParcelHistorical (id:{self.id})"
+
+
+class RaleighSubsection(models.Model):
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True, verbose_name="Date")
+    geom = models.GeometryField(srid=4326)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"RaleighSubsection (id:{self.id})"
