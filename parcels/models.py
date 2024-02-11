@@ -1,4 +1,7 @@
+import json
+
 from django.contrib.gis.db import models
+from django.contrib.gis.geos import GEOSGeometry
 from simple_history.models import HistoricalRecords
 
 
@@ -66,6 +69,12 @@ class ParcelHistorical(models.Model):
 
     def __str__(self):
         return f"ParcelHistorical (id:{self.id})"
+
+    def get_geosgeom_object(self):
+        if self.data_geojson["geometry"]:
+            return GEOSGeometry(str(self.data_geojson["geometry"]))
+        else:
+            return None
 
 
 class RaleighSubsection(models.Model):
