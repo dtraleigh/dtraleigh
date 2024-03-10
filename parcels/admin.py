@@ -18,6 +18,7 @@ class ParcelHistoricalAdmin(admin.OSMGeoAdmin):
 
 class RaleighSubsectionAdmin(admin.OSMGeoAdmin):
     list_display = ("id", "created_date", "modified_date")
+    raw_id_fields = ("sections",)
 
 
 admin.site.register(Parcel, ParcelAdmin)

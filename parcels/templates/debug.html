@@ -1,0 +1,21 @@
+{% extends "generic_map_base.html" %}
+{% load render_table from django_tables2 %}
+{% block content %}
+{% load leaflet_tags %}
+<div class="container" style="height:800px;">
+  {% leaflet_map "debug_map" callback="window.map_init_debug" %}
+</div>
+<script type="text/javascript">
+    var section_geojson = {{section.geom.geojson|safe}};
+    var parcel_geojson = {{parcel_cleaned_geojson|safe}};
+
+    function map_init_debug (map, options) {
+      var section_data = L.geoJSON(section_geojson, {style: {color:'orange'}});
+      var parcel_data = L.geoJSON(parcel_geojson, {style: {color:'blue'}});
+
+      map.addLayer(section_data);
+      map.addLayer(parcel_data);
+      map.fitBounds(parcel_data.getBounds());
+    }
+</script>
+{%endblock content%}

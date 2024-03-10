@@ -4,6 +4,8 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from simple_history.models import HistoricalRecords
 
+from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326
+
 
 class Parcel(models.Model):
     property_address = models.CharField(max_length=400, blank=True, null=True)
@@ -71,8 +73,11 @@ class ParcelHistorical(models.Model):
         return f"ParcelHistorical (id:{self.id})"
 
     def get_geosgeom_object(self):
-        if self.data_geojson["geometry"]:
+        if self.data_geojson["geometry"] and identify_coordinate_system(self) == "epsg:4326":
             return GEOSGeometry(str(self.data_geojson["geometry"]))
+        elif self.data_geojson["geometry"] and identify_coordinate_system(self) == "epsg:2264":
+            converted_geometry = str(convert_geometry_to_epsg4326(self.data_geojson["geometry"]))
+            return GEOSGeometry(converted_geometry)
         else:
             return None
 
@@ -81,6 +86,7 @@ class RaleighSubsection(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True, verbose_name="Date")
     geom = models.GeometryField(srid=4326)
+    sections = models.ManyToManyField(ParcelHistorical)
 
     class Meta:
         ordering = ["id"]

@@ -1,9 +1,11 @@
+import json
+
 from django.shortcuts import render
 from django_tables2 import SingleTableView, Column
 
 from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers
 from parcels.location import get_parcels_from_point
-from parcels.models import Parcel
+from parcels.models import Parcel, RaleighSubsection, ParcelHistorical
 from parcels.tables import ParcelHistoryTable
 
 page_title = "Parcel Tracking"
@@ -47,3 +49,15 @@ class ParcelHistoryView(SingleTableView):
     model = Parcel
     table_class = ParcelHistoryTable
     template_name = "parcel_main.html"
+
+
+def debug(request, parcel_id, subsection_id):
+    section = RaleighSubsection.objects.get(id=subsection_id)
+    parcel = ParcelHistorical.objects.get(id=parcel_id)
+
+    # parcel_cleaned_geojson = parcel.data_geojson["geometry"]
+    parcel_cleaned_geojson = json.dumps(parcel.data_geojson["geometry"])
+
+    return render(request, "debug.html", {"section": section,
+                                          "parcel": parcel,
+                                          "parcel_cleaned_geojson": parcel_cleaned_geojson})
