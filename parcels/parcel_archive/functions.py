@@ -184,7 +184,7 @@ def convert_geometry_to_epsg4326(geometry):
         shape_coords = []
         for coord in geom.coords[0]:
             x, y = convert_epsg2264_to_epsg4326(coord[0], coord[1])
-            shape_coords.append([x, y])
+            shape_coords.append([y, x])
         converted_coordinates.append(shape_coords)
 
     elif geom.geom_type == "MultiPolygon":
@@ -192,7 +192,7 @@ def convert_geometry_to_epsg4326(geometry):
             shape_coords = []
             for coord in shape[0]:
                 x, y = convert_epsg2264_to_epsg4326(coord[0], coord[1])
-                shape_coords.append([x, y])
+                shape_coords.append([y, x])
             converted_coordinates.append([shape_coords])
 
     else:

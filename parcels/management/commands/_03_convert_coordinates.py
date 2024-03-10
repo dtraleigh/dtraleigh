@@ -16,6 +16,7 @@ def convert_and_save_new_geojson(parcel, parcel_coordinate_system):
         sys.exit(1)
     elif parcel_coordinate_system == "epsg:2264":
         parcel.data_geojson["geometry"] = convert_geometry_to_epsg4326(parcel.data_geojson["geometry"])
+        parcel.data_geojson["geometry"] = verify_epsg4326_format(parcel)
         parcel.save()
     elif parcel_coordinate_system == "epsg:4326":
         parcel.data_geojson["geometry"] = verify_epsg4326_format(parcel)
