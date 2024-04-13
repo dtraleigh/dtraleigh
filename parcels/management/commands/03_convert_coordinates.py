@@ -53,14 +53,15 @@ class Command(BaseCommand):
         print(f"Page: ", end=" ")
 
         for page_number in paginator.page_range:
-            page = paginator.page(page_number)
-            print(f"{page_number}", sep=" ", end=" ", flush=True)
-            for parcel in page.object_list:
-                parcel_coordinate_system = identify_coordinate_system(parcel)
-                convert_and_save_new_geojson(parcel, parcel_coordinate_system)
+            if page_number > 260:
+                page = paginator.page(page_number)
+                print(f"{page_number}", sep=" ", end=" ", flush=True)
+                for parcel in page.object_list:
+                    parcel_coordinate_system = identify_coordinate_system(parcel)
+                    convert_and_save_new_geojson(parcel, parcel_coordinate_system)
 
-                coordinate_systems_found.append(parcel_coordinate_system)
-                coordinate_systems_found = list(set(coordinate_systems_found))
+                    coordinate_systems_found.append(parcel_coordinate_system)
+                    coordinate_systems_found = list(set(coordinate_systems_found))
 
         print(coordinate_systems_found)
         print(f"\nStart: {start_time}")

@@ -1,15 +1,22 @@
+from datetime import datetime
+from unittest import skip
+
 from django.test import TestCase
 
 from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers
 from parcels.models import Parcel, RaleighSubsection, ParcelHistorical, Snapshot
 from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326, \
-    verify_epsg4326_format, switch_coordinates
+    update_epsg4326_format, switch_coordinates
 from parcels.management.commands._03_convert_coordinates import convert_and_save_new_geojson
 
 
 class ParcelTestCase(TestCase):
     databases = "__all__"
-    fixtures = ["parcels_test_data", "raleigh_subsections"]
+    fixtures = ["parcels_test_data",
+                "raleigh_subsections",
+                "snapshot",
+                "random_output"
+                ]
 
     def setUp(self):
         Snapshot.objects.create(name="Test Snapshot")
@@ -256,7 +263,7 @@ class ParcelTestCase(TestCase):
             [-78.73211062925463, 35.88965347414136],
             [-78.73211042127825, 35.88959578462791]]]}
 
-        self.assertEquals(verify_epsg4326_format(wym_academy_parcel), expected_output)
+        self.assertEquals(update_epsg4326_format(wym_academy_parcel), expected_output)
 
     def test_convert_and_save_new_geojson1(self):
         # epsg:2264 polygon
@@ -432,3 +439,24 @@ class ParcelTestCase(TestCase):
                                 [-78.62914098450993, 35.77889549477342], [-78.62983035930512, 35.77889549477342],
                                 [-78.62983035930512, 35.77805532317532]]]},
                            'properties': {}})
+
+    # @skip("Skipping test_check_all_parcels_can_be_converted().")
+    def test_check_all_parcels_can_be_converted(self):
+        start_time = datetime.now()
+        print("Pre-checking a sample of parcels if they can be converted.")
+        all_parcels = ParcelHistorical.objects.all()
+        coordinate_systems_found = []
+
+        for count, parcel in enumerate(all_parcels):
+            print(f"{count}", sep=",", end=" ", flush=True)
+            parcel_coordinate_system = identify_coordinate_system(parcel)
+            convert_and_save_new_geojson(parcel, parcel_coordinate_system, False)
+
+            coordinate_systems_found.append(parcel_coordinate_system)
+            coordinate_systems_found = list(set(coordinate_systems_found))
+
+        print(coordinate_systems_found)
+        print(f"\nStart: {start_time}")
+        print(f"End: {datetime.now()}")
+
+        self.assertTrue(True)
