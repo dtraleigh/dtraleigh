@@ -151,7 +151,8 @@ def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
     try:
         # From the scan
         parcel_data = parcel_json["attributes"]
-        set_parcel_to_active(parcel)
+        if not scan_report.is_test:
+            set_parcel_to_active(parcel)
 
         for field in fields_to_track:
             if field == "DEED_ACRES":
@@ -179,13 +180,15 @@ def update_parcel_if_needed(parcel_json, parcel_model, scan_report):
         if num_parcel_changes > 0:
             if not scan_report.is_test:
                 parcel.save(update_fields=update_fields)
+                logger.info(f"Updated {parcel}")
             else:
-                print(f"Fake updated {parcel}")
+                # print(f"Fake updated {parcel}")
+                pass
             scan_report.num_changes += 1
             scan_report.increment_num_parcels_updated()
 
             log_update_info(parcel, update_fields)
-            scan_report.parcels_updated.append(parcel)
+            # scan_report.parcels_updated.append(parcel) # commenting this out to save memory
     except Exception as e:
         scan_report.add_parcel_issue(parcel, e)
 

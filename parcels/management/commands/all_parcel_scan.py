@@ -1,5 +1,6 @@
 import datetime
 import logging
+from array import *
 
 from django.core.management.base import BaseCommand
 
@@ -7,9 +8,10 @@ from parcels.ScanReport import ScanReport
 from parcels.functions import get_all_RAL_parcels
 from parcels.functions_scan import update_parcel_is_active, create_a_new_parcel, update_parcel_if_needed
 from parcels.models import Parcel
+from utils.utils import get_size
 
 logger = logging.getLogger("django")
-list_of_objectids_scanned = []
+list_of_objectids_scanned = array("i", [])
 
 
 class Command(BaseCommand):
@@ -23,7 +25,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         scan_report = ScanReport("RAL Scan Report", options["test"], Parcel)
         scan_report.send_intro_message(options["test"])
-        scan_report.known_parcel_objectids = [p.objectid for p in Parcel.objects.all().iterator()]
+        scan_report.known_parcel_objectids = array("i", [p.objectid for p in Parcel.objects.all().iterator()])
 
         offset = 0
         if options["offset"]:
@@ -45,7 +47,8 @@ class Command(BaseCommand):
             for parcel_json in parcel_subset["features"]:
                 if not options["update_only"]:
                     if parcel_json["attributes"]["OBJECTID"] not in scan_report.known_parcel_objectids:
-                        create_a_new_parcel(parcel_json, Parcel, scan_report)
+                        if not options["test"]:
+                            create_a_new_parcel(parcel_json, Parcel, scan_report)
                         scan_report.add_objectid_to_known_list(parcel_json["attributes"]["OBJECTID"])
                     else:
                         update_parcel_if_needed(parcel_json, Parcel, scan_report)
@@ -54,9 +57,11 @@ class Command(BaseCommand):
 
             self.update_objectids_list(parcel_subset["features"])
             offset += num_features_returned
+            print(f"scan_report size is now: {get_size(scan_report)}")
 
         update_parcel_is_active(list_of_objectids_scanned, options["test"], Parcel)
         scan_report.send_output_message()
+        print(f"scan_report final size: {get_size(scan_report)}")
 
     def update_objectids_list(self, parcel_json):
         for parcel in parcel_json:

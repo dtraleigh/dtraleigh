@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from array import *
 
 from parcels.functions_scan import scan_results_email, truncate_list_for_printing
 from parcels.models import Parcel
@@ -19,11 +20,11 @@ class ScanReport:
         self.parcels_with_issues = []
         self.total_parcels_in_dataset = 0
         self.is_test = is_test
-        self.list_of_objectids_scanned = []
+        self.list_of_objectids_scanned = array("i", [])
         self.num_changes = 0
         self.start_time = datetime.now()
         self.end_time = None
-        self.known_parcel_objectids = []
+        self.known_parcel_objectids = array("i", [])
 
     def add_parcel_json_issue(self, parcel_json, e):
         self.output_message += f"{e}\n"

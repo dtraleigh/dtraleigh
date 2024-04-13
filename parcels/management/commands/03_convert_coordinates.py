@@ -4,23 +4,36 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.core.paginator import Paginator
 
-from parcels.models import ParcelHistorical, RaleighSubsection
+from parcels.models import ParcelHistorical
 from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326, \
-    verify_epsg4326_format
+    update_epsg4326_format, verify_epsg4326_format_is_correct
 
 
-def convert_and_save_new_geojson(parcel, parcel_coordinate_system):
+def convert_and_save_new_geojson(parcel, parcel_coordinate_system, verbose=False):
     if parcel_coordinate_system is None:
         print(f"Check {parcel}")
         print(parcel.data_geojson["geometry"])
         sys.exit(1)
     elif parcel_coordinate_system == "epsg:2264":
+        if verbose:
+            print(f"Checking {parcel} with epsg:2264 coordinates. Converting to epsg:4326 coordinates.")
         parcel.data_geojson["geometry"] = convert_geometry_to_epsg4326(parcel.data_geojson["geometry"])
-        parcel.data_geojson["geometry"] = verify_epsg4326_format(parcel)
+        if verbose:
+            print(f"{parcel} converted. Updating format if the coordinates need to be switched.")
+        parcel.data_geojson["geometry"] = update_epsg4326_format(parcel)
+        if verbose:
+            print(f"{parcel} updated. Saving.")
         parcel.save()
     elif parcel_coordinate_system == "epsg:4326":
-        parcel.data_geojson["geometry"] = verify_epsg4326_format(parcel)
-        parcel.save()
+        if verbose:
+            print(f"Checking {parcel} with epsg:4326 coordinates")
+        if not verify_epsg4326_format_is_correct(parcel):
+            if verbose:
+                print(f"{parcel} failed epsg:4326 verify check. Updating... ")
+            parcel.data_geojson["geometry"] = update_epsg4326_format(parcel)
+            if verbose:
+                print(f"{parcel} is updated. Now saving.")
+            parcel.save()
 
 
 class Command(BaseCommand):
