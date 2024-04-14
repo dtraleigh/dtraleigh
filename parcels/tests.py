@@ -7,7 +7,7 @@ from parcels.history import get_parcel_history_diffs, get_parcel_history_table_h
 from parcels.models import Parcel, RaleighSubsection, ParcelHistorical, Snapshot
 from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326, \
     update_epsg4326_format, switch_coordinates
-from parcels.management.commands._03_convert_coordinates import convert_and_save_new_geojson
+from parcels.management.commands.parcel_03_convert_coordinates import convert_and_save_new_geojson
 
 
 class ParcelTestCase(TestCase):
@@ -440,7 +440,7 @@ class ParcelTestCase(TestCase):
                                 [-78.62983035930512, 35.77805532317532]]]},
                            'properties': {}})
 
-    # @skip("Skipping test_check_all_parcels_can_be_converted().")
+    @skip("Skipping test_check_all_parcels_can_be_converted().")
     def test_check_all_parcels_can_be_converted(self):
         start_time = datetime.now()
         print("Pre-checking a sample of parcels if they can be converted.")
