@@ -36,6 +36,16 @@ def convert_and_save_new_geojson(parcel, parcel_coordinate_system, verbose=False
             parcel.save()
 
 
+def get_elapsed_time(start_time, end_time):
+    time_difference = end_time - start_time
+    seconds = time_difference.total_seconds()
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    remaining_seconds = int(seconds % 60)
+
+    return f"{hours} hours, {minutes} minutes, {remaining_seconds} seconds"
+
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         # parser.add_argument("-t", "--test", action="store_true", help="Run a test without making any changes.")
@@ -63,6 +73,8 @@ class Command(BaseCommand):
                 coordinate_systems_found = list(set(coordinate_systems_found))
 
         print(coordinate_systems_found)
-        print(f"\nStart: {start_time}")
-        print(f"End: {datetime.now()}")
+        end_time = datetime.now()
 
+        print(f"\nStart: {start_time}")
+        print(f"End: {end_time}")
+        print(f"Elapsed Time: {get_elapsed_time(start_time, end_time)}")
