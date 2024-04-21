@@ -56,6 +56,7 @@ class Command(BaseCommand):
         # Set as needed
         parcel_subset = ParcelHistorical.objects.all()
         coordinate_systems_found = []
+        parcels_not_valid = []
 
         paginator = Paginator(parcel_subset, 10000)
 
@@ -65,14 +66,23 @@ class Command(BaseCommand):
         for page_number in paginator.page_range:
             page = paginator.page(page_number)
             print(f"{page_number}", sep=" ", end=" ", flush=True)
+
             for parcel in page.object_list:
                 parcel_coordinate_system = identify_coordinate_system(parcel)
                 convert_and_save_new_geojson(parcel, parcel_coordinate_system)
 
                 coordinate_systems_found.append(parcel_coordinate_system)
                 coordinate_systems_found = list(set(coordinate_systems_found))
+                if not verify_epsg4326_format_is_correct(parcel):
+                    parcels_not_valid.append(parcel)
 
-        print(coordinate_systems_found)
+                if len(parcels_not_valid) > 10:
+                    print("More than 10 invalid parcels. Quitting script.")
+                    sys.exit(1)
+
+        print(f"\nCoordinate Systems Found: {coordinate_systems_found}")
+        print(f"Parcel not valid: {parcels_not_valid}")
+
         end_time = datetime.now()
 
         print(f"\nStart: {start_time}")
