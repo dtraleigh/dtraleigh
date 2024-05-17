@@ -9,6 +9,7 @@ from parcels.parcel_archive.functions import identify_coordinate_system, convert
     update_epsg4326_format, verify_epsg4326_format_is_correct
 
 
+# Tries to convert everything to epsg:4326
 def convert_and_save_new_geojson(parcel, parcel_coordinate_system, verbose=False):
     if parcel_coordinate_system is None:
         print(f"Check {parcel}")

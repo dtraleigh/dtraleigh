@@ -1,0 +1,52 @@
+{% extends "generic_map_base.html" %}
+{% load render_table from django_tables2 %}
+{% block content %}
+{% load leaflet_tags %}
+<div class="container" style="height:800px;">
+  {% leaflet_map "debug_map" callback="window.map_init_debug" %}
+</div>
+<div>
+    <p>{{parcel_list}}</p>
+    <table>
+        <tr>
+            <th>Parcel</th>
+            <th>REID</th>
+        </tr>
+        {% for parcel in parcel_debug_data %}
+         <tr>
+             <td>{{parcel}}</td>
+             <td>REID</td>
+         </tr>
+        {% endfor%}
+    </table>
+</div>
+<script type="text/javascript">
+    var geojsonFeature = {{sections|safe}};
+    var orphan_parcels_geojson = {{geojson_data|safe}};
+
+    function map_init_debug (map, options) {
+      var section_data = L.geoJSON(geojsonFeature, {
+        style: {color:'orange'},
+        onEachSection: onEachSection,
+      });
+      var parcel_data = L.geoJSON(orphan_parcels_geojson, {
+        style: {color:'black'},
+        onEachParcel: onEachParcel,
+      });
+
+      function onEachParcel(feature, layer) {
+        var popupContent = '<p>'+feature.properties.REID+'</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      function onEachSection(feature, layer) {
+        var popupContent = '<p>'+feature.properties.pk+'</p>';
+        layer.bindPopup(popupContent, { maxWidth: 600 });
+      }
+
+      map.addLayer(section_data);
+      map.fitBounds(section_data.getBounds());
+      map.addLayer(parcel_data);
+    }
+</script>
+{%endblock content%}
