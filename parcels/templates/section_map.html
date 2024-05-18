@@ -23,30 +23,44 @@
 <script type="text/javascript">
     var geojsonFeature = {{sections|safe}};
     var orphan_parcels_geojson = {{geojson_data|safe}};
+</script>
+<script type="text/javascript">
+    function map_init_debug(map, options) {
+    //Sections
+    var section_data = L.geoJSON(geojsonFeature, {
+        style: {
+            color: 'orange'
+        },
+		onEachFeature : onEachSection,
+    });
 
-    function map_init_debug (map, options) {
-      var section_data = L.geoJSON(geojsonFeature, {
-        style: {color:'orange'},
-        onEachSection: onEachSection,
-      });
-      var parcel_data = L.geoJSON(orphan_parcels_geojson, {
-        style: {color:'black'},
-        onEachParcel: onEachParcel,
-      });
-
-      function onEachParcel(feature, layer) {
-        var popupContent = '<p>'+feature.properties.REID+'</p>';
-        layer.bindPopup(popupContent, { maxWidth: 600 });
-      }
-
-      function onEachSection(feature, layer) {
-        var popupContent = '<p>'+feature.properties.pk+'</p>';
-        layer.bindPopup(popupContent, { maxWidth: 600 });
-      }
-
-      map.addLayer(section_data);
-      map.fitBounds(section_data.getBounds());
-      map.addLayer(parcel_data);
+    function onEachSection(feature, layer) {
+        var popupContent = '<p>section id: ' + feature.properties.pk + '</p>';
+        layer.bindPopup(popupContent, {
+            maxWidth: 600
+        });
     }
+
+    map.addLayer(section_data);
+    map.fitBounds(section_data.getBounds());
+
+    //Parcels
+    var parcel_data = L.geoJSON(orphan_parcels_geojson, {
+        style: {
+            color: 'black'
+        },
+        onEachFeature: onEachParcel,
+    });
+
+    function onEachParcel(feature, layer) {
+        var popupContent = '<p>PARCEL_ID: ' + feature.properties.PARCEL_ID + '</p>';
+        layer.bindPopup(popupContent, {
+            maxWidth: 600
+        });
+    }
+
+    map.addLayer(parcel_data);
+}
+
 </script>
 {%endblock content%}
