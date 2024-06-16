@@ -81,6 +81,24 @@ class ParcelHistorical(models.Model):
         else:
             return None
 
+    def get_total_value(self):
+        keys_to_check = ["TOTAL_VALU", "TOTVALASSD"]
+        for key in keys_to_check:
+            try:
+                return self.data_geojson["properties"][key]
+            except KeyError:
+                continue
+        raise KeyError(f"None of the keys {keys_to_check} were found in the data. {self.data_geojson}")
+
+    def get_propdesc(self):
+        keys_to_check = ["PROPDESC"]
+        for key in keys_to_check:
+            try:
+                return self.data_geojson["properties"][key]
+            except KeyError:
+                continue
+        raise KeyError(f"None of the keys {keys_to_check} were found in the data. {self.data_geojson}")
+
 
 class RaleighSubsection(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)

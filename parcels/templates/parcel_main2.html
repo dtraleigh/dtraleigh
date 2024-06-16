@@ -1,0 +1,92 @@
+{% extends "generic_map_base.html" %}
+{% load render_table from django_tables2 %}
+{% block content %}
+{% load leaflet_tags %}
+<div class="container">
+  <div class="row">
+    <form action="?" method="get">
+      <label for="lat_input">Lat:</label>
+      <input id="lat_input"
+               type="text"
+               name="lat_input"
+               placeholder=""
+               value="{{ lat_input }}">
+      <label for="lon_input">Lon:</label>
+      <input id="lon_input"
+               type="text"
+               name="lon_input"
+               placeholder=""
+               value="{{ lon_input }}">
+      <input type="submit" value="Submit">
+    </form>
+  </div>
+  {% leaflet_map "parcel_picker_map" callback="window.map_init_picker" %}
+  {% for parcel in all_parcel_data %}
+  <div class="row">
+    <div class="col border bg-light p-2">
+      {% leaflet_map parcel.id callback="window.map_init_basic" %}
+    </div>
+    <div class="col border bg-light p-2">
+      <h4>{{parcel.get_propdesc}}</h4>
+      <ul>
+        <li>Total Value: {{parcel.get_total_value}}</li>
+      </ul>
+    </div>
+  </div>
+  {% endfor %}
+  <!--Debug data
+  <div class="row">
+    {{all_parcel_data}}
+  </div>-->
+</div>
+<script>
+function getPolygonCentroid(polygon) {
+  var coordinates = polygon.coordinates[0];
+  var x = 0, y = 0, area = 0, factor;
+  var j = coordinates.length - 1;
+
+  for (var i = 0; i < coordinates.length; i++) {
+    factor = (coordinates[i][0] * coordinates[j][1] - coordinates[j][0] * coordinates[i][1]);
+    x += (coordinates[i][0] + coordinates[j][0]) * factor;
+    y += (coordinates[i][1] + coordinates[j][1]) * factor;
+    area += factor;
+    j = i;
+  }
+
+  area *= 0.5;
+  factor = 1 / (6 * area);
+
+  return [y * factor, x * factor];
+}
+</script>
+<script type="text/javascript">
+  function map_init_picker (map, options) {
+    map.setView([35.779591,-78.638176], 15);
+
+    var lat;
+    var lng;
+
+    map.on('click', function(e) {
+        //console.log(e.latlng);
+        lat = e.latlng.lat;
+        lng = e.latlng.lng;
+        document.getElementById('lat_input').value = lat;
+        document.getElementById('lon_input').value = lng;
+    });
+  }
+</script>
+{% for parcel in all_parcel_data %}
+<script type="text/javascript">
+  var parcel_geojson{{parcel.id}} = {{parcel.get_geosgeom_object.geojson|safe}};
+</script>
+<script type="text/javascript">
+    function map_init_basic (map, options) {
+      var centerCoordinates = getPolygonCentroid(parcel_geojson{{parcel.id}});
+      //console.log(centerCoordinates);
+      map.setView(centerCoordinates, 18);
+      var parcel_data = L.geoJSON(parcel_geojson{{parcel.id}}, {style: {color:'orange'}});
+      map.addLayer(parcel_data);
+    }
+</script>
+{% endfor %}
+{%endblock content%}

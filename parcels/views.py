@@ -6,14 +6,14 @@ from django.shortcuts import render
 from django_tables2 import SingleTableView, Column
 
 from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers
-from parcels.location import get_parcels_from_point
+from parcels.functions import get_parcels_from_point, get_parcel_historical_from_point
 from parcels.models import Parcel, RaleighSubsection, ParcelHistorical
 from parcels.tables import ParcelHistoryTable
 
 page_title = "Parcel Tracking"
 
 
-def main(request):
+def get_lat_lon_from_request(request):
     lat = None
     lon = None
     lat_string_from_form = request.GET.get("lat_input")
@@ -22,7 +22,11 @@ def main(request):
         lat = float(lat_string_from_form)
     if lon_string_from_form:
         lon = float(lon_string_from_form)
+    return lat, lon
 
+
+def main(request):
+    lat, lon = get_lat_lon_from_request(request)
     target_parcels = get_parcels_from_point(lat, lon)
 
     # [['parcel_inst1', 'parcel_inst1_table'], ['parcel_inst2', 'parcel_inst2_table'], .....]
@@ -45,6 +49,19 @@ def main(request):
                                                 "lat_input": lat,
                                                 "lon_input": lon,
                                                 "all_parcel_data": all_parcel_data})
+
+
+def history(request):
+    lat, lon = get_lat_lon_from_request(request)
+    # target_parcels = get_parcel_historical_from_point(lat, lon)
+    # test_list = [314374, 635498, 956622, 1277746, 1598870, 1919994, 2241118, 2562242, 2883366, 3204490, 3525614, 3846738, 4095766, 4430240, 4624572, 5131169, 5466538, 5802660, 5992856, 6481831, 6819357, 7160950, 7499335, 7838400]
+    test_list = [314374, 635498, 956622]
+    target_parcels = ParcelHistorical.objects.filter(id__in=test_list)
+
+    return render(request, "parcel_main2.html", {"page_title": page_title,
+                                                 "lat_input": lat,
+                                                 "lon_input": lon,
+                                                 "all_parcel_data": target_parcels})
 
 
 class ParcelHistoryView(SingleTableView):
@@ -106,5 +123,3 @@ def raleigh_map(request):
                                                 "geojson_data": geojson_data,
                                                 "parcel_debug_data": first_page_list,
                                                 "parcel_list": parcel_list})
-
-

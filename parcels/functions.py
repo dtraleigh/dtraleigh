@@ -4,7 +4,7 @@ from django.contrib.gis.geos import Point
 
 import parcels.models
 from newBernTOD.functions import query_url_with_retries
-from parcels.models import RaleighSubsection
+from parcels.models import RaleighSubsection, Parcel, ParcelHistorical
 
 logger = logging.getLogger("django")
 
@@ -42,3 +42,44 @@ def get_ral_subsection(lat, lon):
         logger.info(e)
         logger.info(f"Failed to find a Raleigh subsection for {lat}, {lon}")
         return None
+
+
+def get_parcels_from_point(lat, lon, subsection=None):
+    """
+    Take in a lat and lon (floats) and return all parcels where the point is inside
+    the geometry.
+    """
+    pnt = Point(lon, lat)
+
+    return Parcel.objects.filter(geom__intersects=pnt)
+
+
+def get_parcel_historical_from_point(lat, lon, subsection=None):
+    """
+    Take in a lat and lon (floats) and return all historical parcels where the point is inside
+    the geometry. Optional subsection argument.
+    """
+    if lat is None and lon is None:
+        return []
+
+    pnt = Point(lon, lat)
+
+    if not subsection:
+        subsection = get_ral_subsection(lat, lon)
+
+    parcel_pool = subsection.sections.all()
+    overlapping_parcels = []
+    warning_parcels = []
+
+    for parcel in parcel_pool:
+        parcel_geom = parcel.get_geosgeom_object()
+        if parcel_geom:
+            if parcel_geom.intersects(pnt):
+                overlapping_parcels.append(parcel)
+        else:
+            warning_parcels.append(parcel)
+
+    if warning_parcels:
+        print(f"WARNING: Some parcels did not have a geos geometry. {warning_parcels}")
+
+    return overlapping_parcels
