@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 from develop import views as develop_views
 from buildings import views as buildings_views
 from newBernTOD import views as newbern_views
+from parking import views as parking_views
 
 urlpatterns = [
     path(
@@ -32,4 +33,5 @@ urlpatterns = [
     path("filter_tod/", newbern_views.filter_tod),
     path("tod/", include("newBernTOD.urls")),
     path("parcels/", include("parcels.urls")),
+    path("parking/", include("parking.urls")),
   ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

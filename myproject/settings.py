@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     "eats",
     "rpd",
     "parcels",
-    "django_tables2"
+    "django_tables2",
+    "parking"
 ]
 
 MIDDLEWARE = [
