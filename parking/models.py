@@ -29,6 +29,9 @@ class Rate(models.Model):
     start_time = models.TimeField(blank=True, null=True)
     end_time = models.TimeField(blank=True, null=True)
 
+    class Meta:
+        ordering = ["start_time"]
+
     def __str__(self):
         return f"Rate (id:{self.id}) - {self.day_of_week}: {self.start_time}-{self.end_time} - {self.rate}"
 
