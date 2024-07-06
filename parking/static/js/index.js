@@ -60,22 +60,6 @@ const options = {
 const data = {
     labels: parkingLocations,
     datasets: datasets,
-//    datasets: [{
-//        label: 'free',
-//        backgroundColor: "green",
-//        data: [{x: 7, rate: "Free"}],
-//        barPercentage: 0.9,
-//    }, {
-//        label: 'charge',
-//        backgroundColor: "orange",
-//        data: [{x: 12, rate: "Rate 2"}],
-//        barPercentage: 0.9,
-//    }, {
-//        label: 'free',
-//        backgroundColor: "green",
-//        data: [{x: 16, rate: "Free Evenings"}],
-//        barPercentage: 0.9,
-//    }],
 };
 
 const myChart = new Chart("myChart", {

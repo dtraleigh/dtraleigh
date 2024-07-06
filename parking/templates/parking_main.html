@@ -4,6 +4,8 @@
         <script src="{% static "chart.js/dist/chart.min.js" %}"></script>
         <script src="{% static "chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js" %}"></script>
         <script src="{% static "js/time.js" %}"></script>
+        <script src="{% static "js/colors.js" %}"></script>
+        <script src="{% static "patternomaly/dist/patternomaly.js" %}"></script>
 
         <link rel="stylesheet" href="{% static "bootstrap-5.3.3-dist/css/bootstrap.min.css" %}">
 
@@ -27,6 +29,8 @@
         <script>
             var parkingLocations = [{{parking_locations|safe}}];
             var datasets = {{datasets|safe}};
+            datasets = populateColorAndPattern(datasets)
+            console.log(datasets);
         </script>
         <script src="{% static "js/index.js" %}"></script>
         <script src="{% static "bootstrap-5.3.3-dist/js/bootstrap.min.js" %}"></script>

@@ -3,6 +3,7 @@ from parking.models import Rate, ParkingLocation, RateSchedule
 
 
 class RateAdmin(admin.ModelAdmin):
+    save_as = True
     list_display = ("day_of_week", "is_free", "all_day", "rate", "start_time", "end_time")
 
 
