@@ -45,8 +45,8 @@ class RateSchedule(models.Model):
 
 
 class ParkingLocation(models.Model):
-    parking_location_types = (("DECK", "Parking Deck"),
-                              ("LOT", "Parking Lot"))
+    parking_location_types = (("DECK", "Deck"),
+                              ("LOT", "Lot"))
 
     name = models.CharField(max_length=400)
     type = models.CharField(choices=parking_location_types,

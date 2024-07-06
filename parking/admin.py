@@ -8,6 +8,7 @@ class RateAdmin(admin.ModelAdmin):
 
 
 class ParkingLocationAdmin(admin.ModelAdmin):
+    save_as = True
     list_display = ("name", "type", "owner")
 
 

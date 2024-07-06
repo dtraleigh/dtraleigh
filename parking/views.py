@@ -49,11 +49,11 @@ def get_parking_datasets(parking_locations_to_show, day_of_week):
 
 
 def main(request):
-    day_of_the_week = "MONDAY"  # Used for debugging
-    # day_of_the_week = get_today_day_of_week()
+    # day_of_the_week = "MONDAY"  # Used for debugging
+    day_of_the_week = get_today_day_of_week()
     parking_locations_to_show = ParkingLocation.objects.all()
 
-    parking_locations = [f"\'{loc.name}\'" for loc in parking_locations_to_show]
+    parking_locations = [f"\'{loc.get_type_display()}: {loc.name}\'" for loc in parking_locations_to_show]
     parking_locations_string = ", ".join(parking_locations)
 
     datasets = get_parking_datasets(parking_locations_to_show, day_of_the_week)
