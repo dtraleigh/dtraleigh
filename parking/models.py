@@ -49,6 +49,9 @@ class Rate(models.Model):
 class ParkingLocation(models.Model):
     parking_location_types = (("DECK", "Deck"),
                               ("LOT", "Lot"))
+    cost_list = (("HIGH", "$$$"),
+                 ("MEDIUM", "$$"),
+                 ("LOW", "$"))
 
     name = models.CharField(max_length=400)
     type = models.CharField(choices=parking_location_types,
@@ -56,6 +59,12 @@ class ParkingLocation(models.Model):
                             default=None,
                             verbose_name="Parking Location Type",
                             max_length=100)
+    cost = models.CharField(choices=cost_list,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            verbose_name="Cost",
+                            max_length=20)
     owner = models.CharField(max_length=400)
     url = models.TextField(blank=True, null=True, verbose_name="Parking information URL")
     special_event_capable = models.BooleanField(default=False)
@@ -65,4 +74,5 @@ class ParkingLocation(models.Model):
         return f"ParkingLocation (id:{self.id}) - {self.name}"
 
     def get_todays_rates(self, day_of_week):
-        return [rate for rate in Rate.objects.filter(day_of_week=day_of_week) if rate.rate_schedule == self.rate_schedule]
+        return [rate for rate in Rate.objects.filter(day_of_week=day_of_week) if
+                rate.rate_schedule == self.rate_schedule]

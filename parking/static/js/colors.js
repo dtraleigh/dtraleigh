@@ -1,28 +1,3 @@
-//function populateColorAndPattern(datasets) {
-//    datasets.forEach(function(dataset) {
-//        dataset.data.forEach(function(dataPoint) {
-//            let patternColor;
-//            switch(dataPoint.rate) {
-//                case 'Free':
-//                case 'Free Evenings':
-//                    patternColor = pattern.draw('dash', 'DarkSeaGreen');
-//                    break;
-//                case 'Hourly Rates Apply':
-//                    patternColor = pattern.draw('dash', 'orange');
-//                    break;
-//                case '$5 Flat Fee':
-//                case '$7 Flat Fee':
-//                    patternColor = pattern.draw('dot-dash', 'blue');
-//                    break;
-//                default:
-//                    patternColor = pattern.draw('diagonal', 'gray');
-//            }
-//            dataset.backgroundColor = patternColor;
-//        });
-//    });
-//
-//    return datasets;
-//}
 function populateColorAndPattern(datasets) {
     datasets.forEach(function(dataset) {
         let backgroundColors = [];
@@ -32,14 +7,17 @@ function populateColorAndPattern(datasets) {
             switch(dataPoint.rate) {
                 case 'Free':
                 case 'Free Evenings':
-                    patternColor = pattern.draw('dash', 'DarkSeaGreen');
+                case 'Free all day':
+                    patternColor = 'DarkSeaGreen';
                     break;
                 case 'Hourly Rates Apply':
                 case 'Hourly Rates Apply all day':
                     patternColor = pattern.draw('dash', 'orange');
                     break;
                 case '$5 Flat Fee':
+                case '$5 Flat Fee all day':
                 case '$7 Flat Fee':
+                case '$7 Flat Fee all day':
                     patternColor = pattern.draw('dot-dash', 'blue');
                     break;
                 default:
