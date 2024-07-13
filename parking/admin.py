@@ -4,12 +4,13 @@ from parking.models import Rate, ParkingLocation, RateSchedule
 
 class RateAdmin(admin.ModelAdmin):
     save_as = True
-    list_display = ("day_of_week", "is_free", "all_day", "rate", "start_time", "end_time")
+    list_display = ("day_of_week", "is_free", "all_day", "rate",
+                    "start_time", "end_time", "date_created", "rate_schedule")
 
 
 class ParkingLocationAdmin(admin.ModelAdmin):
     save_as = True
-    list_display = ("name", "type", "owner")
+    list_display = ("name", "type", "owner", "rate_schedule")
 
 
 class RateScheduleAdmin(admin.ModelAdmin):

@@ -13,6 +13,7 @@ cligj==0.7.2
 colorama==0.4.6
 dict-toolbox==4.1.1
 Django==4.1.10
+django-debug-toolbar==4.1.0
 django-environ==0.10.0
 django-extensions==3.2.1
 django-leaflet==0.29.0

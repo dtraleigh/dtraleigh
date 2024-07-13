@@ -1,9 +1,10 @@
-from django.urls import path
+from django.urls import path, include
 
 from eats import views
 
 urlpatterns = [
     path("", views.home),
+    path('__debug__/', include('debug_toolbar.urls')),
     path("test/", views.home_test),
     path("tips/", views.tips_main),
     path("manage/", views.eats_login),

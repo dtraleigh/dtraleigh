@@ -11,15 +11,6 @@ def get_today_day_of_week():
     return est_time.strftime("%A").upper()
 
 
-def get_rate_color(rate):
-    if rate.is_free:
-        return "MediumSeaGreen"
-    elif not rate.is_free and rate.rate == "HOURLY_RATES":
-        return "pattern.draw('diagonal', 'Tomato')"
-    elif not rate.is_free and rate.rate == "WEEKEND_FLAT":
-        return "YellowGreen"
-
-
 def get_parking_datasets(parking_locations_to_show, day_of_week):
     datasets = [{
         "label": "free",
@@ -36,11 +27,19 @@ def get_parking_datasets(parking_locations_to_show, day_of_week):
     }]
 
     for location in parking_locations_to_show:
-        todays_rates = location.rate_schedule.first().rates.filter(day_of_week=day_of_week)
+        todays_rates = location.get_todays_rates(day_of_week)
 
         for count, rate in enumerate(todays_rates):
             if rate.all_day and rate.is_free:
-                datasets[count]["data"].append({"x": 23, "rate": f"{rate.get_rate_display()} all day"})
+                datasets[0]["data"].append({"x": 23, "rate": f"{rate.get_rate_display()} all day"})
+                datasets[1]["data"].append({})
+                datasets[2]["data"].append({})
+                break
+            elif rate.all_day:
+                datasets[0]["data"].append({})
+                datasets[1]["data"].append({"x": 23, "rate": f"{rate.get_rate_display()} all day"})
+                datasets[2]["data"].append({})
+                break
             else:
                 datasets[count]["data"].append({"x": rate.end_time.hour - rate.start_time.hour,
                                                 "rate": rate.get_rate_display()})
@@ -49,9 +48,9 @@ def get_parking_datasets(parking_locations_to_show, day_of_week):
 
 
 def main(request):
-    # day_of_the_week = "MONDAY"  # Used for debugging
-    day_of_the_week = get_today_day_of_week()
-    parking_locations_to_show = ParkingLocation.objects.all()
+    day_of_the_week = "FRIDAY"  # Used for debugging
+    # day_of_the_week = get_today_day_of_week()
+    parking_locations_to_show = ParkingLocation.objects.exclude(rate_schedule=None)
 
     parking_locations = [f"\'{loc.get_type_display()}: {loc.name}\'" for loc in parking_locations_to_show]
     parking_locations_string = ", ".join(parking_locations)

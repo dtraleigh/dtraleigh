@@ -1,6 +1,13 @@
 from django.db import models
 
 
+class RateSchedule(models.Model):
+    name = models.CharField(max_length=400)
+
+    def __str__(self):
+        return f"RateSchedule (id:{self.id}) - {self.name}"
+
+
 class Rate(models.Model):
     days_of_week = (("MONDAY", "Monday"),
                     ("TUESDAY", "Tuesday"),
@@ -12,7 +19,8 @@ class Rate(models.Model):
     rate_information = (("FREE", "Free"),
                         ("FREE_EVENING", "Free Evenings"),
                         ("HOURLY_RATES", "Hourly Rates Apply"),
-                        ("WEEKEND_FLAT", "$5 Flat Fee"))
+                        ("WEEKEND_FLAT_5", "$5 Flat Fee"),
+                        ("FLAT_7", "$7 Flat Fee"))
 
     day_of_week = models.CharField(choices=days_of_week,
                                    blank=True,
@@ -28,20 +36,14 @@ class Rate(models.Model):
     is_free = models.BooleanField(default=False)
     start_time = models.TimeField(blank=True, null=True)
     end_time = models.TimeField(blank=True, null=True)
+    date_created = models.DateTimeField(auto_now_add=True, verbose_name="Date added.")
+    rate_schedule = models.ForeignKey(RateSchedule, default=None, on_delete=models.SET_NULL, null=True)
 
     class Meta:
         ordering = ["start_time"]
 
     def __str__(self):
         return f"Rate (id:{self.id}) - {self.day_of_week}: {self.start_time}-{self.end_time} - {self.rate}"
-
-
-class RateSchedule(models.Model):
-    name = models.CharField(max_length=400)
-    rates = models.ManyToManyField(Rate, blank=True)
-
-    def __str__(self):
-        return f"RateSchedule (id:{self.id}) - {self.name}"
 
 
 class ParkingLocation(models.Model):
@@ -57,7 +59,10 @@ class ParkingLocation(models.Model):
     owner = models.CharField(max_length=400)
     url = models.TextField(blank=True, null=True, verbose_name="Parking information URL")
     special_event_capable = models.BooleanField(default=False)
-    rate_schedule = models.ManyToManyField(RateSchedule, default=None, blank=True)
+    rate_schedule = models.ForeignKey(RateSchedule, default=None, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"ParkingLocation (id:{self.id}) - {self.name}"
+
+    def get_todays_rates(self, day_of_week):
+        return [rate for rate in Rate.objects.filter(day_of_week=day_of_week) if rate.rate_schedule == self.rate_schedule]

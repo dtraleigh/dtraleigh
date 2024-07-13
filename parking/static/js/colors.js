@@ -1,24 +1,54 @@
+//function populateColorAndPattern(datasets) {
+//    datasets.forEach(function(dataset) {
+//        dataset.data.forEach(function(dataPoint) {
+//            let patternColor;
+//            switch(dataPoint.rate) {
+//                case 'Free':
+//                case 'Free Evenings':
+//                    patternColor = pattern.draw('dash', 'DarkSeaGreen');
+//                    break;
+//                case 'Hourly Rates Apply':
+//                    patternColor = pattern.draw('dash', 'orange');
+//                    break;
+//                case '$5 Flat Fee':
+//                case '$7 Flat Fee':
+//                    patternColor = pattern.draw('dot-dash', 'blue');
+//                    break;
+//                default:
+//                    patternColor = pattern.draw('diagonal', 'gray');
+//            }
+//            dataset.backgroundColor = patternColor;
+//        });
+//    });
+//
+//    return datasets;
+//}
 function populateColorAndPattern(datasets) {
     datasets.forEach(function(dataset) {
+        let backgroundColors = [];
+
         dataset.data.forEach(function(dataPoint) {
             let patternColor;
             switch(dataPoint.rate) {
                 case 'Free':
-                case 'Free all day':
                 case 'Free Evenings':
-                    patternColor = "DarkSeaGreen"
+                    patternColor = pattern.draw('dash', 'DarkSeaGreen');
                     break;
                 case 'Hourly Rates Apply':
-                    patternColor = pattern.draw('dash', '#ff7f0e'); // Orange for Hourly Rates Apply
+                case 'Hourly Rates Apply all day':
+                    patternColor = pattern.draw('dash', 'orange');
                     break;
                 case '$5 Flat Fee':
-                    patternColor = pattern.draw('dot-dash', '#2ca02c'); // Green for $5 Flat Fee
+                case '$7 Flat Fee':
+                    patternColor = pattern.draw('dot-dash', 'blue');
                     break;
                 default:
-                    patternColor = pattern.draw('diagonal', '#1f77b4'); // Default color
+                    patternColor = pattern.draw('diagonal', 'gray');
             }
-            dataset.backgroundColor = patternColor;
+            backgroundColors.push(patternColor);
         });
+
+        dataset.backgroundColor = backgroundColors;
     });
 
     return datasets;
