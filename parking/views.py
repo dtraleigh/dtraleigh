@@ -52,7 +52,8 @@ def main(request):
     # day_of_the_week = get_today_day_of_week()
     parking_locations_to_show = ParkingLocation.objects.exclude(rate_schedule=None)
 
-    parking_locations = [f"\'{loc.get_type_display()}: {loc.name} {loc.get_cost_display()}\'" for loc in parking_locations_to_show]
+    parking_locations = [f"\'{loc.get_type_display()}: {loc.name} {loc.get_cost_display()}\'"
+                         for loc in parking_locations_to_show]
     parking_locations_string = ", ".join(parking_locations)
 
     datasets = get_parking_datasets(parking_locations_to_show, day_of_the_week)

@@ -55,6 +55,18 @@ const options = {
             },
         }
     },
+    legendCallback: function(chart) {
+        const text = [];
+        text.push('<ul class="custom-legend">');
+        chart.data.datasets.forEach((dataset, i) => {
+            text.push('<li>');
+            text.push('<span style="background-color:' + dataset.backgroundColor + '"></span>');
+            text.push(dataset.label);
+            text.push('</li>');
+        });
+        text.push('</ul>');
+        return text.join('');
+    }
 };
 
 const data = {
@@ -62,8 +74,23 @@ const data = {
     datasets: datasets,
 };
 
+const customLegendPlugin = {
+    id: 'customLegendPlugin',
+    afterUpdate: function(chart) {
+        const legendContainer = document.getElementById('custom-legend');
+        const text = [];
+        text.push('<ul class="custom-legend">');
+        text.push('<li><span style="background-color:' + freeColor + '"></span>Free</li>');
+        text.push('<li><span style="background-image:url(' + patternToDataURL(hourlyPattern) + ')"></span>Hourly Rate</li>');
+        text.push('<li><span style="background-image:url(' + patternToDataURL(flatPattern) + ')"></span>Flat Rate</li>');
+        text.push('</ul>');
+        legendContainer.innerHTML = text.join('');
+    }
+};
+
 const myChart = new Chart("myChart", {
     type: "bar",
     data: data,
-    options: options
+    options: options,
+    plugins: [customLegendPlugin]
 });
