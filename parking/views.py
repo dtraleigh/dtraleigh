@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from datetime import datetime
 import pytz
+from django.db.models import Q
 
 from parking.models import ParkingLocation
 
@@ -50,7 +51,7 @@ def get_parking_datasets(parking_locations_to_show, day_of_week):
 def main(request):
     day_of_the_week = "MONDAY"  # Used for debugging
     # day_of_the_week = get_today_day_of_week()
-    parking_locations_to_show = ParkingLocation.objects.exclude(rate_schedule=None)
+    parking_locations_to_show = ParkingLocation.objects.exclude(Q(rate_schedule__isnull=True) | Q(is_enabled=False))
 
     parking_locations = [f"\'{loc.get_type_display()}: {loc.name} {loc.get_cost_display()}\'"
                          for loc in parking_locations_to_show]

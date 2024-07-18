@@ -182,5 +182,5 @@ LEAFLET_CONFIG = {
 }
 
 DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda r: True,  # disable/enable the debug toolbar
+    "SHOW_TOOLBAR_CALLBACK": lambda r: False,  # disable/enable the debug toolbar
 }

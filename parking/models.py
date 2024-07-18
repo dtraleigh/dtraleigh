@@ -69,6 +69,7 @@ class ParkingLocation(models.Model):
     url = models.TextField(blank=True, null=True, verbose_name="Parking information URL")
     special_event_capable = models.BooleanField(default=False)
     rate_schedule = models.ForeignKey(RateSchedule, default=None, on_delete=models.SET_NULL, null=True, blank=True)
+    is_enabled = models.BooleanField(default=True)
 
     def __str__(self):
         return f"ParkingLocation (id:{self.id}) - {self.name}"
