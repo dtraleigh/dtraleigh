@@ -7,7 +7,6 @@ from django.views.generic import TemplateView
 from develop import views as develop_views
 from buildings import views as buildings_views
 from newBernTOD import views as newbern_views
-from parking import views as parking_views
 
 urlpatterns = [
     path(

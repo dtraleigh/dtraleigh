@@ -48,9 +48,8 @@ def get_parking_datasets(parking_locations_to_show, day_of_week):
     return datasets
 
 
-def main(request):
-    day_of_the_week = "MONDAY"  # Used for debugging
-    # day_of_the_week = get_today_day_of_week()
+def main(request, day_of_the_week=get_today_day_of_week()):
+    day_of_the_week = day_of_the_week.upper()
     parking_locations_to_show = ParkingLocation.objects.exclude(Q(rate_schedule__isnull=True) | Q(is_enabled=False))
 
     parking_locations = [f"\'{loc.get_type_display()}: {loc.name} {loc.get_cost_display()}\'"
