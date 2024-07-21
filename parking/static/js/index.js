@@ -25,6 +25,13 @@ const options = {
         y: {
             stacked: true,
         },
+        y2: {
+            position: 'right',
+            grid: {
+                drawOnChartArea: false, // Only want the grid lines for one axis to show up
+            },
+            labels: ['Click any bar to Go'],
+        }
     },
     responsive: false,
     plugins: {
@@ -88,9 +95,23 @@ const customLegendPlugin = {
     }
 };
 
+
 const myChart = new Chart("myChart", {
     type: "bar",
     data: data,
     options: options,
     plugins: [customLegendPlugin]
 });
+
+document.getElementById("myChart").onclick = function (e) {
+    const activePoints = myChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+    if (activePoints.length > 0) {
+        const firstPoint = activePoints[0];
+        const labelIndex = firstPoint.index;
+        console.log('Clicked bar:', parkingLocations[labelIndex]);
+        window.open('https://dtraleigh.com', '_blank');
+    } else {
+        console.log('No bar was clicked');
+    }
+};
+
