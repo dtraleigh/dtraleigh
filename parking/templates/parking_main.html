@@ -47,6 +47,7 @@
             var parkingLocations = [{{parking_locations|safe}}];
             var datasets = {{datasets|safe}};
             datasets = populateColorAndPattern(datasets)
+            console.log(parkingLocations);
             console.log(datasets);
         </script>
         <script src="{% static "js/index.js" %}"></script>
