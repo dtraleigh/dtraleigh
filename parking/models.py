@@ -70,6 +70,7 @@ class ParkingLocation(models.Model):
     special_event_capable = models.BooleanField(default=False)
     rate_schedule = models.ForeignKey(RateSchedule, default=None, on_delete=models.SET_NULL, null=True, blank=True)
     is_enabled = models.BooleanField(default=True)
+    gmaps_params_encoded = models.CharField(max_length=400, null=True, blank=True)
 
     def __str__(self):
         return f"ParkingLocation (id:{self.id}) - {self.name}"

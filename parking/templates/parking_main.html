@@ -46,9 +46,11 @@
         <script>
             var parkingLocations = [{{parking_locations|safe}}];
             var datasets = {{datasets|safe}};
-            datasets = populateColorAndPattern(datasets)
+            datasets = populateColorAndPattern(datasets);
+            parkingLocationDirUrls = {{parkingLocationDirUrls|safe}};
             console.log(parkingLocations);
             console.log(datasets);
+            console.log(parkingLocationDirUrls);
         </script>
         <script src="{% static "js/index.js" %}"></script>
         <script src="{% static "bootstrap-5.3.3-dist/js/bootstrap.min.js" %}"></script>

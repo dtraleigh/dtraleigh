@@ -108,8 +108,10 @@ document.getElementById("myChart").onclick = function (e) {
     if (activePoints.length > 0) {
         const firstPoint = activePoints[0];
         const labelIndex = firstPoint.index;
-        console.log('Clicked bar:', parkingLocations[labelIndex]);
-        window.open('https://dtraleigh.com', '_blank');
+        console.log('Clicked bar:', parkingLocations[labelIndex],
+        'labelIndex', labelIndex,
+        'url: ', parkingLocationDirUrls[labelIndex]);
+        window.open(parkingLocationDirUrls[labelIndex], '_blank');
     } else {
         console.log('No bar was clicked');
     }

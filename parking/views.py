@@ -57,7 +57,10 @@ def main(request, day_of_the_week=get_today_day_of_week()):
     parking_locations_string = ", ".join(parking_locations)
 
     datasets = get_parking_datasets(parking_locations_to_show, day_of_the_week)
+    parkingLocationDirUrls = [f"https://www.google.com/maps/dir/?api=1&destination={loc.gmaps_params_encoded}"
+                              for loc in parking_locations_to_show]
 
     return render(request, "parking_main.html", {"day_of_the_week": day_of_the_week,
                                                  "parking_locations": parking_locations_string,
-                                                 "datasets": datasets})
+                                                 "datasets": datasets,
+                                                 "parkingLocationDirUrls": parkingLocationDirUrls})

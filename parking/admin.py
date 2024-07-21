@@ -10,7 +10,7 @@ class RateAdmin(admin.ModelAdmin):
 
 class ParkingLocationAdmin(admin.ModelAdmin):
     save_as = True
-    list_display = ("name", "type", "cost", "owner", "rate_schedule", "is_enabled")
+    list_display = ("name", "type", "cost", "owner", "rate_schedule", "is_enabled", "gmaps_params_encoded")
 
 
 class RateScheduleAdmin(admin.ModelAdmin):
