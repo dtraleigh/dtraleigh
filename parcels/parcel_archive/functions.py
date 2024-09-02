@@ -7,6 +7,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from pyproj import Transformer, transform
 
 base_path = "parcels\\parcel_archive\\"
+transformer = Transformer.from_crs("epsg:2264", "epsg:4326")
 
 
 def get_zip_files_list():
@@ -85,13 +86,33 @@ def parcel_has_CITY_value(parcel):
         print(e)
 
 
+def parcel_has_PLAN_JURIS_value(parcel):
+    try:
+        if "PLAN_JURIS" in parcel.data_geojson["properties"]:
+            return True
+        return False
+    except KeyError as e:
+        print(e)
+
+
 def get_list_of_all_possible_CITY_values(parcels):
     list_of_CITY_values = []
     for parcel in parcels:
-        if parcel.data_geojson["properties"]["CITY"] not in list_of_CITY_values:
-            list_of_CITY_values.append(parcel.data_geojson["properties"]["CITY"])
+        if parcel_has_CITY_value(parcel):
+            if parcel.data_geojson["properties"]["CITY"] not in list_of_CITY_values:
+                list_of_CITY_values.append(parcel.data_geojson["properties"]["CITY"])
 
     return list_of_CITY_values
+
+
+def get_list_of_all_possible_PLAN_JURIS_values(parcels):
+    list_of_PLAN_JURIS_values = []
+    for parcel in parcels:
+        if parcel_has_PLAN_JURIS_value(parcel):
+            if parcel.data_geojson["properties"]["PLAN_JURIS"] not in list_of_PLAN_JURIS_values:
+                list_of_PLAN_JURIS_values.append(parcel.data_geojson["properties"]["PLAN_JURIS"])
+
+    return list_of_PLAN_JURIS_values
 
 
 def switch_coordinates(coordinates):
@@ -133,11 +154,14 @@ def add_polygon_type(parcel):
     }
 
 
-def identify_coordinate_system(parcel):
+def identify_coordinate_system(parcel, debug=False):
     # Not scientific, just based on observations
     first_coord = get_first_coord(parcel)
 
-    if (2000000 < first_coord[0] < 2200000) and (700000 < first_coord[1] < 810000):
+    if debug:
+        print(f"first_coord: {first_coord}")
+
+    if (2000000 < first_coord[0] < 2200000) and (660000 < first_coord[1] < 810000):
         return "epsg:2264"
     elif (-79 < first_coord[0] < -77) and (34 < first_coord[1] < 36):
         return "epsg:4326"
@@ -205,7 +229,6 @@ def convert_geometry_to_epsg4326(geometry):
 
 
 def convert_epsg2264_to_epsg4326(x, y):
-    transformer = Transformer.from_crs("epsg:2264", "epsg:4326")
     return transformer.transform(x, y)
 
 
@@ -236,3 +259,23 @@ def verify_epsg4326_format_is_correct(parcel):
         return False
 
     return True
+
+
+def queryset_iterator(queryset, batch_size=500, gc_collect=True):
+    iterator = queryset.values_list('pk', flat=True).distinct().iterator()
+    eof = False
+    while not eof:
+        primary_key_buffer = []
+        try:
+            while len(primary_key_buffer) < batch_size:
+                primary_key_buffer.append(next(iterator))
+        except StopIteration:
+            eof = True
+
+        if primary_key_buffer:  # Ensure there are primary keys to filter on
+            for obj in queryset.filter(pk__in=primary_key_buffer).iterator():
+                yield obj
+
+        if gc_collect:
+            gc.collect()
+
