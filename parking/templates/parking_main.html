@@ -28,6 +28,14 @@
                 height: 20px;
                 margin-right: 10px;
             }
+            .container {
+                position: relative;
+            }
+            @media (min-width: 768px) {
+                .container, .container-md, .container-sm {
+                    max-width: 100%;
+                }
+            }
         </style>
     </head>
     <body>
@@ -36,8 +44,9 @@
             <h2 class="text-center">{{day_of_the_week}}</h2>
             <p class="text-center">near</p>
             <h2 class="text-center">Fayetteville Street</h2>
+            <p class="text-center">Click any bar to Go.</p>
             <div class="row justify-content-center">
-                <div class="col-8">
+                <div class="col-12">
                     <canvas id="myChart"></canvas>
                     <div id="custom-legend"></div>
                 </div>

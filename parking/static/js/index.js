@@ -24,16 +24,21 @@ const options = {
         },
         y: {
             stacked: true,
+            ticks:{
+                mirror: true,
+                z: 1
+            }
         },
         y2: {
             position: 'right',
+            display: false, // Keeping this in case its needed later
             grid: {
                 drawOnChartArea: false, // Only want the grid lines for one axis to show up
             },
-            labels: ['Click any bar to Go'],
+            labels: [''],
         }
     },
-    responsive: false,
+    responsive: true,
     plugins: {
         legend: {
             display: false
