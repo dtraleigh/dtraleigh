@@ -154,6 +154,14 @@ def add_polygon_type(parcel):
     }
 
 
+def add_polygon_type_to_geometry(geometry):
+    geom_type_calculated = determine_geometry_type(geometry)
+    return {
+        'type': geom_type_calculated,
+        'coordinates': geometry
+    }
+
+
 def identify_coordinate_system(parcel, debug=False):
     # Not scientific, just based on observations
     first_coord = get_first_coord(parcel)
@@ -181,6 +189,20 @@ def get_first_coord(parcel):
 
     elif geom.geom_type == "MultiPolygon":
         first_coord = parcel.data_geojson["geometry"]["coordinates"][0][0][0]
+
+    return first_coord
+
+
+def get_first_coord_from_geometry(geometry, debug=False):
+    if "type" not in geometry:
+        geometry = add_polygon_type_to_geometry(geometry)
+    geom = GEOSGeometry(str(geometry))
+
+    if geom.geom_type == "Polygon":
+        first_coord = geometry["coordinates"][0][0]
+
+    elif geom.geom_type == "MultiPolygon":
+        first_coord = geometry["coordinates"][0][0][0]
 
     return first_coord
 
