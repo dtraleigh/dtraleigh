@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 
 from parcels.management.commands.parcel_03_convert_coordinates import get_elapsed_time
 from parcels.models import ParcelHistorical, RaleighSubsection
-from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326
+from parcels.parcel_archive.functions import identify_coordinate_system_from_parcel, convert_geometry_to_epsg4326
 
 logger = logging.getLogger("django")
 
@@ -38,7 +38,7 @@ class Command(BaseCommand):
             print(f"{page_number}", sep=" ", end=" ", flush=True)
             for parcel in parcels:
                 logger.info(f"Checking {parcel}")
-                if identify_coordinate_system(parcel) == "epsg:2264":
+                if identify_coordinate_system_from_parcel(parcel) == "epsg:2264":
                     parcel.data_geojson["geometry"] = convert_geometry_to_epsg4326(parcel.data_geojson["geometry"])
                     parcel.save()
 

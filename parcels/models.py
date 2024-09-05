@@ -4,7 +4,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from simple_history.models import HistoricalRecords
 
-from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326
+from parcels.parcel_archive.functions import identify_coordinate_system_from_parcel, convert_geometry_to_epsg4326
 
 
 class Parcel(models.Model):
@@ -73,9 +73,9 @@ class ParcelHistorical(models.Model):
         return f"ParcelHistorical (id:{self.id})"
 
     def get_geosgeom_object(self):
-        if self.data_geojson["geometry"] and identify_coordinate_system(self) == "epsg:4326":
+        if self.data_geojson["geometry"] and identify_coordinate_system_from_parcel(self) == "epsg:4326":
             return GEOSGeometry(str(self.data_geojson["geometry"]))
-        elif self.data_geojson["geometry"] and identify_coordinate_system(self) == "epsg:2264":
+        elif self.data_geojson["geometry"] and identify_coordinate_system_from_parcel(self) == "epsg:2264":
             converted_geometry = str(convert_geometry_to_epsg4326(self.data_geojson["geometry"]))
             return GEOSGeometry(converted_geometry)
         else:

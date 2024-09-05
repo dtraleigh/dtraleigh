@@ -162,9 +162,26 @@ def add_polygon_type_to_geometry(geometry):
     }
 
 
-def identify_coordinate_system(parcel, debug=False):
+def identify_coordinate_system_from_parcel(parcel, debug=False):
     # Not scientific, just based on observations
     first_coord = get_first_coord(parcel)
+
+    if debug:
+        print(f"first_coord: {first_coord}")
+
+    if (2000000 < first_coord[0] < 2200000) and (660000 < first_coord[1] < 810000):
+        return "epsg:2264"
+    elif (-79 < first_coord[0] < -77) and (34 < first_coord[1] < 36):
+        return "epsg:4326"
+    elif (-79 < first_coord[1] < -77) and (34 < first_coord[0] < 36):
+        return "epsg:4326"
+    else:
+        return None
+
+
+def identify_coordinate_system_from_geometry(geometry, debug=False):
+    # Not scientific, just based on observations
+    first_coord = get_first_coord_from_geometry(geometry)
 
     if debug:
         print(f"first_coord: {first_coord}")
@@ -207,7 +224,7 @@ def get_first_coord_from_geometry(geometry, debug=False):
     return first_coord
 
 
-def update_epsg4326_format(parcel):
+def update_epsg4326_format_from_parcel(parcel):
     # want to see coordinates [-78.685, 35.751] rather than [35.751, -78.685]
     first_coord = get_first_coord(parcel)
 
@@ -216,6 +233,17 @@ def update_epsg4326_format(parcel):
         type_of_geom = determine_geometry_type(updated_coords)
         return {'type': type_of_geom, 'coordinates': updated_coords}
     return parcel.data_geojson["geometry"]
+
+
+def update_epsg4326_format_from_geometry(geometry):
+    # want to see coordinates [-78.685, 35.751] rather than [35.751, -78.685]
+    first_coord = get_first_coord_from_geometry(geometry)
+
+    if (-79 < first_coord[1] < -77) and (34 < first_coord[0] < 36):
+        updated_coords = switch_coordinates(geometry["coordinates"])
+        type_of_geom = determine_geometry_type(updated_coords)
+        return {'type': type_of_geom, 'coordinates': updated_coords}
+    return geometry
 
 
 def convert_geometry_to_epsg4326(geometry):
@@ -254,7 +282,7 @@ def convert_epsg2264_to_epsg4326(x, y):
     return transformer.transform(x, y)
 
 
-def verify_epsg4326_format_is_correct(parcel):
+def verify_epsg4326_format_is_correct_from_parcel(parcel):
     # Return True if the geojson coordinates are exactly how we want them to be.
     data_geojson = parcel.data_geojson
 
@@ -277,6 +305,33 @@ def verify_epsg4326_format_is_correct(parcel):
         return False
 
     first_coord = get_first_coord(parcel)
+    if (-79 < first_coord[1] < -77) and (34 < first_coord[0] < 36):
+        return False
+
+    return True
+
+
+def verify_epsg4326_format_is_correct_from_data_geojson(data_geojson):
+    # Return True if the geojson coordinates are exactly how we want them to be.
+    if data_geojson["type"] != "Feature":
+        return False
+
+    if "geometry" not in data_geojson:
+        return False
+
+    if "type" not in data_geojson["geometry"]:
+        return False
+
+    if data_geojson["geometry"]["type"] not in ["Polygon", "MultiPolygon"]:
+        return False
+
+    if "coordinates" not in data_geojson["geometry"]:
+        return False
+
+    if not data_geojson["geometry"]["coordinates"]:
+        return False
+
+    first_coord = get_first_coord_from_geometry(data_geojson["geometry"])
     if (-79 < first_coord[1] < -77) and (34 < first_coord[0] < 36):
         return False
 

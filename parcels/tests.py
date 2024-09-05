@@ -5,9 +5,10 @@ from django.test import TestCase
 
 from parcels.history import get_parcel_history_diffs, get_parcel_history_table_headers
 from parcels.models import Parcel, RaleighSubsection, ParcelHistorical, Snapshot
-from parcels.parcel_archive.functions import identify_coordinate_system, convert_geometry_to_epsg4326, \
-    update_epsg4326_format, switch_coordinates, get_first_coord, get_first_coord_from_geometry
-from parcels.management.commands.parcel_03_convert_coordinates import convert_and_save_new_geojson
+from parcels.parcel_archive.functions import identify_coordinate_system_from_parcel, convert_geometry_to_epsg4326, \
+    update_epsg4326_format_from_parcel, switch_coordinates, get_first_coord, get_first_coord_from_geometry, \
+    identify_coordinate_system_from_geometry
+from parcels.management.commands.parcel_03_convert_coordinates import convert_and_save_new_geojson_from_parcel
 
 
 class ParcelTestCase(TestCase):
@@ -111,7 +112,8 @@ class ParcelTestCase(TestCase):
         wym_academy_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                              snapshot=Snapshot.objects.get(name="Test Snapshot"))
 
-        self.assertEquals(identify_coordinate_system(wym_academy_parcel), "epsg:4326")
+        self.assertEquals(identify_coordinate_system_from_parcel(wym_academy_parcel), "epsg:4326")
+        self.assertEquals(identify_coordinate_system_from_geometry(data_geojson["geometry"]), "epsg:4326")
 
     def test_identify_coordinate_system2(self):
         data_geojson = {'type': 'Feature', 'geometry': {'type': 'Polygon', 'coordinates': [
@@ -125,7 +127,8 @@ class ParcelTestCase(TestCase):
         test_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                       snapshot=Snapshot.objects.get(name="Test Snapshot"))
 
-        self.assertEquals(identify_coordinate_system(test_parcel), "epsg:2264")
+        self.assertEquals(identify_coordinate_system_from_parcel(test_parcel), "epsg:2264")
+        self.assertEquals(identify_coordinate_system_from_geometry(data_geojson["geometry"]), "epsg:2264")
 
     def test_identify_coordinate_system3(self):
         # Note: geometry.type is missing and the lat, lons are reversed from how I want them to be.
@@ -138,7 +141,8 @@ class ParcelTestCase(TestCase):
         wym_academy_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                              snapshot=Snapshot.objects.get(name="Test Snapshot"))
 
-        self.assertEquals(identify_coordinate_system(wym_academy_parcel), "epsg:4326")
+        self.assertEquals(identify_coordinate_system_from_parcel(wym_academy_parcel), "epsg:4326")
+        self.assertEquals(identify_coordinate_system_from_geometry(data_geojson["geometry"]), "epsg:4326")
 
     def test_convert_coordinates_to_epsg4326_polygon(self):
         data_geojson = {'type': 'Feature', 'geometry': {'type': 'Polygon', 'coordinates': [
@@ -263,7 +267,7 @@ class ParcelTestCase(TestCase):
             [-78.73211062925463, 35.88965347414136],
             [-78.73211042127825, 35.88959578462791]]]}
 
-        self.assertEquals(update_epsg4326_format(wym_academy_parcel), expected_output)
+        self.assertEquals(update_epsg4326_format_from_parcel(wym_academy_parcel), expected_output)
 
     def test_convert_and_save_new_geojson1(self):
         # epsg:2264 polygon
@@ -277,7 +281,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         test_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                       snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(test_parcel, identify_coordinate_system(test_parcel))
+        convert_and_save_new_geojson_from_parcel(test_parcel, identify_coordinate_system_from_parcel(test_parcel))
 
         self.assertEquals(test_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'Polygon', 'coordinates': [
@@ -309,7 +313,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         test_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                       snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(test_parcel, identify_coordinate_system(test_parcel))
+        convert_and_save_new_geojson_from_parcel(test_parcel, identify_coordinate_system_from_parcel(test_parcel))
 
         self.assertEquals(test_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
@@ -347,7 +351,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         test_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                       snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(test_parcel, identify_coordinate_system(test_parcel))
+        convert_and_save_new_geojson_from_parcel(test_parcel, identify_coordinate_system_from_parcel(test_parcel))
 
         self.assertEquals(test_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
@@ -375,7 +379,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         wym_academy_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                              snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(wym_academy_parcel, identify_coordinate_system(wym_academy_parcel))
+        convert_and_save_new_geojson_from_parcel(wym_academy_parcel, identify_coordinate_system_from_parcel(wym_academy_parcel))
 
         self.assertEquals(wym_academy_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'Polygon', 'coordinates':
@@ -403,7 +407,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         test_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                       snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(test_parcel, identify_coordinate_system(test_parcel))
+        convert_and_save_new_geojson_from_parcel(test_parcel, identify_coordinate_system_from_parcel(test_parcel))
 
         self.assertEquals(test_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
@@ -431,7 +435,7 @@ class ParcelTestCase(TestCase):
                         'properties': {}}
         wym_academy_parcel = ParcelHistorical.objects.create(data_geojson=data_geojson,
                                                              snapshot=Snapshot.objects.get(name="Test Snapshot"))
-        convert_and_save_new_geojson(wym_academy_parcel, identify_coordinate_system(wym_academy_parcel))
+        convert_and_save_new_geojson_from_parcel(wym_academy_parcel, identify_coordinate_system_from_parcel(wym_academy_parcel))
 
         self.assertEquals(wym_academy_parcel.data_geojson,
                           {'type': 'Feature', 'geometry': {'type': 'Polygon', 'coordinates':
@@ -449,8 +453,8 @@ class ParcelTestCase(TestCase):
 
         for count, parcel in enumerate(all_parcels):
             print(f"{count}", sep=",", end=" ", flush=True)
-            parcel_coordinate_system = identify_coordinate_system(parcel)
-            convert_and_save_new_geojson(parcel, parcel_coordinate_system, False)
+            parcel_coordinate_system = identify_coordinate_system_from_parcel(parcel)
+            convert_and_save_new_geojson_from_parcel(parcel, parcel_coordinate_system, False)
 
             coordinate_systems_found.append(parcel_coordinate_system)
             coordinate_systems_found = list(set(coordinate_systems_found))
