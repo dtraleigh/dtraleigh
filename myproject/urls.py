@@ -33,4 +33,5 @@ urlpatterns = [
     path("tod/", include("newBernTOD.urls")),
     path("parcels/", include("parcels.urls")),
     path("parking/", include("parking.urls")),
+    path("transit/", include("transit.urls")),
   ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

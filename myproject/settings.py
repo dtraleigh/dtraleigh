@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     "rpd",
     "parcels",
     "django_tables2",
-    "parking"
+    "parking",
+    "transit"
 ]
 
 MIDDLEWARE = [
