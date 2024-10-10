@@ -1,6 +1,6 @@
 import os
 from django.contrib.gis.utils import LayerMapping
-from .models import BusRoute
+from .models import ShapefileRoute
 
 busroute_mapping = {
     'objectid': 'OBJECTID',
@@ -20,5 +20,5 @@ GoRaleigh_Bus_Routes_shp = os.path.abspath(
 
 
 def run(verbose=True):
-    lm = LayerMapping(BusRoute, GoRaleigh_Bus_Routes_shp, busroute_mapping, transform=True)
+    lm = LayerMapping(ShapefileRoute, GoRaleigh_Bus_Routes_shp, busroute_mapping, transform=True)
     lm.save(strict=True, verbose=verbose)
