@@ -33,6 +33,9 @@ class ShapefileRoute(models.Model):
     def __str__(self):
         return self.full_name or self.route_long_name or self.route_short_name
 
+    class Meta:
+        ordering = ["full_name"]
+
 
 busroute_mapping = {
     'objectid': 'OBJECTID',
@@ -54,16 +57,13 @@ class GTFSRoute(models.Model):
     route_long_name = models.CharField(max_length=255, null=True, blank=True)
     route_desc = models.TextField(null=True, blank=True)
     route_type = models.IntegerField(null=True, blank=True)
-
-    shapefile_route = models.OneToOneField(
-        ShapefileRoute,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="gtfs_route"
-    )
+    shapefile_routes = models.ManyToManyField('ShapefileRoute', blank=True)
 
     def __str__(self):
         return self.route_long_name or self.route_short_name
+
+    class Meta:
+        ordering = ["route_long_name"]
 
 
 class Trip(models.Model):

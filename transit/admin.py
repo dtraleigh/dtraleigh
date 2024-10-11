@@ -1,9 +1,24 @@
 from django.contrib.gis import admin
-from .models import ShapefileRoute
+from .models import *
 
 
-class BusRouteAdmin(admin.OSMGeoAdmin):
+class ShapefileRouteAdmin(admin.OSMGeoAdmin):
     list_display = ("full_name", "route_color", "dir_name", "line_name", "objectid")
 
 
-admin.site.register(ShapefileRoute, BusRouteAdmin)
+class GTFSRouteAdmin(admin.ModelAdmin):
+    list_display = ("route_long_name", "route_id", "agency_id", "route_short_name", "route_desc", "route_type")
+
+
+class TripAdmin(admin.ModelAdmin):
+    list_display = ("trip_id", "route", "service_id", "trip_headsign", "shape_id", "direction_id")
+
+
+class StopTimeAdmin(admin.ModelAdmin):
+    list_display = ("trip", "stop_id", "stop_sequence", "arrival_time", "departure_time")
+
+
+admin.site.register(ShapefileRoute, ShapefileRouteAdmin)
+admin.site.register(GTFSRoute, GTFSRouteAdmin)
+admin.site.register(Trip, TripAdmin)
+admin.site.register(StopTime, StopTimeAdmin)
