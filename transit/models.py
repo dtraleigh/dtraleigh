@@ -117,15 +117,12 @@ class GTFSRoute(models.Model):
 
         trips = self.trip_set.filter(direction_id=direction_id)  # Filter by direction
         for trip in trips:
-            # Check if the service is running on the specified day
             service_calendar = ServiceCalendar.objects.get(service_id=trip.service_id)
             if getattr(service_calendar, day_of_week):
-                # Get the first stop_time for the trip, ordered by stop_sequence
                 first_stop_time = StopTime.objects.filter(trip=trip).order_by('stop_sequence').first()
                 if first_stop_time:
                     departure_times.append(first_stop_time.departure_time)
 
-        # Return a sorted list of departure times
         return sorted(departure_times)
 
     def is_high_frequency(self, day_of_week):
@@ -137,12 +134,10 @@ class GTFSRoute(models.Model):
         :param day_of_week: 'monday', 'tuesday', 'wednesday', etc.
         :return: True if high frequency exists, otherwise False.
         """
-        # Check outbound departure times
         outbound_departure_times = self.get_all_departure_times_at_start(day_of_week, direction_id=0)
         if self._has_high_frequency(outbound_departure_times):
             return True
 
-        # Check inbound departure times
         inbound_departure_times = self.get_all_departure_times_at_start(day_of_week, direction_id=1)
         if self._has_high_frequency(inbound_departure_times):
             return True
@@ -156,10 +151,8 @@ class GTFSRoute(models.Model):
         :param departure_times: List of departure times.
         :return: True if high frequency exists, otherwise False.
         """
-        # Sort the departure times
         departure_times.sort()
 
-        # Check for any differences of 15 minutes or less
         for i in range(1, len(departure_times)):
             t1 = datetime.combine(datetime.today(), departure_times[i - 1])
             t2 = datetime.combine(datetime.today(), departure_times[i])
@@ -177,19 +170,14 @@ class GTFSRoute(models.Model):
         trips = self.trip_set.all()
         trip_times = []
 
-        # Filter trips based on the service calendar for the given day
         for trip in trips:
             try:
-                # Get the ServiceCalendar for this trip's service_id
                 service_calendar = ServiceCalendar.objects.get(service_id=trip.service_id)
 
-                # Check if the trip operates on the given day
                 if getattr(service_calendar, day_of_week):
-                    # Get the first stop time by filtering by trip and ordering by stop_sequence
                     first_stop_time = StopTime.objects.filter(trip=trip).order_by('stop_sequence').first()
 
                     if first_stop_time:
-                        # Add trip ID, stop ID, first stop's departure time, and stop sequence to the list
                         trip_times.append((
                             trip.trip_id,
                             first_stop_time.stop_id,
@@ -197,13 +185,10 @@ class GTFSRoute(models.Model):
                             first_stop_time.stop_sequence
                         ))
             except ServiceCalendar.DoesNotExist:
-                # If no service calendar is found for the trip's service_id, skip the trip
                 continue
 
-        # Sort the trip_times list by the departure time
         trip_times.sort(key=lambda x: x[2])
 
-        # Print the sorted list
         for trip_id, stop_id, departure_time, stop_sequence in trip_times:
             print(
                 f"Trip ID: {trip_id}, Stop ID: {stop_id}, First Stop Time: {departure_time.strftime('%H:%M:%S')}, Stop Sequence: {stop_sequence}")
