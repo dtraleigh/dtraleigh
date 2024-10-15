@@ -13,7 +13,8 @@ def get_high_frequency_shapefile_routes(day_of_week):
     ]
 
     high_frequency_shapefile_routes = ShapefileRoute.objects.filter(
-        Q(gtfsroute__in=high_frequency_routes)
+        Q(gtfsroute__in=high_frequency_routes),
+        is_enabled=True
     ).distinct()
 
     return high_frequency_shapefile_routes
@@ -24,7 +25,7 @@ def main(request):
     all_transit_data = serialize("geojson",
                                  ShapefileRoute.objects.all(),
                                  geometry_field="geom",
-                                 fields=("full_name", "route_color"))
+                                 fields=("line_name", "route_color"))
 
     return render(request, "transit_main.html", {"all_transit_data": all_transit_data})
 
@@ -34,6 +35,6 @@ def high_frequency(request, day_of_the_week):
     all_transit_data = serialize("geojson",
                                  get_high_frequency_shapefile_routes(day_of_the_week),
                                  geometry_field="geom",
-                                 fields=("full_name", "route_color"))
+                                 fields=("line_name", "route_color"))
 
     return render(request, "transit_main.html", {"all_transit_data": all_transit_data})

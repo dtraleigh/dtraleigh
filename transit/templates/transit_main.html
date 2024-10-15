@@ -23,7 +23,7 @@
   </head>
   <body>
     {% load leaflet_tags %}
-    {% leaflet_map "tranit_map" callback="window.map_init_basic" %}
+    {% leaflet_map "transit_map" callback="window.map_init_basic" %}
   </body>
   <script type="text/javascript">
   function map_init_basic(map, options) {
@@ -37,8 +37,8 @@
         };
       },
       onEachFeature: function(feature, layer) {
-        if (feature.properties && feature.properties.full_name) {
-          layer.bindPopup(feature.properties.full_name);
+        if (feature.properties && feature.properties.line_name) {
+          layer.bindPopup(feature.properties.line_name);
         }
       }
     }).addTo(map);

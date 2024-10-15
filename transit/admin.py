@@ -3,7 +3,7 @@ from .models import *
 
 
 class ShapefileRouteAdmin(admin.OSMGeoAdmin):
-    list_display = ("full_name", "route_color", "dir_name", "line_name", "objectid")
+    list_display = ("full_name", "is_enabled", "route_color", "dir_name", "line_name", "objectid")
 
 
 class GTFSRouteAdmin(admin.ModelAdmin):

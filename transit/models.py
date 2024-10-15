@@ -30,6 +30,7 @@ class ShapefileRoute(models.Model):
     shape_len = models.CharField(max_length=1, null=True, blank=True)
     geom = models.MultiLineStringField(srid=4326, null=True, blank=True)
     route_color = models.CharField(max_length=30, choices=COLORS, default=RED)
+    is_enabled = models.BooleanField(default=True)
 
     def __str__(self):
         return self.full_name or f"ShapefileRoute {self.objectid}"
