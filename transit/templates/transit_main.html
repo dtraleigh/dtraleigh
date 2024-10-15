@@ -27,9 +27,8 @@
   </body>
   <script type="text/javascript">
   function map_init_basic(map, options) {
-    map.setView([35.7856604, -78.6458469], 15);
-
-    L.geoJSON({{all_transit_data|safe}}, {
+    // Dynamically center and zoom the map based on geoJSON data
+    var geojsonLayer = L.geoJSON({{all_transit_data|safe}}, {
       style: function(feature) {
         return {
           color: feature.properties.route_color || "blue",
@@ -37,11 +36,22 @@
         };
       },
       onEachFeature: function(feature, layer) {
-        if (feature.properties && feature.properties.line_name) {
-          layer.bindPopup(feature.properties.line_name);
+        if (feature.properties) {
+          let popupContent = `<strong>Line Name:</strong> ${feature.properties.line_name}<br>`;
+          popupContent += `<strong>Direction:</strong> ${feature.properties.dir_name || "N/A"}`;
+          layer.bindPopup(popupContent);
         }
       }
-    }).addTo(map);
+    });
+
+    // Add the geoJSON layer to the map
+    geojsonLayer.addTo(map);
+
+    // Adjust the map to fit all features in the geoJSON layer
+    map.fitBounds(geojsonLayer.getBounds());
+
+    // Update the attribution control for this specific map
+    map.attributionControl.setPrefix('Data source from <a href="https://arcg.is/1m1fOT1" target="_blank">City of Raleigh Open Data</a> and <a href="https://goraleigh.org/developer-resources" target="_blank">GoRaleigh</a>');
   }
-  </script>
+</script>
 </html>
