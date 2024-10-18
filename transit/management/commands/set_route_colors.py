@@ -1,65 +1,43 @@
 from django.core.management.base import BaseCommand
 from transit.models import ShapefileRoute
 
+# Predefined list of 40 colors
+PREDEFINED_COLORS = [
+    "#FF5733", "#33FF57", "#3357FF", "#F1C40F", "#9B59B6", "#E74C3C", "#1ABC9C", "#3498DB",
+    "#2ECC71", "#F39C12", "#8E44AD", "#2C3E50", "#27AE60", "#D35400", "#C0392B", "#2980B9",
+    "#16A085", "#E67E22", "#34495E", "#D0ECE7", "#82E0AA", "#F7DC6F", "#AF7AC5", "#EC7063",
+    "#73C6B6", "#5499C7", "#FAD7A0", "#5DADE2", "#48C9B0", "#52BE80", "#7DCEA0", "#F0B27A",
+    "#F1948A", "#D5F5E3", "#D7BDE2", "#A3E4D7", "#A9CCE3", "#F9E79F", "#F5CBA7", "#D98880"
+]
 
-def change_route_color(shapefile_route_id, new_color):
+
+def change_route_color(route_instances, new_color):
     try:
-        # Validate new_color is one of the predefined choices
-        if new_color not in dict(ShapefileRoute.COLORS):
-            raise ValueError(f"{new_color} is not a valid color choice.")
-
-        shapefile_route = ShapefileRoute.objects.get(id=shapefile_route_id)
-        shapefile_route.route_color = new_color
-        shapefile_route.save()
-
-        print(f"Updated route color to {new_color} for ShapefileRoute ID {shapefile_route_id}.")
-
-    except ShapefileRoute.DoesNotExist:
-        print(f"ShapefileRoute with ID {shapefile_route_id} does not exist.")
+        for route in route_instances:
+            route.route_color = new_color
+            route.save()
+        print(
+            f"Updated route color to {new_color} for {route_instances.count()} ShapefileRoute(s) with line_name {route_instances.first().line_name}.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
 
 class Command(BaseCommand):
-    help = "Sets the ShapefileRoute instance colors to their defaults"
+    help = "Sets unique colors for each ShapefileRoute instance, grouping by line_name"
 
     def handle(self, *args, **options):
-        red_routes = ["1 Capital", "4 Rex Hospital", "7 South Saunders", "7L Carolina Pines", "15 WakeMed",
-                      "15L Trawick", "17 Rock Quarry", "24L North Crosstown", "36 Creedmoor"]
-        blue_routes = ["2 Falls of Neuse", "9 Hillsborough", "16 Oberlin", "19 Apollo Heights", "20 Garner",
-                       "26 Edwards Mill"]
-        orange_routes = ["3 Glascock", "5 Biltmore Hills", "6 Crabtree", "12 Method", "18 Poole/Barwell",
-                         "18S Poole", "Wake Forest Loop"]
-        purple_routes = ["8 Six Forks", "11 Avent Ferry", "11L Buck Jones", "21 Caraleigh", "25L Triangle Town Center",
-                         "33 Knightdale", "40X Wake Tech Express", "55X Poole Road Express", "70X Brier Creek Express"]
-        magenta_routes = ["10 Longview", "23L Millbrook", "27 Blue Ridge"]
-        green_routes = ["FRX", "WRX", "ZWX"]
-        white_routes = ["R-Line"]
+        # Group routes by line_name
+        line_names = ShapefileRoute.objects.values_list('line_name', flat=True).distinct()
+        num_routes = len(line_names)
 
-        for route in red_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.RED)
+        if num_routes > len(PREDEFINED_COLORS):
+            print(
+                f"Warning: There are more routes ({num_routes}) than available colors ({len(PREDEFINED_COLORS)}). Colors will be reused.")
 
-        for route in blue_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.BLUE)
-
-        for route in orange_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.ORANGE)
-
-        for route in purple_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.PURPLE)
-
-        for route in magenta_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.MAGENTA)
-
-        for route in green_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.GREEN)
-
-        for route in white_routes:
-            for route_subset in ShapefileRoute.objects.filter(line_name__contains=route):
-                change_route_color(route_subset.id, ShapefileRoute.WHITE)
+        # Assign colors to routes with the same line_name
+        for i, line_name in enumerate(line_names):
+            route_instances = ShapefileRoute.objects.filter(line_name=line_name, is_enabled=True)
+            if route_instances.exists():
+                # Use modulus to cycle through the predefined colors if there are more routes than colors
+                color = PREDEFINED_COLORS[i % len(PREDEFINED_COLORS)]
+                change_route_color(route_instances, color)

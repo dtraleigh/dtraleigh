@@ -26,8 +26,10 @@ def main(request):
                                  ShapefileRoute.objects.all(),
                                  geometry_field="geom",
                                  fields=("line_name", "route_color", "dir_name"))
+    legend_title = "All Routes"
 
-    return render(request, "transit_main.html", {"all_transit_data": all_transit_data})
+    return render(request, "transit_main.html", {"all_transit_data": all_transit_data,
+                                                 "legend_title": legend_title})
 
 
 @xframe_options_exempt
@@ -36,5 +38,7 @@ def high_frequency(request, day_of_the_week):
                                  get_high_frequency_shapefile_routes(day_of_the_week),
                                  geometry_field="geom",
                                  fields=("line_name", "route_color", "dir_name"))
+    legend_title = "High Frequency Routes"
 
-    return render(request, "transit_main.html", {"all_transit_data": all_transit_data})
+    return render(request, "transit_main.html", {"all_transit_data": all_transit_data,
+                                                 "legend_title": legend_title})
