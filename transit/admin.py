@@ -7,7 +7,8 @@ class ShapefileRouteAdmin(admin.OSMGeoAdmin):
 
 
 class GTFSRouteAdmin(admin.ModelAdmin):
-    list_display = ("route_long_name", "route_id", "agency_id", "route_short_name", "route_desc", "route_type")
+    list_display = ("route_long_name", "is_enabled", "route_id", "agency_id", "route_short_name", "route_desc",
+                    "route_type")
 
 
 class TripAdmin(admin.ModelAdmin):
