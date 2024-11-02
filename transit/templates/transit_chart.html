@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Route Service Hours</title>
+    <script src="https://cdn.anychart.com/releases/8.13.0/js/anychart-base.min.js"></script>
+
+    <style>
+        html, body, #container {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+</head>
+<body>
+
+<div id="container" style="width: 1400px; height: 800px;"></div>
+
+<script>
+  anychart.onDocumentReady(function () {
+        var data = [
+          {% for route in high_frequency_GTFS_route_chart_data %}
+            {{ route|safe }},
+          {% endfor %}
+        ];
+
+        var chart = anychart.bar();
+        var series = chart.rangeBar(data);
+        chart.title("Bus Route Service Hours");
+
+        chart.xAxis().title("Route");
+        chart.yAxis().title("Service Hours (Time of Day)")
+                     .labels().format(function() {
+                         var hour = this.value;
+                         return (hour % 12 || 12) + ' ' + (hour >= 12 ? 'PM' : 'AM');
+                     });
+
+        // Set the Y-axis labels to use the route names from the data
+        chart.xAxis().labels().format(function() {
+            return data[this.index][0];
+        });
+
+        chart.container("container");
+        chart.draw();
+    });
+</script>
+
+
+</body>
+</html>

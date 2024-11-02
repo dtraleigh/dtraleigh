@@ -2,7 +2,7 @@ from django.contrib.gis import admin
 from .models import *
 
 
-class ShapefileRouteAdmin(admin.OSMGeoAdmin):
+class ShapefileRouteAdmin(admin.GISModelAdmin):
     list_display = ("full_name", "is_enabled", "route_color", "dir_name", "line_name", "objectid")
 
 

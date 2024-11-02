@@ -3,7 +3,7 @@ from django.contrib.gis import admin
 from newBernTOD.models import *
 
 
-class ParcelAdmin(admin.OSMGeoAdmin):
+class ParcelAdmin(admin.GISModelAdmin):
     list_display = ("objectid", "is_active", "pin", "property_address", "curr_zoning", "prop_zoning", "created_date", "modified_date")
 
 

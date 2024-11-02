@@ -3,15 +3,15 @@ from django.contrib.gis import admin
 from buildings.models import *
 
 
-class BuildingAdmin(admin.OSMGeoAdmin):
+class BuildingAdmin(admin.GISModelAdmin):
     list_display = ("PIN_NUM", "ADDR1", "YEAR_BUILT", "LAND_VAL", "DEED_ACRES", "PROPDESC")
 
 
-class DecadeAdmin(admin.OSMGeoAdmin):
+class DecadeAdmin(admin.GISModelAdmin):
     list_display = ("decade_name", "start_year", "end_year")
 
 
-class BorderAdmin(admin.OSMGeoAdmin):
+class BorderAdmin(admin.GISModelAdmin):
     list_display = ("muni_name", "created_date")
 
 
