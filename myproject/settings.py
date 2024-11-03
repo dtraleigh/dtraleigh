@@ -13,12 +13,13 @@ if env("DJANGO_DEBUG") == "1":
 else:
     DEBUG = False
 
-ALLOWED_HOSTS = ["127.0.0.1", "apps.dtraleigh.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "apps.dtraleigh.com", "apps2.dtraleigh.com"]
 
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# Nov 2024: Retiring newBernTOD and parcels
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -34,10 +35,10 @@ INSTALLED_APPS = [
     "simple_history",
     "leaflet",
     "buildings",
-    "newBernTOD",
+    #"newBernTOD",
     "eats",
     "rpd",
-    "parcels",
+    #"parcels",
     "django_tables2",
     "parking",
     "transit"
