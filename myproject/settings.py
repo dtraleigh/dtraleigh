@@ -13,7 +13,7 @@ if env("DJANGO_DEBUG") == "1":
 else:
     DEBUG = False
 
-ALLOWED_HOSTS = ["127.0.0.1", "apps.dtraleigh.com", "apps2.dtraleigh.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "apps.dtraleigh.com"]
 
 INTERNAL_IPS = [
     "127.0.0.1",
