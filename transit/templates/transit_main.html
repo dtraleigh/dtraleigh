@@ -27,6 +27,18 @@
   </body>
   <script type="text/javascript">
   function map_init_basic(map, options) {
+    // Define different base layers
+    var streetsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+
+    var darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+
+    // Add the default base layer to the map
+    streetsLayer.addTo(map); // Set this as the default layer
+
     // Dynamically center and zoom the map based on geoJSON data
     var geojsonLayer = L.geoJSON({{all_transit_data|safe}}, {
       style: function(feature) {
@@ -52,6 +64,53 @@
 
     // Update the attribution control for this specific map
     map.attributionControl.setPrefix('Data source from <a href="https://arcg.is/1m1fOT1" target="_blank">City of Raleigh Open Data</a> and <a href="https://goraleigh.org/developer-resources" target="_blank">GoRaleigh</a>');
+
+    // Create a custom legend
+    var legend = L.control({ position: 'bottomright' });
+
+    legend.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'info legend');
+
+      // Style the legend div
+      div.style.backgroundColor = 'white';
+      div.style.padding = '10px';
+      div.style.border = '2px solid #ccc';
+      div.style.borderRadius = '5px';
+      div.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.2)';
+
+      div.innerHTML = "<h4 style='margin-top: 0;'>{{legend_title}}</h4>";
+
+      var routes = {{ all_transit_data|safe }}.features;
+      var addedRoutes = {};  // Object to track unique routes
+
+      // Loop through the routes and create unique legend entries
+      for (var i = 0; i < routes.length; i++) {
+        var color = routes[i].properties.route_color || 'blue';
+        var lineName = routes[i].properties.line_name || 'Unknown';
+
+        // Use lineName as a key to track uniqueness
+        if (!addedRoutes[lineName]) {
+          addedRoutes[lineName] = true;  // Mark this route as added
+
+          // Create a legend item with a color square and line name
+          div.innerHTML +=
+            `<i style="background:${color}; width: 12px; height: 12px; display: inline-block; margin-right: 8px;"></i>` +
+            `${lineName}<br>`;
+        }
+      }
+      return div;
+    };
+
+    legend.addTo(map);
+
+    // Layer control to toggle between base layers
+    var baseLayers = {
+      "Dark": darkLayer,
+      "Streets": streetsLayer
+    };
+
+    // Add the layer control to the map
+    L.control.layers(baseLayers).addTo(map);
   }
 </script>
 </html>
