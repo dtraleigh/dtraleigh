@@ -80,7 +80,19 @@ def high_frequency(request, day_of_the_week):
 
 @xframe_options_exempt
 def high_frequency_chart(request, day_of_the_week):
-    high_frequency_GTFS_routes = get_high_frequency_gtfs_routes(day_of_the_week)
+    # Dynamic, if we ever need to update the data
+    # high_frequency_GTFS_routes = get_high_frequency_gtfs_routes(day_of_the_week)
+
+    # Static, cheap fix for faster load times
+    # Note, this only works locally
+    if day_of_the_week == 'saturday':
+        high_freq_route_ids = [191, 180, 193, 198]
+    elif day_of_the_week == 'sunday':
+        high_freq_route_ids = [191, 180, 198]
+    else:
+        high_freq_route_ids = [191, 165, 180, 193, 198, 176, 194, 170]
+    high_frequency_GTFS_routes = GTFSRoute.objects.filter(id__in=high_freq_route_ids)
+
     high_frequency_GTFS_route_chart_data = []
 
     for route in high_frequency_GTFS_routes:
