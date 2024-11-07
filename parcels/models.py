@@ -99,6 +99,19 @@ class ParcelHistorical(models.Model):
                 continue
         raise KeyError(f"None of the keys {keys_to_check} were found in the data. {self.data_geojson}")
 
+    def get_first_coord(self):
+        geom = GEOSGeometry(str(self.data_geojson["geometry"]))
+
+        first_coord = [35.88959578462791, -78.73211042127825]
+
+        if geom.geom_type == "Polygon":
+            first_coord = self.data_geojson["geometry"]["coordinates"][0][0]
+
+        elif geom.geom_type == "MultiPolygon":
+            first_coord = self.data_geojson["geometry"]["coordinates"][0][0][0]
+
+        return first_coord
+
 
 class RaleighSubsection(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)

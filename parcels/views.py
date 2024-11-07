@@ -27,6 +27,23 @@ def get_lat_lon_from_request(request):
 
 def main(request):
     lat, lon = get_lat_lon_from_request(request)
+    target_parcels = get_parcel_historical_from_point(lat, lon)
+
+    # [['parcel_inst1', 'parcel_inst1_table'], ['parcel_inst2', 'parcel_inst2_table'], .....]
+    all_parcel_data = []
+
+    for parcel in target_parcels:
+        table = None
+        all_parcel_data.append([parcel, table])
+
+    return render(request, "parcel_main_historical.html", {"page_title": page_title,
+                                                           "lat_input": lat,
+                                                           "lon_input": lon,
+                                                           "all_parcel_data": all_parcel_data})
+
+
+def main_backup(request):
+    lat, lon = get_lat_lon_from_request(request)
     target_parcels = get_parcels_from_point(lat, lon)
 
     # [['parcel_inst1', 'parcel_inst1_table'], ['parcel_inst2', 'parcel_inst2_table'], .....]

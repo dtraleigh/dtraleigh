@@ -17,7 +17,7 @@ class SubscriberAdmin(admin.ModelAdmin):
     list_display = ("name", "email", "comments", "role", "send_emails", "is_bot", "topic_id")
 
 
-class DevelopmentPlansAdmin(admin.OSMGeoAdmin):
+class DevelopmentPlansAdmin(admin.GISModelAdmin):
     list_display = ("objectid", "plan_type", "submitted", "status", "major_street", "geom",
                     "plan_name", "plan_numbe", "planurl", "modified_date", "created_date")
     history_list_display = ["status"]
@@ -61,8 +61,8 @@ admin.site.register(Subscriber, SubscriberAdmin)
 admin.site.register(Zoning, ZoningAdmin)
 admin.site.register(AdministrativeAlternate, AADAdmin)
 admin.site.register(TextChangeCase, TCAdmin)
-admin.site.register(WakeCorporate, admin.OSMGeoAdmin)
-admin.site.register(TrackArea, admin.OSMGeoAdmin)
+admin.site.register(WakeCorporate, admin.GISModelAdmin)
+admin.site.register(TrackArea, admin.GISModelAdmin)
 admin.site.register(DevelopmentPlan, DevelopmentPlansAdmin)
 admin.site.register(NeighborhoodMeeting, NMAdmin)
 admin.site.register(DesignAlternateCase, DACAdmin)
