@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     "simple_history",
     "leaflet",
     "buildings",
-    #"newBernTOD",
+    "newBernTOD",
     "eats",
     "rpd",
     #"parcels",
