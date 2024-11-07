@@ -61,12 +61,12 @@ def high_frequency(request, day_of_the_week):
 
     # Static, cheap fix for faster load times
     if day_of_the_week == 'saturday':
-        sat_high_freq_route_ids = [8, 7, 2, 1, 62, 61, 83, 84]
+        high_freq_route_ids = [8, 7, 2, 1, 62, 61, 83, 84]
     elif day_of_the_week == 'sunday':
-        sat_high_freq_route_ids = [8, 7, 2, 1, 83, 84]
+        high_freq_route_ids = [8, 7, 2, 1, 83, 84]
     else:
-        sat_high_freq_route_ids = [64, 63, 44, 43, 60, 59, 8, 7, 2, 1, 62, 61, 74, 73, 83, 84]
-    high_freq_routes = ShapefileRoute.objects.filter(id__in=sat_high_freq_route_ids)
+        high_freq_route_ids = [64, 63, 44, 43, 60, 59, 8, 7, 2, 1, 62, 61, 74, 73, 83, 84]
+    high_freq_routes = ShapefileRoute.objects.filter(id__in=high_freq_route_ids)
 
     all_transit_data = serialize("geojson",
                                  high_freq_routes,
