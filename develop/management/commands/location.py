@@ -15,36 +15,44 @@ logger = logging.getLogger("django")
 
 def get_itb_items(items_that_changed):
     tracked_items = []
+    logger.debug("Starting to process items")
 
     for item in items_that_changed:
         # For zoning requests, we want only the ones that are itb
-        # NMs now have pins
+        logger.debug(f"Processing item: {item}")
+
         if isinstance(item, Zoning):
             try:
                 lat, lon = get_lat_lon_by_pin(get_pins_from_location_url(item.location_url)[0])
                 if is_itb(lat, lon):
                     tracked_items.append(item)
+                    logger.debug(f"Added Zoning item to tracked_items: {item}")
             except TypeError:
-                logger.info(item)
+                logger.error(f"TypeError for item {item}: {e}")
+                send_email_notice(f"TypeError for item {item}: {e}", email_admins())
                 continue
+
 
         elif isinstance(item, NeighborhoodMeeting):
             try:
                 lat, lon = get_lat_lon_by_pin(get_pins_from_location_url(item.rezoning_site_address_url)[0])
                 if is_itb(lat, lon):
                     tracked_items.append(item)
-            except TypeError:
-                logger.info(item)
+                    logger.debug(f"Added NeighborhoodMeeting item to tracked_items: {item}")
+            except TypeError as e:
+                logger.error(f"TypeError for item {item}: {e}")
+                send_email_notice(f"TypeError for item {item}: {e}", email_admins())
                 continue
 
-        # Dev plans, we can calculate is_itb using geom x and y
         elif isinstance(item, DevelopmentPlan):
             if is_itb(item.geom.y, item.geom.x):
                 tracked_items.append(item)
+                logger.debug(f"Added DevelopmentPlan item to tracked_items: {item}")
 
         # Text change cases, neighborhood meetings aren't always location specific so just add all of them
         elif isinstance(item, TextChangeCase):
             tracked_items.append(item)
+            logger.debug(f"Added TextChangeCase item to tracked_items: {item}")
 
         # elif isinstance(item, NeighborhoodMeeting):
         #     if item.is_itb_override:
@@ -64,16 +72,16 @@ def get_itb_items(items_that_changed):
                 try:
                     address_lat, address_lon = get_lat_lon_by_address(piece)
                 except TypeError as e:
-                    message = f"{e}\n"
-                    message += f"piece: {piece}\n"
-                    message += f"item.project_name: {item.project_name}\n"
-                    logger.info(message)
+                    message = f"Error processing item {item.project_name} at piece '{piece}': {e}"
+                    logger.error(message)
                     send_email_notice(message, email_admins())
                 if address_lat and address_lon:
                     # If anything hits True, add it.
                     if is_itb(address_lat, address_lon):
                         tracked_items.append(item)
+                        logger.debug(f"Added item by project name part match: {item}")
 
+    logger.debug("Finished processing items")
     return tracked_items
 
 
