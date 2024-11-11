@@ -1,0 +1,13 @@
+{% extends "generic_base.html" %}
+
+{% block content %}
+    <div class="container d-flex flex-column justify-content-center align-items-center min-vh-100">
+        <h1 class="display-4 text-danger">500</h1>
+        <p class="lead text-center">Oops! Something went wrong on our end.</p>
+        <p class="text-muted text-center">An unexpected error has occurred. Please try refreshing the page or come back later.</p>
+        <div class="text-center">
+            <button class="btn btn-primary mt-3 mx-auto" onclick="window.location.reload()">Refresh Page</button>
+        </div>
+        {% include "dtraleigh_footer.html" %}
+    </div>
+{% endblock %}

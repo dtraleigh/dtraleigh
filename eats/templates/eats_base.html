@@ -40,9 +40,7 @@
 
     {% block content %}{% endblock %}
 
-    <div class="footer">
-      <p>&copy; {% now "Y" %} Leo Suarez, a side project of <a href="https://dtraleigh.com" title="The Raleigh Connoisseur">The Raleigh Connoisseur</a></p>
-    </div>
+    {% include "dtraleigh_footer.html" %}
   </div> <!-- /container -->
 
 <script src="{% static "eats-js/jquery-1.11.0.min.js" %}"}></script>
