@@ -13,8 +13,6 @@ class Command(BaseCommand):
         n = datetime.now().strftime("%H:%M %m-%d-%y")
         logger.info(f"{n}: Trying to send email to admins")
         message = "Email from test_email.py"
-        print("1")
         send_email_notice(message, email_admins())
-        print("2")
         e = datetime.now().strftime("%H:%M %m-%d-%y")
         logger.info(f"{e}: Sent test email to admins")
