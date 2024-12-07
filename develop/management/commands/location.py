@@ -69,13 +69,16 @@ def get_itb_items(items_that_changed):
         else:
             project_name_parts = split_up_project_name(item.project_name)
             for piece in project_name_parts:
+                address_lat = None
+                address_lon = None
                 try:
                     address_lat, address_lon = get_lat_lon_by_address(piece)
                 except TypeError as e:
                     message = f"Error processing item {item.project_name} at piece '{piece}': {e}"
                     logger.error(message)
                     send_email_notice(message, email_admins())
-                if address_lat and address_lon:
+
+                if address_lat is not None and address_lon is not None:
                     # If anything hits True, add it.
                     if is_itb(address_lat, address_lon):
                         tracked_items.append(item)
