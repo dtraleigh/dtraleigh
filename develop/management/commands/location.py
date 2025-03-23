@@ -23,22 +23,41 @@ def get_itb_items(items_that_changed):
 
         if isinstance(item, Zoning):
             try:
-                lat, lon = get_lat_lon_by_pin(get_pins_from_location_url(item.location_url)[0])
+                pins = get_pins_from_location_url(item.location_url)
+
+                if not pins:
+                    logger.error(f"No pins found for item {item}. Location URL: {item.location_url}")
+                    send_email_notice(f"No pins found for item {item}. Location URL: {item.location_url}",
+                                      email_admins())
+                    continue
+
+                lat, lon = get_lat_lon_by_pin(pins[0])
+
                 if is_itb(lat, lon):
                     tracked_items.append(item)
                     logger.debug(f"Added Zoning item to tracked_items: {item}")
-            except TypeError:
+
+            except TypeError as e:
                 logger.error(f"TypeError for item {item}: {e}")
                 send_email_notice(f"TypeError for item {item}: {e}", email_admins())
-                continue
 
 
         elif isinstance(item, NeighborhoodMeeting):
             try:
-                lat, lon = get_lat_lon_by_pin(get_pins_from_location_url(item.rezoning_site_address_url)[0])
+                pins = get_pins_from_location_url(item.rezoning_site_address_url)
+
+                if not pins:
+                    logger.error(f"No pins found for item {item}. Location URL: {item.rezoning_site_address_url}")
+                    send_email_notice(f"No pins found for item {item}. Location URL: {item.rezoning_site_address_url}",
+                                      email_admins())
+                    continue
+
+                lat, lon = get_lat_lon_by_pin(pins[0])
+
                 if is_itb(lat, lon):
                     tracked_items.append(item)
                     logger.debug(f"Added NeighborhoodMeeting item to tracked_items: {item}")
+
             except TypeError as e:
                 logger.error(f"TypeError for item {item}: {e}")
                 send_email_notice(f"TypeError for item {item}: {e}", email_admins())
