@@ -277,3 +277,23 @@ class DesignAlternateCase(models.Model):
 
     def __str__(self):
         return f"DA case = {self.case_number} - {self.project_name}"
+
+# This is an auto-generated Django model module created by ogrinspect.
+class WakeRacialCovenant(models.Model):
+    docid = models.CharField(max_length=12)
+    rownum = models.CharField(max_length=20)
+    url = models.CharField(max_length=254, null=True, blank=True)
+    bookpage = models.CharField(max_length=254, null=True, blank=True)
+    grantor = models.CharField(max_length=254, null=True, blank=True)
+    grantee = models.CharField(max_length=254, null=True, blank=True)
+    doctypedes = models.CharField(max_length=254, null=True, blank=True)
+    doctypeid = models.CharField(max_length=254, null=True, blank=True)
+    recorddate = models.DateField()
+    execdate = models.DateField()
+    propertyde = models.CharField(max_length=254, null=True, blank=True)
+    bm = models.CharField(max_length=254, null=True, blank=True)
+    lots = models.CharField(max_length=254, null=True, blank=True)
+    notes = models.CharField(max_length=254, null=True, blank=True)
+    mapreview = models.CharField(max_length=254, null=True, blank=True)
+    bestmap = models.CharField(max_length=254, null=True, blank=True)
+    geom = models.MultiPolygonField(srid=2264)

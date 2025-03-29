@@ -1,7 +1,7 @@
 from django.shortcuts import render
 import requests
 from django.core.serializers import serialize
-from develop.models import TrackArea
+from develop.models import TrackArea, WakeRacialCovenant
 from arcgis2geojson import arcgis2geojson
 from django.views.decorators.clickjacking import xframe_options_exempt
 
@@ -51,3 +51,17 @@ def dx_zoning40(request):
     dx40_zoning_data = arcgis2geojson(response.json())
 
     return render(request, "dx.html", {"dx_zoning_data": dx40_zoning_data})
+
+
+@xframe_options_exempt
+def wake_racial_covenants(request):
+    # wake_racial_covenants_data = serialize("geojson", WakeRacialCovenant.objects.all(),
+    #                                        geometry_field="geom")
+    wake_racial_covenants_data = serialize(
+        "geojson",
+        WakeRacialCovenant.objects.all(),
+        geometry_field="geom",
+        fields=["url"]
+    )
+
+    return render(request, "wake_racial_cov.html", {"wake_racial_covenants_data": wake_racial_covenants_data})

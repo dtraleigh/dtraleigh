@@ -20,6 +20,7 @@ urlpatterns = [
     path("ncod/", develop_views.ncod),
     path("dx/", develop_views.dx_zoning),
     path("dx40/", develop_views.dx_zoning40),
+    path("wake_racial/", develop_views.wake_racial_covenants),
     path("tod/", newbern_views.tod),
     path("buildings/", buildings_views.building_date_map),
     path("buildings/geojson/<str:decade>/", buildings_views.geojson_helper),

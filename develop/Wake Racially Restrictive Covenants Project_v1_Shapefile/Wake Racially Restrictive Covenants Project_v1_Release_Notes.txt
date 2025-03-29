@@ -1,0 +1,97 @@
+/********************************************************************************************************************************************************************************************
+* Name:     WakeRacialCovenants_ReleaseNotes_YYYY-MM-DD.txt
+* Purpose:  Describes format of data files for Wake County Racially Restrictive Covenants Project
+* Updated:  03/05/2025
+*
+* Project description: 
+*	Identify and map racially restrictive covenants in Wake County property deeds between 1905-1950. The project used AI to search hundreds of thousands of documents from this timeframe
+*	in the Wake County Register of Deeds (ROD) database and identified 20,000 documents of interest.  Volunteers read and indexed these documents of interest and identified 15,000 having
+*	racial covenants. The project then georeferenced hundreds of historical maps (from the ROD Book of Maps) to digitize these covenanted properties and display them on a current Wake
+*	County map.  The digitized covenant data can be correlated with other geographic datasets or used to implement a geographic (rather than text-based) title search for covenant properties. 
+*
+* Data files:
+*	Covenant Map - an image showing the extent of the racially restrictive covenants mapped so far. 
+*	Data Table   - Comma Separated Value file that can be loaded into a spreadsheet.  It contains ALL the covenant data identified (including the covenants that can't yet be placed on a map). 
+*	Shapefile    - Data file that can be loaded into a GIS system to display a map of the individual covenants and all associated attributes (grantor, grantee, execution date, location, etc). Includes 
+*		       about 98% of the covenants in the Data Table above. It excludes documents not mapped yet, like those with vague property descriptions ("Beginning at the pile of
+*		       rocks..."). Research continues on these deeds and the ones that can be resolved will be included in future releases.
+*	Release Notes - this file
+*
+* Important Notes
+*	- Click the URL link in the data/attribute table to view the original source document
+*	- The Shapefile contains overlapping features, reflecting how properties have been merged, subdivided, and redrawn over the years.
+* 	- The Data Table may contain multiple entries for a single document. There may also be multiple Shapefile features associated with a single line in the Data Table.
+*	  This is because a single document may contain multiple tracts, and in turn each tract may reference multiple lots in different plats (aka Book of Maps).
+*	- Additional research is required before mapping documents marked "RESEARCH" or "MORE WORK". Subsequent releases will map the documents that can be resolved and also clean the Shapefile features.
+*	- The dark blue line shown on the Covenant Map image represents the 1948 Raleigh City Limits
+* 
+* 
+* Reference: Wake County Register of Deeds Office
+* URL: https://www.wake.gov/departments-government/register-deeds
+*******************************************************************************************************************************************************************************************/
+
+Version		Release Date	Description
+0		2025-01-30	Prerelease
+1		2025-03-05	Initial Release. RESEARCH/MORE WORK documents aren't mapped. Fixed geometries in Shapefile but features aren't cleaned 
+
+
+
+------------------------------------------------------------------------------------
+-- Layout for Covenant Data Table and Shapefile Attribute Table
+-----------------------------------------------------------------------------------
+name                    data type          	description
+------------------------------------------------------------------------------------
+DocID			char(12)		ROD Document identification number
+RowNum			char(12)		Indicates the row in the Data Table corresponding to a given Shapefile feature.
+URL			varchar(100)		Link to PDF viewer to display historical document
+Book_Page		char(12)		ROD Book and page number containing registered document
+Grantor			varchar(1000)		Grantor (party of the first part)
+Grantee			varchar(1000)		Grantee (party of the second part)
+DocType_Description	char(20)		Document category (Deed, Deed of Trust, etc)
+DocType_ID		char(2)			Identifier for the Document Type
+Record_Date		char(10)		Date the document was registered in the ROD office
+Exec_Date		char(10)		Date the Grantor and Grantee executed the document
+Property_Description	varchar(100)		Subdivision name for the property
+Book_of_Maps		char(12)		ROD book and page number of parcel map/survey listed in document
+Lots			varchar(100)		Lot numbers or description of the parcel
+Notes			varchar(100)		Additional information for identifying/mapping the parcel
+Map_Review		char(20)		Review status
+Best_Map		char(12)		ROD book and page number of map/survey used to map the parcel
+Mapped			char(2)			Mapping status ("Y" indicates the document is included in the Covenant Shapefile).
+ 
+
+
+
+/*****************************************************************************
+Map Review codes
+Map_Review          	Description
+*******************************************************************************
+MAPPABLE		Document contains enough information to be mapped
+RESEARCH		Research required to map the document has not begun
+MORE WORK		Initial research completed but additional work required to map the document
+**************************************************************************** */
+
+
+
+/*****************************************************************************
+Document Type codes
+DocTypeDescription	DocTypeID	Description
+*******************************************************************************
+AGREE			3		Agreement
+ASSGMT			5		Assignment
+COVNTS			14		Covenants
+DECLN			16		Declaration
+DEED			17              Deed
+D - T			19              Deed of Trust
+LEASE			24              Lease
+MTG			29              Meeting
+P OF A			35              Power of Attorney
+QCD			36              Quit Claim Deed
+RELEASE			37              Release
+RESTRNS			42              Restrictions
+R - W			44              Right of Way
+SEE INSTRUMENT		47              See Instrument
+SUPL			50              Supplement to Agreement & Lease
+NULL			UNSPECIFIED     Not Specified
+
+

@@ -1,6 +1,6 @@
 import os
 from django.contrib.gis.utils import LayerMapping
-from develop.models import WakeCorporate, DevelopmentPlan
+from develop.models import WakeCorporate, DevelopmentPlan, WakeRacialCovenant
 
 # Auto-generated `LayerMapping` dictionary for WakeCorporate model
 wakecorporate_mapping = {
@@ -53,6 +53,26 @@ developmentplan_mapping = {
     "geom": "MULTIPOINT",
 }
 
+# Auto-generated `LayerMapping` dictionary for WakeRacialCovenant model
+wakeracialcovenant_mapping = {
+    'docid': 'DocID',
+    'rownum': 'RowNum',
+    'url': 'URL',
+    'bookpage': 'BookPage',
+    'grantor': 'grantor',
+    'grantee': 'grantee',
+    'doctypedes': 'DocTypeDes',
+    'doctypeid': 'DocTypeID',
+    'recorddate': 'RecordDate',
+    'execdate': 'execdate',
+    'propertyde': 'PropertyDe',
+    'bm': 'bm',
+    'lots': 'lots',
+    'notes': 'notes',
+    'mapreview': 'MapReview',
+    'bestmap': 'BestMap',
+    'geom': 'MULTIPOLYGON',
+}
 
 wake_shp = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "Corporate_Limits", "Corporate_Limits.shp"),
@@ -62,6 +82,10 @@ devs_shp = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "Development_Plans", "Development_Plans.shp"),
 )
 
+wake_racial_cov_shp = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "Wake Racially Restrictive Covenants Project_v1_Shapefile",
+                 "WakeRacialCovenants_v1_Shapefile.shp"),
+)
 
 def run_wake(verbose=True):
     lm = LayerMapping(WakeCorporate, wake_shp, wakecorporate_mapping, transform=False)
@@ -70,4 +94,9 @@ def run_wake(verbose=True):
 
 def run_devs(verbose=True):
     lm = LayerMapping(DevelopmentPlan, devs_shp, developmentplan_mapping, transform=False)
+    lm.save(strict=True, verbose=verbose)
+
+
+def run_wake_racial_cov(verbose=True):
+    lm = LayerMapping(WakeRacialCovenant, wake_racial_cov_shp, wakeracialcovenant_mapping, transform=False)
     lm.save(strict=True, verbose=verbose)
