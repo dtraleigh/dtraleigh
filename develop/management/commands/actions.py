@@ -186,3 +186,44 @@ def create_new_discourse_post(subscriber, item):
                                "raw": message})
 
     requests.request("POST", post_url, data=post_payload, headers=headers)
+
+def ensure_correct_discourse_title(subscriber):
+    expected_title = "Raleigh-area Mall / Life-Style Center / RTP Redevelopments"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Api-Key": subscriber.api_key,
+        "Api-Username": subscriber.name,
+        "Accept": "*/*",
+        "Cache-Control": "no-cache",
+        "Host": "community.dtraleigh.com",
+        "Accept-Encoding": "gzip, deflate",
+        "Connection": "keep-alive",
+        "cache-control": "no-cache"
+    }
+
+    topic_id = 1184
+    get_url = f"https://community.dtraleigh.com/t/{topic_id}.json"
+    response = requests.get(get_url, headers=headers)
+
+    if response.status_code != 200:
+        logger.error(f"Failed to fetch topic. Status code: {response.status_code}, Response: {response.text}")
+        return
+
+    topic_data = response.json()
+    current_title = topic_data.get("title")
+
+    if current_title != expected_title:
+        logger.info(f"Title mismatch. Updating topic title from '{current_title}' to '{expected_title}'")
+
+        update_url = f"https://community.dtraleigh.com/t/-/{topic_id}.json"
+        update_payload = json.dumps({"title": expected_title})
+
+        update_response = requests.put(update_url, data=update_payload, headers=headers)
+
+        if update_response.status_code == 200:
+            logger.info("Topic title successfully updated.")
+        else:
+            logger.error(f"Failed to update topic title. Status code: {update_response.status_code}, Response: {update_response.text}")
+    else:
+        logger.info("Topic title is already correct.")
