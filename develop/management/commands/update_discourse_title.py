@@ -10,7 +10,7 @@ class Command(BaseCommand):
         try:
             subscriber = Subscriber.objects.get(id=2)
             ensure_correct_discourse_title(subscriber)
-            self.stdout.write(self.style.SUCCESS("Title check completed."))
+            #self.stdout.write(self.style.SUCCESS("Title check completed."))
         except Subscriber.DoesNotExist:
             self.stderr.write(self.style.ERROR("Subscriber with ID 2 does not exist."))
         except Exception as e:
