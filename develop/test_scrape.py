@@ -1,3 +1,4 @@
+# noinspection PyUnusedImports
 from bs4 import BeautifulSoup
 from unittest.mock import patch, MagicMock
 
@@ -6,18 +7,44 @@ from django.test import TestCase
 from develop.management.commands.scrape import *
 
 
-class ScrapeTestCaseSimple(SimpleTestCase):
+class ScrapeTestCaseGeneral(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """Need to create 3 items to check against"""
+        SiteReviewCase.objects.create(case_number="Test-SR-2020",
+                                      project_name="Test SR Project")
+        AdministrativeAlternate.objects.create(case_number="Test-AAD-2020",
+                                               project_name="Test AAD Project")
+        TextChangeCase.objects.create(case_number="Test-TCC-2020",
+                                      project_name="Test TCC project")
+
     def test_get_page_content(self):
         """quick test to check that the sites we are scraping are returning data"""
         websites_used = [
             "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases",
-            # "https://raleighnc.gov/SupportPages/administrative-alternate-design-cases",
+            "https://raleighnc.gov/planning/services/rezoning-process/neighborhood-meetings",
             "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases",
             "https://raleighnc.gov/planning/services/text-changes/text-change-cases",
             ]
 
         for url in websites_used:
             self.assertIsNotNone(get_page_content(url))
+
+    def test_get_generic_link(self):
+        content1 = """<td><a href="https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR15/SR-106-17.pdf">SR-106-17</a></td>"""
+        content1_souped = BeautifulSoup(content1, "html.parser")
+
+        self.assertEqual(get_generic_link(content1_souped), "https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR15/SR-106-17.pdf")
+
+        content2 = """<td><a href="https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal prod/COR15/SR 106 17.pdf">SR-106-17</a></td>"""
+        content2_souped = BeautifulSoup(content2, "html.parser")
+
+        self.assertEqual(get_generic_link(content2_souped), "https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal%20prod/COR15/SR%20106%2017.pdf")
+
+        content3 = """<td>SR-106-17</td>"""
+        content3_souped = BeautifulSoup(content3, "html.parser")
+
+        self.assertEqual(get_generic_link(content3_souped), None)
 
     def test_get_rows_in_table(self):
         """get_rows_in_table() takes in an html table and returns
@@ -63,22 +90,35 @@ class ScrapeTestCaseSimple(SimpleTestCase):
 
         self.assertEqual(get_case_number_from_row(row_tds), "SR-106-17")
 
-    def test_get_generic_link(self):
-        content1 = """<td><a href="https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR15/SR-106-17.pdf">SR-106-17</a></td>"""
-        content1_souped = BeautifulSoup(content1, "html.parser")
+    def test_determine_if_known_case2(self):
+        """Happy, easy match"""
+        known_sr_cases = SiteReviewCase.objects.all()
+        sr1 = determine_if_known_case(known_sr_cases, "Test-SR-2020", "Test SR Project")
+        self.assertEqual(sr1, known_sr_cases[0])
 
-        self.assertEqual(get_generic_link(content1_souped), "https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR15/SR-106-17.pdf")
+        known_aad_cases = AdministrativeAlternate.objects.all()
+        aad1 = determine_if_known_case(known_aad_cases, "Test-AAD-2020", "Test AAD Project")
+        self.assertEqual(aad1, known_aad_cases[0])
 
-        content2 = """<td><a href="https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal prod/COR15/SR 106 17.pdf">SR-106-17</a></td>"""
-        content2_souped = BeautifulSoup(content2, "html.parser")
+        known_tcc_cases = TextChangeCase.objects.all()
+        tcc1 = determine_if_known_case(known_tcc_cases, "Test-TCC-2020", "Test TCC Project")
+        self.assertEqual(tcc1, known_tcc_cases[0])
 
-        self.assertEqual(get_generic_link(content2_souped), "https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal%20prod/COR15/SR%20106%2017.pdf")
+        # Very different matches
+        known_sr_cases = SiteReviewCase.objects.all()
+        sr2 = determine_if_known_case(known_sr_cases, "Wrong-SR-2020", "Wrong SR Project")
+        self.assertEqual(sr2, None)
 
-        content3 = """<td>SR-106-17</td>"""
-        content3_souped = BeautifulSoup(content3, "html.parser")
+        known_aad_cases = AdministrativeAlternate.objects.all()
+        aad2 = determine_if_known_case(known_aad_cases, "Wrong-AAD-2020", "Wrong AAD Project")
+        self.assertEqual(aad2, None)
 
-        self.assertEqual(get_generic_link(content3_souped), None)
+        known_tcc_cases = TextChangeCase.objects.all()
+        tcc2 = determine_if_known_case(known_tcc_cases, "Wrong-TCC-2020", "Wrong TCC Project")
+        self.assertEqual(tcc2, None)
 
+
+class ScrapeTestCaseZoning(SimpleTestCase):
     def test_extract_case_number_and_year(self):
         """Test extraction of zpnum and zpyear from case number text"""
         # Standard format
@@ -208,40 +248,463 @@ class ScrapeTestCaseSimple(SimpleTestCase):
         self.assertIsNone(result)
 
 
-class ScrapeTestCaseDjango(TestCase):
+class TextChangesTestCaseSimple(SimpleTestCase):
+
+    def test_validate_table_headers_valid(self):
+        """Test validation of table headers with td elements"""
+        html = """<table><thead><tr><td>Case Number</td><td>Project Name</td><td>Description</td><td>Status</td></tr></thead></table>"""
+        souped = BeautifulSoup(html, "html.parser")
+        thead = souped.find("thead")
+
+        headers = validate_table_headers(thead)
+
+        self.assertIsNotNone(headers)
+        self.assertEqual(len(headers), 4)
+        self.assertEqual(headers[0], "Case Number")
+        self.assertEqual(headers[3], "Status")
+
+    def test_validate_table_headers_real_world_th(self):
+        """Test with real-world table structure using th headers"""
+        html = """<table class="table tablesaw tablesaw-swipe" data-tablesaw-minimap="" data-tablesaw-mode-switch="" data-tablesaw-mode="swipe" id="tablesaw-5246" style=""><thead><tr><th><strong>Case #&nbsp;</strong></th><th><strong>Case Name</strong></th><th><strong>Description</strong></th><th><strong>Status</strong></th><th><strong>Contact</strong></th></tr></thead></table>"""
+        souped = BeautifulSoup(html, "html.parser")
+        thead = souped.find("thead")
+
+        headers = validate_table_headers(thead)
+
+        self.assertIsNotNone(headers)
+        self.assertEqual(len(headers), 5)
+        self.assertIn("Case #", headers[0])
+        self.assertIn("Case Name", headers[1])
+
+    def test_validate_table_headers_th_elements(self):
+        """Test that th headers are now accepted"""
+        html = """<table><thead><tr><th>Case Number</th><th>Project Name</th><th>Description</th><th>Status</th></tr></thead></table>"""
+        souped = BeautifulSoup(html, "html.parser")
+        thead = souped.find("thead")
+
+        headers = validate_table_headers(thead)
+
+        self.assertIsNotNone(headers)
+        self.assertEqual(len(headers), 4)
+        self.assertEqual(headers[0], "Case Number")
+        self.assertEqual(headers[3], "Status")
+
+    def test_extract_text_change_row_data_valid(self):
+        """Test extraction of row data"""
+        html = """<tr>
+            <td><a href="case.pdf">TC-123-24</a></td>
+            <td>Zoning Text Change</td>
+            <td>Update ordinance</td>
+            <td>Approved</td>
+        </tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        with patch('develop.management.commands.scrape.get_case_number_from_row') as mock_case:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+                    mock_case.return_value = "TC-123-24"
+                    mock_link.return_value = "case.pdf"
+                    mock_text.side_effect = ["Zoning Text Change", "Update ordinance", "Approved"]
+
+                    data = extract_text_change_row_data(row_tds)
+
+        self.assertIsNotNone(data)
+        self.assertEqual(data["case_number"], "TC-123-24")
+        self.assertEqual(data["case_url"], "case.pdf")
+        self.assertEqual(data["project_name"], "Zoning Text Change")
+        self.assertEqual(data["description"], "Update ordinance")
+        self.assertEqual(data["status"], "Approved")
+
+    def test_extract_text_change_row_data_insufficient_columns(self):
+        """Test that None is returned with insufficient columns"""
+        html = """<tr><td>Col1</td><td>Col2</td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        data = extract_text_change_row_data(row_tds)
+
+        self.assertIsNone(data)
+
+    def test_validate_text_change_data_valid(self):
+        """Test validation of complete data"""
+        data = {
+            "case_number": "TC-123-24",
+            "case_url": "case.pdf",
+            "project_name": "Zoning Text Change",
+            "description": "Update ordinance",
+            "status": "Approved"
+        }
+
+        result = validate_text_change_data(data)
+        self.assertTrue(result)
+
+    def test_validate_text_change_data_missing_optional_description(self):
+        """Test that missing description doesn't fail validation"""
+        data = {
+            "case_number": "TC-123-24",
+            "case_url": "case.pdf",
+            "project_name": "Zoning Text Change",
+            "description": None,
+            "status": "Approved"
+        }
+
+        result = validate_text_change_data(data)
+        self.assertTrue(result)
+
+    def test_validate_text_change_data_missing_required_field(self):
+        """Test that missing required field fails validation"""
+        data = {
+            "case_number": "TC-123-24",
+            "case_url": None,
+            "project_name": "Zoning Text Change",
+            "description": "Update ordinance",
+            "status": "Approved"
+        }
+
+        result = validate_text_change_data(data)
+        self.assertFalse(result)
+
+    def test_validate_text_change_data_none(self):
+        """Test that None data fails validation"""
+        result = validate_text_change_data(None)
+        self.assertFalse(result)
+
+    @patch('develop.management.commands.scrape.email_admins')
+    @patch('develop.management.commands.scrape.send_email_notice')
+    @patch('develop.management.commands.scrape.logger')
+    def test_handle_text_change_validation_error(self, mock_logger, mock_email, mock_admins):
+        """Test that validation errors are logged and emails are sent"""
+        mock_admins.return_value = ["admin@example.com"]
+
+        html = """<tr><td>Col1</td><td>Col2</td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        data = {"case_number": None, "case_url": None, "project_name": None, "status": None}
+        handle_text_change_validation_error(row_tds, data)
+
+        mock_logger.info.assert_called()
+        mock_email.assert_called_once()
+
+    def test_check_for_no_active_cases_true(self):
+        """Test detection of 'No active cases' sentinel"""
+        result = check_for_no_active_cases("No active cases")
+        self.assertTrue(result)
+
+    def test_check_for_no_active_cases_false(self):
+        """Test that normal case numbers don't match sentinel"""
+        result = check_for_no_active_cases("TC-123-24")
+        self.assertFalse(result)
+
+    @patch('develop.management.commands.scrape.fields_are_same')
+    @patch('develop.management.commands.scrape.logger')
+    def test_update_text_change_if_changed_updates(self, mock_logger, mock_fields_are_same):
+        """Test that text change is updated when fields differ"""
+        mock_fields_are_same.return_value = False
+
+        mock_tc = MagicMock()
+        mock_tc.case_number = "TC-123-24"
+        mock_tc.case_url = "old_url"
+        mock_tc.project_name = "Old Name"
+        mock_tc.description = "Old Description"
+        mock_tc.status = "Old Status"
+
+        result = update_text_change_if_changed(
+            mock_tc,
+            "new_url",
+            "New Name",
+            "New Description",
+            "New Status"
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(mock_tc.case_url, "new_url")
+        self.assertEqual(mock_tc.project_name, "New Name")
+        mock_tc.save.assert_called_once()
+
+    @patch('develop.management.commands.scrape.fields_are_same')
+    @patch('develop.management.commands.scrape.logger')
+    def test_update_text_change_if_changed_no_update(self, mock_logger, mock_fields_are_same):
+        """Test that text change is not updated when fields are the same"""
+        mock_fields_are_same.return_value = True
+
+        mock_tc = MagicMock()
+
+        result = update_text_change_if_changed(
+            mock_tc,
+            "same_url",
+            "Same Name",
+            "Same Description",
+            "Same Status"
+        )
+
+        self.assertFalse(result)
+        mock_tc.save.assert_not_called()
+
+    @patch('develop.management.commands.scrape.TextChangeCase.objects.create')
+    @patch('develop.management.commands.scrape.logger')
+    def test_create_new_text_change(self, mock_logger, mock_create):
+        """Test that new text change case is created"""
+        create_new_text_change(
+            "TC-123-24",
+            "case.pdf",
+            "Zoning Text Change",
+            "Update ordinance",
+            "Approved"
+        )
+
+        mock_create.assert_called_once_with(
+            case_number="TC-123-24",
+            case_url="case.pdf",
+            project_name="Zoning Text Change",
+            description="Update ordinance",
+            status="Approved"
+        )
+        mock_logger.info.assert_called()
+
+    @patch('develop.management.commands.scrape.upsert_text_change_case')
+    def test_process_text_change_row_valid(self, mock_upsert):
+        """Test processing a valid text change row"""
+        html = """<tr>
+            <td><a href="case.pdf">TC-123-24</a></td>
+            <td>Zoning Text Change</td>
+            <td>Update ordinance</td>
+            <td>Approved</td>
+        </tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row = souped.find("tr")
+
+        with patch('develop.management.commands.scrape.get_case_number_from_row') as mock_case:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+                    mock_case.return_value = "TC-123-24"
+                    mock_link.return_value = "case.pdf"
+                    mock_text.side_effect = ["Zoning Text Change", "Update ordinance", "Approved"]
+
+                    data = process_text_change_row(row)
+
+        self.assertIsNotNone(data)
+        self.assertEqual(data["case_number"], "TC-123-24")
+
+    def test_process_text_change_row_no_active_cases(self):
+        """Test that 'No active cases' row is skipped"""
+        html = """<tr><td>No active cases</td><td></td><td></td><td></td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row = souped.find("tr")
+
+        with patch('develop.management.commands.scrape.get_case_number_from_row') as mock_case:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+                    with patch('develop.management.commands.scrape.send_email_notice'):
+                        with patch('develop.management.commands.scrape.email_admins'):
+                            mock_case.return_value = "No active cases"
+                            mock_link.return_value = None
+                            mock_text.return_value = None
+
+                            data = process_text_change_row(row)
+
+        self.assertIsNone(data)
+
+    def test_process_text_change_row_real_world_example(self):
+        """Test processing a real-world text change row from the city website"""
+        html = """<tr><td><a href="https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR22/TC-03-24.pdf" data-uw-pdf-br="2" data-uw-pdf-doc="">TC-3-24</a></td><td>Historic Preservation and RHDC</td><td><span dir="ltr">Revises historic preservation requirements and processes to align with state law.</span></td><td>City Council<br>Public Hearing<br>Dec. 2</td><td><a href="mailto:Tania.Tully@raleighnc.gov" aria-label="send an email to Tania.Tully@raleighnc.gov" data-uw-rm-vglnk="" uw-rm-vague-link-id="mailto:tania.tully@raleighnc.gov$send an email to tania.tully@raleighnc.gov">Tully</a></td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row = souped.find("tr")
+
+        with patch('develop.management.commands.scrape.get_case_number_from_row') as mock_case:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+                    mock_case.return_value = "TC-3-24"
+                    mock_link.return_value = "https://cityofraleigh0drupal.blob.core.usgovcloudapi.net/drupal-prod/COR22/TC-03-24.pdf"
+                    mock_text.side_effect = [
+                        "Historic Preservation and RHDC",
+                        "Revises historic preservation requirements and processes to align with state law.",
+                        "City Council\nPublic Hearing\nDec. 2"
+                    ]
+
+                    data = process_text_change_row(row)
+
+        self.assertIsNotNone(data)
+        self.assertEqual(data["case_number"], "TC-3-24")
+        self.assertEqual(data["project_name"], "Historic Preservation and RHDC")
+        self.assertIn("historic preservation", data["description"].lower())
+        self.assertIn("City Council", data["status"])
+
+    @patch('develop.management.commands.scrape.determine_if_known_case')
+    @patch('develop.management.commands.scrape.create_new_text_change')
+    @patch('develop.management.commands.scrape.TextChangeCase.objects.all')
+    def test_upsert_text_change_case_creates_new(self, mock_all, mock_create, mock_determine):
+        """Test that upsert creates new text change when it doesn't exist"""
+        mock_determine.return_value = None
+        mock_all.return_value = []
+
+        data = {
+            "case_number": "TC-123-24",
+            "case_url": "case.pdf",
+            "project_name": "Zoning Text Change",
+            "description": "Update ordinance",
+            "status": "Approved"
+        }
+
+        upsert_text_change_case(data)
+
+        mock_create.assert_called_once()
+
+    @patch('develop.management.commands.scrape.determine_if_known_case')
+    @patch('develop.management.commands.scrape.update_text_change_if_changed')
+    @patch('develop.management.commands.scrape.TextChangeCase.objects.all')
+    def test_upsert_text_change_case_updates_existing(self, mock_all, mock_update, mock_determine):
+        """Test that upsert updates existing text change"""
+        mock_existing = MagicMock()
+        mock_determine.return_value = mock_existing
+        mock_all.return_value = [mock_existing]
+
+        data = {
+            "case_number": "TC-123-24",
+            "case_url": "case.pdf",
+            "project_name": "Zoning Text Change",
+            "description": "Update ordinance",
+            "status": "Approved"
+        }
+
+        upsert_text_change_case(data)
+
+        mock_update.assert_called_once()
+
+
+class TextChangesTestCaseDjango(TestCase):
     @classmethod
     def setUpTestData(cls):
-        """Need to create 3 items to check against"""
-        SiteReviewCase.objects.create(case_number="Test-SR-2020",
-                                      project_name="Test SR Project")
-        AdministrativeAlternate.objects.create(case_number="Test-AAD-2020",
-                                               project_name="Test AAD Project")
-        TextChangeCase.objects.create(case_number="Test-TCC-2020",
-                                      project_name="Test TCC project")
+        """Create test text change cases"""
+        TextChangeCase.objects.create(
+            case_number="TC-001-24",
+            case_url="case1.pdf",
+            project_name="First Text Change",
+            description="First description",
+            status="Approved"
+        )
+        TextChangeCase.objects.create(
+            case_number="TC-002-24",
+            case_url="case2.pdf",
+            project_name="Second Text Change",
+            description="Second description",
+            status="Pending"
+        )
 
-    def test_determine_if_known_case2(self):
-        """Happy, easy match"""
-        known_sr_cases = SiteReviewCase.objects.all()
-        sr1 = determine_if_known_case(known_sr_cases, "Test-SR-2020", "Test SR Project")
-        self.assertEqual(sr1, known_sr_cases[0])
+    def test_determine_if_known_case_match(self):
+        """Test that matching text change case is found"""
+        known_cases = TextChangeCase.objects.all()
+        result = determine_if_known_case(known_cases, "TC-001-24", "First Text Change")
 
-        known_aad_cases = AdministrativeAlternate.objects.all()
-        aad1 = determine_if_known_case(known_aad_cases, "Test-AAD-2020", "Test AAD Project")
-        self.assertEqual(aad1, known_aad_cases[0])
+        self.assertIsNotNone(result)
+        self.assertEqual(result.case_number, "TC-001-24")
 
-        known_tcc_cases = TextChangeCase.objects.all()
-        tcc1 = determine_if_known_case(known_tcc_cases, "Test-TCC-2020", "Test TCC Project")
-        self.assertEqual(tcc1, known_tcc_cases[0])
+    def test_determine_if_known_case_no_match(self):
+        """Test that non-matching case returns None"""
+        known_cases = TextChangeCase.objects.all()
+        result = determine_if_known_case(known_cases, "TC-999-24", "Unknown Case")
 
-        # Very different matches
-        known_sr_cases = SiteReviewCase.objects.all()
-        sr2 = determine_if_known_case(known_sr_cases, "Wrong-SR-2020", "Wrong SR Project")
-        self.assertEqual(sr2, None)
+        self.assertIsNone(result)
 
-        known_aad_cases = AdministrativeAlternate.objects.all()
-        aad2 = determine_if_known_case(known_aad_cases, "Wrong-AAD-2020", "Wrong AAD Project")
-        self.assertEqual(aad2, None)
 
-        known_tcc_cases = TextChangeCase.objects.all()
-        tcc2 = determine_if_known_case(known_tcc_cases, "Wrong-TCC-2020", "Wrong TCC Project")
-        self.assertEqual(tcc2, None)
+from bs4 import BeautifulSoup
+from unittest.mock import patch
+
+from django.test import SimpleTestCase
+
+
+class GetGenericTextTestCase(SimpleTestCase):
+
+    def test_get_generic_text_simple(self):
+        """Test extraction of simple text"""
+        html = """<td>Simple text</td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertEqual(result, "Simple text")
+
+    def test_get_generic_text_with_br_tags(self):
+        """Test extraction of text with <br> tags"""
+        html = """<td>City Council<br>Public Hearing<br>Dec. 2</td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertEqual(result, "City Council Public Hearing Dec. 2")
+
+    def test_get_generic_text_with_extra_spaces(self):
+        """Test that extra spaces and newlines are cleaned up"""
+        html = """<td>Text  with   multiple    spaces</td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertEqual(result, "Text with multiple spaces")
+
+    def test_get_generic_text_with_nested_tags(self):
+        """Test extraction with nested HTML tags"""
+        html = """<td><span dir="ltr">Revises <strong>historic</strong> preservation requirements.</span></td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertEqual(result, "Revises historic preservation requirements.")
+
+    def test_get_generic_text_empty(self):
+        """Test extraction of empty element"""
+        html = """<td></td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertIsNone(result)
+
+    def test_get_generic_text_whitespace_only(self):
+        """Test extraction of whitespace-only element"""
+        html = """<td>   \n\t  </td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertIsNone(result)
+
+    def test_get_generic_text_with_nbsp(self):
+        """Test extraction with non-breaking spaces"""
+        html = """<td>Text&nbsp;with&nbsp;nbsp;</td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        # BeautifulSoup converts &nbsp; to actual non-breaking space characters
+        self.assertIn("Text", result)
+        self.assertIn("with", result)
+
+    def test_get_generic_text_real_world_status(self):
+        """Test with real-world status text from city website"""
+        html = """<td>City Council<br>Public Hearing<br>Dec. 2</td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        self.assertEqual(result, "City Council Public Hearing Dec. 2")
+
+    def test_get_generic_text_real_world_description(self):
+        """Test with real-world description containing multiple lines"""
+        html = """<td><span dir="ltr">Seeks to reintegrate parts of two previously adopted text changes (TC-2-24 and TC-5-23) that remain valid after recent changes in state law (Session Law 2024-57), which had nullified those prior updates.</span></td>"""
+        souped = BeautifulSoup(html, "html.parser")
+        td = souped.find("td")
+
+        result = get_generic_text(td)
+        expected = "Seeks to reintegrate parts of two previously adopted text changes (TC-2-24 and TC-5-23) that remain valid after recent changes in state law (Session Law 2024-57), which had nullified those prior updates."
+        self.assertEqual(result, expected)
+
+    @patch('develop.management.commands.scrape.logger')
+    def test_get_generic_text_exception_handling(self, mock_logger):
+        """Test that exceptions are logged and None is returned"""
+        # Pass an invalid object that doesn't have find_all method
+        result = get_generic_text(None)
+
+        self.assertIsNone(result)
+        mock_logger.info.assert_called()

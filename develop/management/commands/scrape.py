@@ -109,12 +109,32 @@ def get_generic_link(content):
 
 
 def get_generic_text(content):
-    """This is used to take a reliably straightforward piece of text."""
+    """Extract text from HTML content, preserving line breaks and spacing.
+
+    Handles <br> tags by converting them to spaces, and cleans up extra whitespace.
+
+    Args:
+        content: BeautifulSoup element
+
+    Returns:
+        Cleaned text string, or None if extraction fails
+    """
     try:
-        return content.get_text().strip()
+        # Replace <br> tags with spaces before extracting text
+        for br in content.find_all("br"):
+            br.replace_with(" ")
+
+        # Get the text and clean up multiple spaces
+        text = content.get_text().strip()
+
+        # Replace multiple spaces/newlines with a single space
+        text = " ".join(text.split())
+
+        return text if text else None
+
     except Exception as e:
-        logger.info(e)
-        return "None"
+        logger.info(f"get_generic_text error: {e}")
+        return None
 
 # Deprecated after removing contact and contact_url
 # def get_contact_url(content):
@@ -304,93 +324,248 @@ def admin_alternates(page_content):
                                                                status=status)
 
 
+def validate_table_headers(table_thead):
+    """Extract and validate table headers.
+
+    Supports both td and th header elements and returns the header texts.
+
+    Args:
+        table_thead: BeautifulSoup thead element
+
+    Returns:
+        List of header text strings, or None if headers are invalid
+    """
+    if not table_thead:
+        return None
+
+    # Try to find th elements first (modern tables), then fall back to td
+    thead_row = table_thead.find_all("th")
+    if not thead_row:
+        thead_row = table_thead.find_all("td")
+
+    if not thead_row:
+        return None
+
+    headers = [header.get_text().strip() for header in thead_row]
+    return headers if len(headers) > 0 else None
+
+
+def extract_text_change_row_data(row_tds):
+    """Extract all data fields from a text change case row.
+
+    Args:
+        row_tds: List of BeautifulSoup td elements from the row
+
+    Returns:
+        Dictionary with extracted data or None if extraction fails
+    """
+    if len(row_tds) < 4:
+        return None
+
+    case_number = get_case_number_from_row(row_tds)
+    case_url = get_generic_link(row_tds[0])
+    project_name = get_generic_text(row_tds[1])
+    description = get_generic_text(row_tds[2])
+    status = get_generic_text(row_tds[3])
+
+    return {
+        "case_number": case_number,
+        "case_url": case_url,
+        "project_name": project_name,
+        "description": description,
+        "status": status
+    }
+
+
+def validate_text_change_data(data):
+    """Validate that all required fields are present.
+
+    Args:
+        data: Dictionary with text change case data
+
+    Returns:
+        Boolean indicating if data is valid
+    """
+    if not data:
+        return False
+
+    required_fields = ["case_number", "case_url", "project_name", "status"]
+    return all(data.get(field) for field in required_fields)
+
+
+def handle_text_change_validation_error(row_tds, data):
+    """Log and send email notification for text change scraping errors.
+
+    Args:
+        row_tds: List of td elements
+        data: Dictionary with extracted data
+    """
+    scraped_info = [
+        ["case_number", data.get("case_number")],
+        ["case_url", data.get("case_url")],
+        ["project_name", data.get("project_name")],
+        ["description", data.get("description")],
+        ["status", data.get("status")]
+    ]
+    message = "scrape.text_changes_cases: Problem scraping this row\n" + str(scraped_info)
+    logger.info(message)
+    send_email_notice(message, email_admins())
+
+
+def check_for_no_active_cases(case_number):
+    """Check if case number indicates no active cases.
+
+    Args:
+        case_number: Case number string
+
+    Returns:
+        Boolean indicating if this is a "no active cases" sentinel
+    """
+    return case_number == "No active cases"
+
+
+def update_text_change_if_changed(known_tc_case, case_url, project_name, description, status):
+    """Update text change case if any fields have changed.
+
+    Args:
+        known_tc_case: TextChangeCase database object
+        case_url: New case URL
+        project_name: New project name
+        description: New description
+        status: New status
+
+    Returns:
+        Boolean indicating if update occurred
+    """
+    if (not fields_are_same(known_tc_case.case_url, case_url) or
+            not fields_are_same(known_tc_case.project_name, project_name) or
+            not fields_are_same(known_tc_case.status, status) or
+            not fields_are_same(known_tc_case.description, description)):
+        known_tc_case.case_url = case_url
+        known_tc_case.project_name = project_name
+        known_tc_case.description = description
+        known_tc_case.status = status
+        known_tc_case.save()
+
+        logger.info("**********************")
+        logger.info(f"Updating a text change case ({str(known_tc_case)})")
+        logger.info(f"case_number: {known_tc_case.case_number}")
+        logger.info(f"project_name: {project_name}")
+        logger.info("**********************")
+        return True
+
+    return False
+
+
+def create_new_text_change(case_number, case_url, project_name, description, status):
+    """Create a new text change case in the database.
+
+    Args:
+        case_number: Case number
+        case_url: URL to case document
+        project_name: Project name
+        description: Case description
+        status: Case status
+    """
+    logger.info("**********************")
+    logger.info("Creating new text change case")
+    logger.info(f"case_number: {case_number}")
+    logger.info(f"project_name: {project_name}")
+    logger.info("**********************")
+
+    TextChangeCase.objects.create(
+        case_number=case_number,
+        case_url=case_url,
+        project_name=project_name,
+        description=description,
+        status=status
+    )
+
+
+def upsert_text_change_case(data):
+    """Create or update a text change case.
+
+    Args:
+        data: Dictionary with text change case data
+    """
+    known_tc_cases = TextChangeCase.objects.all()
+    known_tc_case = determine_if_known_case(
+        known_tc_cases,
+        data["case_number"],
+        data["project_name"]
+    )
+
+    if known_tc_case:
+        update_text_change_if_changed(
+            known_tc_case,
+            data["case_url"],
+            data["project_name"],
+            data["description"],
+            data["status"]
+        )
+    else:
+        create_new_text_change(
+            data["case_number"],
+            data["case_url"],
+            data["project_name"],
+            data["description"],
+            data["status"]
+        )
+
+
+def process_text_change_row(row):
+    """Process a single text change case row.
+
+    Args:
+        row: BeautifulSoup tr element
+
+    Returns:
+        Dictionary with extracted data or None if validation fails
+    """
+    row_tds = row.find_all("td")
+    data = extract_text_change_row_data(row_tds)
+
+    if not validate_text_change_data(data):
+        handle_text_change_validation_error(row_tds, data or {})
+        return None
+
+    # Check for "no active cases" sentinel
+    if check_for_no_active_cases(data["case_number"]):
+        return None
+
+    # If no case URL, set to default
+    if not data["case_url"]:
+        data["case_url"] = "NA"
+
+    return data
+
+
 def text_changes_cases(page_content):
-    if page_content:
-        tc_tables = page_content.find_all("table")
+    """Process all text change cases from page content.
 
-        for tc_table in tc_tables[:1]:
-            # Only check the tables that have thead and td header
-            # For some reason, this new table that we should skip has th header tags instead
-            tcc_actual = []
-            table_thead = tc_table.find("thead")
-            thead_row = table_thead.find_all("td")
+    Args:
+        page_content: BeautifulSoup object with page HTML
+    """
+    if not page_content:
+        return
 
-            for header in thead_row:
-                tcc_actual.append(header.get_text().strip())
+    tc_tables = page_content.find_all("table")
 
-            if len(tcc_actual) > 0:
-                tc_rows = get_rows_in_table(tc_table, "TCC")
+    for tc_table in tc_tables[:1]:
+        table_thead = tc_table.find("thead")
+        headers = validate_table_headers(table_thead)
 
-                for tc in tc_rows:
-                    row_tds = tc.find_all("td")
+        # Skip tables with invalid headers
+        if not headers:
+            continue
 
-                    case_number = get_case_number_from_row(row_tds)
-                    case_url = get_generic_link(row_tds[0])
-                    project_name = get_generic_text(row_tds[1])
-                    description = get_generic_text(row_tds[2])
-                    status = get_generic_text(row_tds[3])
+        tc_rows = get_rows_in_table(tc_table, "TCC")
 
-                    if case_number == "No active cases":
-                        break
+        for tc in tc_rows:
+            tc_data = process_text_change_row(tc)
 
-                    # Found a case where the TC name was not a link. We'll set it to something generic in the mean time.
-                    if not case_url:
-                        case_url = "NA"
-
-                    # If any of these variables are None, log it and move on.
-                    if not case_number or not case_url or not project_name or not status:
-                        scraped_info = [["row_tds", row_tds],
-                                        ["case_number", case_number],
-                                        ["case_url", case_url],
-                                        ["project_name", project_name],
-                                        ["status", status]]
-                        message = "scrape.text_changes_cases: Problem scraping this row"
-                        message += str(scraped_info)
-                        logger.info(message)
-                        send_email_notice(message, email_admins())
-
-                        continue
-
-                    known_tc_cases = TextChangeCase.objects.all()
-                    known_tc_case = determine_if_known_case(known_tc_cases, case_number, project_name)
-
-                    # if known_tc_case was found, check for differences
-                    # if known_tc_case was not found, then we assume a new one was added
-                    # need to create
-                    if known_tc_case:
-                        # Check for difference between known_tc_case and the variables
-                        # Assume that the tc_case number doesn't change.
-                        if (
-                                not fields_are_same(known_tc_case.case_url, case_url) or
-                                not fields_are_same(known_tc_case.project_name, project_name) or
-                                not fields_are_same(known_tc_case.status, status) or
-                                not fields_are_same(known_tc_case.description, description)
-                        ):
-                            known_tc_case.case_url = case_url
-                            known_tc_case.project_name = project_name
-                            known_tc_case.description = description
-                            known_tc_case.status = status
-
-                            known_tc_case.save()
-                            logger.info("**********************")
-                            logger.info("Updating a text change case (" + str(known_tc_case) + ")")
-                            logger.info("scrape case_number:" + case_number)
-                            logger.info("scrape project_name:" + project_name)
-                            logger.info("**********************")
-
-                    else:
-                        # create a new instance
-                        logger.info("**********************")
-                        logger.info("Creating new text change case")
-                        logger.info("case_number:" + case_number)
-                        logger.info("project_name:" + project_name)
-                        logger.info("**********************")
-
-                        TextChangeCase.objects.create(case_number=case_number,
-                                                      case_url=case_url,
-                                                      project_name=project_name,
-                                                      description=description,
-                                                      status=status)
+            if tc_data:
+                upsert_text_change_case(tc_data)
 
 
 def extract_case_number_and_year(case_number_text):
