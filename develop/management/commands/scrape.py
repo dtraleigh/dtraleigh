@@ -1,6 +1,7 @@
 import logging
 import requests
 import sys
+import re
 from bs4 import BeautifulSoup
 from fuzzywuzzy import fuzz
 from datetime import datetime
@@ -80,19 +81,6 @@ def get_case_number_from_row(row_tds):
     except Exception:
         # in rare cases the case number is not a link
         return row_tds[0].string
-
-
-# Deprecated after removing contact and contact_url
-# def get_contact(content):
-#     # content usually is a link but if not we need to account for a non-link piece of text
-#     contact = content.find("a")
-#
-#     if contact:
-#         return contact.get_text().strip()
-#     else:
-#         if content.text.strip() != "":
-#             return content.text.strip()
-#         return None
 
 
 def get_generic_link(content):
@@ -405,7 +393,307 @@ def text_changes_cases(page_content):
                                                       status=status)
 
 
+def extract_case_number_and_year(case_number_text):
+    """Extract zpnum and zpyear from case number text.
+
+    Args:
+        case_number_text: Case number string (e.g., "Z-1234-23")
+
+    Returns:
+        Tuple of (zpnum, zpyear) as strings
+    """
+    parts = case_number_text.split("-")
+    zpnum = parts[1]
+    zpyear = "20" + parts[2][:2]
+
+    return zpnum, zpyear
+
+
+def extract_case_number_text(case_number_status_col):
+    """Extract the case number text from the table cell.
+
+    Handles complex HTML including links, SVGs, and multiple paragraphs.
+    Extracts the first occurrence of a case number pattern (e.g., Z-1234-23).
+
+    Args:
+        case_number_status_col: BeautifulSoup td element
+
+    Returns:
+        Case number text string (e.g., "Z-1234-23")
+    """
+    import re
+
+    full_text = case_number_status_col.get_text()
+
+    # Pattern to match case numbers like Z-1234-23 or Z-13-25
+    # Captures the first occurrence before any extra info like (TCZ-13-25)
+    match = re.search(r'([A-Z]+-\d+-\d+)', full_text)
+
+    if match:
+        return match.group(1).strip()
+
+    # Fallback to original logic if no pattern match found
+    lines = full_text.split("\n")
+    case_number_text = lines[0] if lines[0] else lines[1]
+
+    return case_number_text.strip()
+
+
+def extract_status(case_number_status_col, row_index, zoning_rows):
+    """Extract status from case number cell or next row's first column.
+
+    Handles complex HTML with links and SVGs by extracting text from paragraphs.
+    Status is typically in the last paragraph of the cell.
+
+    Args:
+        case_number_status_col: BeautifulSoup td element
+        row_index: Current row index
+        zoning_rows: List of all zoning rows
+
+    Returns:
+        Status string
+    """
+    try:
+        # Try to find paragraphs in the cell
+        paragraphs = case_number_status_col.find_all("p")
+
+        if paragraphs:
+            # Status is typically in the last paragraph
+            status = paragraphs[-1].get_text().strip()
+            if status:
+                return status
+
+        # Fallback: split by newlines for simple cases
+        lines = case_number_status_col.get_text().split("\n")
+        status = lines[-1].strip() if lines[-1].strip() else lines[-2].strip()
+        return status
+
+    except (AttributeError, IndexError):
+        # Status is on the next row
+        next_row_status_col = zoning_rows[row_index + 1].find_all("td")[0]
+        status = next_row_status_col.get_text().strip()
+        return status
+
+
+def validate_scraped_row(case_number_text, location, zoning_case, status):
+    """Validate that all required fields were successfully scraped.
+
+    Args:
+        case_number_text: Case number text
+        location: Project location
+        zoning_case: Full zoning case identifier
+        status: Case status
+
+    Returns:
+        Boolean indicating if row is valid
+    """
+    return bool(case_number_text and location and zoning_case and status)
+
+
+def handle_validation_error(scraped_info, case_number_text, location, status, plan_url, location_url):
+    """Log and send email notification for scraping errors.
+
+    Args:
+        scraped_info: List of scraped fields for debugging
+        case_number_text: Case number text
+        location: Project location
+        status: Case status
+        plan_url: URL to plan document
+        location_url: URL to location
+    """
+    debug_info = [
+        ["case_number_text", case_number_text],
+        ["location", location],
+        ["status", status],
+        ["plan_url", plan_url],
+        ["location_url", location_url]
+    ]
+    message = "scrape.zoning_requests: Problem scraping this row\n" + str(debug_info)
+    logger.info(message)
+    send_email_notice(message, email_admins())
+
+
+def update_zoning_if_changed(known_zon, status, plan_url, location_url):
+    """Update zoning record if any fields have changed.
+
+    Args:
+        known_zon: Zoning database object
+        status: New status
+        plan_url: New plan URL
+        location_url: New location URL
+
+    Returns:
+        Boolean indicating if update occurred
+    """
+    if (not fields_are_same(known_zon.status, status) or
+            not fields_are_same(known_zon.plan_url, plan_url) or
+            not fields_are_same(known_zon.location_url, location_url)):
+
+        old_status = known_zon.status
+        old_plan_url = known_zon.plan_url
+        old_location_url = known_zon.location_url
+
+        known_zon.status = status
+        known_zon.plan_url = plan_url
+        known_zon.location_url = location_url
+        known_zon.save()
+
+        logger.info("**********************")
+        logger.info("Updating a zoning request")
+        logger.info(f"known_zon: {str(known_zon)}")
+
+        if not fields_are_same(old_status, status):
+            logger.info(f"Status: {old_status} → {status}")
+        if not fields_are_same(old_plan_url, plan_url):
+            logger.info(f"Plan URL: {old_plan_url} → {plan_url}")
+        if not fields_are_same(old_location_url, location_url):
+            logger.info(f"Location URL: {old_location_url} → {location_url}")
+
+        logger.info("**********************")
+        return True
+
+    return False
+
+
+def create_new_zoning(zpyear, zpnum, status, location, plan_url, location_url, zoning_case):
+    """Create a new zoning request in the database.
+
+    Args:
+        zpyear: Zoning permit year
+        zpnum: Zoning permit number
+        status: Case status
+        location: Project location
+        plan_url: URL to plan document
+        location_url: URL to location
+        zoning_case: Full case identifier for logging
+    """
+    logger.info("**********************")
+    logger.info("Creating new Zoning Request from web scrape")
+    logger.info(f"case_number: {zoning_case}")
+    logger.info(f"location: {location}")
+    logger.info("**********************")
+
+    Zoning.objects.create(
+        zpyear=zpyear,
+        zpnum=zpnum,
+        status=status,
+        location=location,
+        plan_url=plan_url,
+        location_url=location_url
+    )
+
+
+def process_zoning_row(row, index, zoning_rows):
+    """Process a single zoning table row.
+
+    Args:
+        row: BeautifulSoup tr element
+        index: Row index in zoning_rows
+        zoning_rows: List of all zoning rows
+
+    Returns:
+        Dictionary with extracted data or None if validation fails
+    """
+    zoning_row_tds = row.find_all("td")
+
+    case_number_status_col = zoning_row_tds[0]
+    project_name_location_col = zoning_row_tds[1]
+    council_district_col = zoning_row_tds[2]
+
+    # Skip if council district is empty
+    if not council_district_col.get_text().strip():
+        return None
+
+    case_number_text = extract_case_number_text(case_number_status_col)
+    status = extract_status(case_number_status_col, index, zoning_rows)
+    plan_url = get_generic_link(case_number_status_col)
+
+    location = re.sub(r"\s+", " ", project_name_location_col.get_text()).strip()
+    location_url = get_generic_link(project_name_location_col)
+
+    zoning_case = case_number_text.split("\n")[0]
+    zpnum, zpyear = extract_case_number_and_year(zoning_case)
+
+    # Check if case number format is invalid
+    if zpnum is None or zpyear is None:
+        debug_info = [
+            ["case_number_text", case_number_text],
+            ["zoning_case", zoning_case],
+            ["location", location],
+            ["status", status]
+        ]
+        message = "scrape.zoning_requests: Invalid case number format\n" + str(debug_info)
+        logger.info(message)
+        send_email_notice(message, email_admins())
+        return None
+
+    if not validate_scraped_row(case_number_text, location, zoning_case, status):
+        handle_validation_error(None, case_number_text, location, status, plan_url, location_url)
+        return None
+
+    return {
+        "zpyear": int(zpyear),
+        "zpnum": int(zpnum),
+        "status": status,
+        "location": location,
+        "plan_url": plan_url,
+        "location_url": location_url,
+        "zoning_case": zoning_case
+    }
+
+
+def upsert_zoning_request(zoning_data):
+    """Create or update a zoning request.
+
+    Args:
+        zoning_data: Dictionary with zoning request data
+    """
+    existing = Zoning.objects.filter(
+        zpnum=zoning_data["zpnum"],
+        zpyear=zoning_data["zpyear"]
+    ).first()
+
+    if existing:
+        update_zoning_if_changed(
+            existing,
+            zoning_data["status"],
+            zoning_data["plan_url"],
+            zoning_data["location_url"]
+        )
+    else:
+        create_new_zoning(
+            zoning_data["zpyear"],
+            zoning_data["zpnum"],
+            zoning_data["status"],
+            zoning_data["location"],
+            zoning_data["plan_url"],
+            zoning_data["location_url"],
+            zoning_data["zoning_case"]
+        )
+
+
 def zoning_requests(page_content):
+    """Process all zoning requests from page content.
+
+    Args:
+        page_content: BeautifulSoup object with page HTML
+    """
+    if not page_content:
+        return
+
+    zoning_tables = page_content.find_all("table")
+
+    for zoning_table in zoning_tables:
+        zoning_rows = get_rows_in_table(zoning_table, "Zoning")
+
+        for index, row in enumerate(zoning_rows):
+            zoning_data = process_zoning_row(row, index, zoning_rows)
+
+            if zoning_data:
+                upsert_zoning_request(zoning_data)
+
+
+def zoning_requests_old(page_content):
     if page_content:
         zoning_tables = page_content.find_all("table")
 

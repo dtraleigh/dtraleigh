@@ -137,10 +137,16 @@ def get_location_text(item):
         return ""
 
 
+def create_zoning_case_text(item):
+    year_two_digits = str(item.zpyear)[-2:] if item.zpyear is not None else ""
+    num = item.zpnum if item.zpnum is not None else ""
+    return f"## Z-{num}-{year_two_digits}\n"
+
+
 def get_new_item_text(new_item):
     """Not including DevelopmentPlan as we don't scrape for them at this time."""
     if isinstance(new_item, Zoning):
-        new_items_message = f"## {str(new_item.zpyear)}-{str(new_item.zpnum)}\n"
+        new_items_message = create_zoning_case_text(new_item)
     elif isinstance(new_item, NeighborhoodMeeting):
         new_items_message = f"## {str(new_item.meeting_datetime_details)}\n"
         new_items_message += f"Rezoning Site Address: {new_item.rezoning_site_address}\n"
@@ -161,7 +167,7 @@ def get_new_item_text(new_item):
 def get_updated_item_text(updated_item):
     """Not including DevelopmentPlan as we don't scrape for them at this time."""
     if isinstance(updated_item, Zoning):
-        updated_items_message = f"## {str(updated_item.zpyear)}-{str(updated_item.zpnum)}\n"
+        updated_items_message = create_zoning_case_text(updated_item)
     elif isinstance(updated_item, NeighborhoodMeeting):
         updated_items_message = f"## {str(updated_item.meeting_datetime_details)}\n"
         updated_items_message += f"Rezoning Site Address: {updated_item.rezoning_site_address}\n"
