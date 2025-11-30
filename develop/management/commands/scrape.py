@@ -31,7 +31,7 @@ class Command(BaseCommand):
             zoning_requests(get_page_content(zon_page_link))
             # admin_alternates(get_page_content(aad_page_link))
             text_changes_cases(get_page_content(tc_page_link))
-            site_reviews(get_page_content(sr_page_link))
+            #site_reviews(get_page_content(sr_page_link)) # Site review moved to the dev portal.
             neighborhood_meetings(get_page_content(neighbor_page_link))
             # design_alternate_cases(get_page_content(da_page_link))
 
@@ -352,6 +352,7 @@ def validate_table_headers(table_thead):
 
 def extract_text_change_row_data(row_tds):
     """Extract all data fields from a text change case row.
+    TC_EXPECTED = ["Case #", "Case Name", "Description", "Status", "Contact"]
 
     Args:
         row_tds: List of BeautifulSoup td elements from the row
@@ -551,7 +552,7 @@ def text_changes_cases(page_content):
 
     tc_tables = page_content.find_all("table")
 
-    for tc_table in tc_tables[:1]:
+    for tc_table in tc_tables[0]:
         table_thead = tc_table.find("thead")
         headers = validate_table_headers(table_thead)
 
@@ -760,6 +761,7 @@ def create_new_zoning(zpyear, zpnum, status, location, plan_url, location_url, z
 
 def process_zoning_row(row, index, zoning_rows):
     """Process a single zoning table row.
+    ZON_EXPECTED = ["Case Number, Application & Status", "Location & Map Link", "Council District", "Staff Contact"]
 
     Args:
         row: BeautifulSoup tr element
@@ -983,94 +985,232 @@ def zoning_requests_old(page_content):
                                           location_url=location_url)
 
 
+def extract_neighborhood_meeting_row_data(row_tds):
+    """Extract all data fields from a neighborhood meeting row.
+    NEIGHBOR_EXPECTED = [
+            "Date & Time", "Meeting Location", "Site Location & Map",
+            "Request", "Council District", "Applicant Contact", "Staff Contact"
+        ]
+
+    Args:
+        row_tds: List of BeautifulSoup td elements from the row
+
+    Returns:
+        Dictionary with extracted data or None if extraction fails
+    """
+    if len(row_tds) < 4:
+        return None
+
+    meeting_datetime_details = get_generic_text(row_tds[0])
+    meeting_location = get_generic_text(row_tds[1])
+    rezoning_site_address = get_generic_text(row_tds[2])
+    rezoning_site_address_url = get_generic_link(row_tds[2])
+    rezoning_request = get_generic_text(row_tds[3])
+    rezoning_request_url = get_generic_link(row_tds[3])
+
+    return {
+        "meeting_datetime_details": meeting_datetime_details,
+        "meeting_location": meeting_location,
+        "rezoning_site_address": rezoning_site_address,
+        "rezoning_site_address_url": rezoning_site_address_url,
+        "rezoning_request": rezoning_request,
+        "rezoning_request_url": rezoning_request_url
+    }
+
+
+def apply_special_exceptions(data):
+    """Apply special case exceptions for known data issues.
+
+    Args:
+        data: Dictionary with neighborhood meeting data
+
+    Returns:
+        Modified data dictionary
+    """
+    # Special case for BRT stations
+    brt_text = "City-initiated rezoning of various properties located near planned Bus Rapid Transit (BRT) stations along New Bern Avenue"
+
+    if data.get("rezoning_site_address") == brt_text:
+        data["rezoning_site_address_url"] = "https://raleighnc.gov/planning/COR"
+
+    return data
+
+
+def validate_neighborhood_meeting_data(data):
+    """Validate that all required fields are present.
+
+    Args:
+        data: Dictionary with neighborhood meeting data
+
+    Returns:
+        Boolean indicating if data is valid
+    """
+    if not data:
+        return False
+
+    required_fields = [
+        "meeting_datetime_details",
+        "rezoning_site_address_url",
+        "meeting_location",
+        "rezoning_site_address"
+    ]
+
+    return all(data.get(field) for field in required_fields)
+
+
+def is_acknowledged_missing_data(rezoning_site_address):
+    """Check if this is a known/acknowledged case with missing data.
+
+    Args:
+        rezoning_site_address: Address string
+
+    Returns:
+        Boolean indicating if this is an acknowledged exception
+    """
+    acknowledged = ["10854 Globe Rd"]
+    return rezoning_site_address in acknowledged
+
+
+def handle_neighborhood_meeting_validation_error(row_tds, data):
+    """Log and send email notification for neighborhood meeting scraping errors.
+
+    Args:
+        row_tds: List of td elements
+        data: Dictionary with extracted data
+    """
+    scraped_info = [
+        ["meeting_datetime_details", data.get("meeting_datetime_details")],
+        ["rezoning_site_address", data.get("rezoning_site_address")],
+        ["rezoning_site_address_url", data.get("rezoning_site_address_url")],
+        ["meeting_location", data.get("meeting_location")]
+    ]
+    message = "scrape.neighborhood_meetings: Problem scraping this row\n" + str(scraped_info)
+    logger.info(message)
+    send_email_notice(message, email_admins())
+
+
+def update_neighborhood_meeting_if_changed(known_nm_case, data):
+    """Update neighborhood meeting if any fields have changed.
+
+    Args:
+        known_nm_case: NeighborhoodMeeting database object
+        data: Dictionary with new data
+
+    Returns:
+        Boolean indicating if update occurred
+    """
+    if (not fields_are_same(known_nm_case.meeting_datetime_details, data["meeting_datetime_details"]) or
+            not fields_are_same(known_nm_case.rezoning_site_address, data["rezoning_site_address"]) or
+            not fields_are_same(known_nm_case.rezoning_site_address_url, data["rezoning_site_address_url"]) or
+            not fields_are_same(known_nm_case.meeting_location, data["meeting_location"]) or
+            not fields_are_same(known_nm_case.rezoning_request, data["rezoning_request"]) or
+            not fields_are_same(known_nm_case.rezoning_request_url, data["rezoning_request_url"])):
+        known_nm_case.meeting_datetime_details = data["meeting_datetime_details"]
+        known_nm_case.rezoning_site_address = data["rezoning_site_address"]
+        known_nm_case.rezoning_site_address_url = data["rezoning_site_address_url"]
+        known_nm_case.meeting_location = data["meeting_location"]
+        known_nm_case.rezoning_request = data["rezoning_request"]
+        known_nm_case.rezoning_request_url = data["rezoning_request_url"]
+        known_nm_case.save()
+
+        logger.info("**********************")
+        logger.info(f"Updating a Neighborhood Meeting ({str(known_nm_case)})")
+        logger.info(f"meeting_datetime_details: {data['meeting_datetime_details']}")
+        logger.info(f"rezoning_site_address_url: {data['rezoning_site_address_url']}")
+        logger.info("**********************")
+        return True
+
+    return False
+
+
+def create_new_neighborhood_meeting(data):
+    """Create a new neighborhood meeting in the database.
+
+    Args:
+        data: Dictionary with neighborhood meeting data
+    """
+    logger.info("**********************")
+    logger.info("Creating new Neighborhood Meeting")
+    logger.info(f"meeting_datetime_details: {data['meeting_datetime_details']}")
+    logger.info(f"rezoning_site_address_url: {data['rezoning_site_address_url']}")
+    logger.info("**********************")
+
+    NeighborhoodMeeting.objects.create(
+        meeting_datetime_details=data["meeting_datetime_details"],
+        meeting_location=data["meeting_location"],
+        rezoning_site_address=data["rezoning_site_address"],
+        rezoning_site_address_url=data["rezoning_site_address_url"],
+        rezoning_request=data["rezoning_request"],
+        rezoning_request_url=data["rezoning_request_url"]
+    )
+
+
+def upsert_neighborhood_meeting(data):
+    """Create or update a neighborhood meeting.
+
+    Args:
+        data: Dictionary with neighborhood meeting data
+    """
+    known_nm_cases = NeighborhoodMeeting.objects.all()
+    known_nm_case = determine_if_known_case(
+        known_nm_cases,
+        data["meeting_datetime_details"],
+        data["rezoning_site_address"]
+    )
+
+    if known_nm_case:
+        update_neighborhood_meeting_if_changed(known_nm_case, data)
+    else:
+        create_new_neighborhood_meeting(data)
+
+
+def process_neighborhood_meeting_row(row):
+    """Process a single neighborhood meeting row.
+
+    Args:
+        row: BeautifulSoup tr element
+
+    Returns:
+        Dictionary with extracted data or None if validation fails
+    """
+    row_tds = row.find_all("td")
+    data = extract_neighborhood_meeting_row_data(row_tds)
+
+    if not data:
+        return None
+
+    # Apply any special case exceptions
+    data = apply_special_exceptions(data)
+
+    # Validate data
+    if not validate_neighborhood_meeting_data(data):
+        # Check if this is an acknowledged exception
+        if not is_acknowledged_missing_data(data.get("rezoning_site_address")):
+            handle_neighborhood_meeting_validation_error(row_tds, data)
+        return None
+
+    return data
+
+
 def neighborhood_meetings(page_content):
-    if page_content:
-        nm_tables = page_content.find_all("table")
+    """Process all neighborhood meetings from page content.
 
-        for count, nm_table in enumerate(nm_tables):
-            # June 2, 22: Table within a table so skip the first one
-            if count == 0:
-                continue
-            nm_rows = get_rows_in_table(nm_table, "NM")
+    Args:
+        page_content: BeautifulSoup object with page HTML
+    """
+    if not page_content:
+        return
 
-            for row_count, nm_row in enumerate(nm_rows):
-                row_tds = nm_row.find_all("td")
+    nm_tables = page_content.find_all("table")
 
-                meeting_datetime_details = get_generic_text(row_tds[0])
-                meeting_location = get_generic_text(row_tds[1])
-                rezoning_site_address = get_generic_text(row_tds[2])
-                rezoning_site_address_url = get_generic_link(row_tds[2])
-                rezoning_request = get_generic_text(row_tds[3])
-                rezoning_request_url = get_generic_link(row_tds[3])
+    for count, nm_table in enumerate(nm_tables):
+        nm_rows = get_rows_in_table(nm_table, "NM")
 
-                # Need to clean up meeting_details, rezoning_request as it has new lines in it.
-                meeting_datetime_details = meeting_datetime_details.replace("\n", "")
-                meeting_datetime_details = meeting_datetime_details.replace("\t", "")
-                rezoning_request = rezoning_request.replace("\n", "")
-                rezoning_request = rezoning_request.replace("\t", "")
+        for nm_row in nm_rows:
+            nm_data = process_neighborhood_meeting_row(nm_row)
 
-                # Special exceptions
-                if rezoning_site_address == "City-initiated rezoning of various properties located near planned Bus " \
-                                            "Rapid Transit (BRT) stations along New Bern Avenue":
-                    rezoning_site_address_url = "https://raleighnc.gov/planning/COR"
-
-                # If any of these variables are None, log it and move on.
-                if not meeting_datetime_details or not rezoning_site_address_url or not meeting_location \
-                        or not rezoning_site_address:
-                    acked = ["10854 Globe Rd"]
-                    if rezoning_site_address not in acked:
-                        scraped_info = [["row_tds", row_tds],
-                                        ["meeting_details", meeting_datetime_details],
-                                        ["rezoning_site_address", rezoning_site_address],
-                                        ["rezoning_site_address_url", rezoning_site_address_url],
-                                        ["meeting_location", meeting_location]]
-                        message = "scrape.neighborhood_meetings: Problem scraping this row\n"
-                        message += str(scraped_info)
-                        logger.info(message)
-                        send_email_notice(message, email_admins())
-
-                    continue
-
-                known_nm_cases = NeighborhoodMeeting.objects.all()
-                # See if we already know about this case from our records, else it's none (something new)
-                known_nm_case = determine_if_known_case(known_nm_cases, meeting_datetime_details, rezoning_site_address)
-
-                if known_nm_case:
-                    if (
-                            not fields_are_same(known_nm_case.meeting_datetime_details, meeting_datetime_details) or
-                            not fields_are_same(known_nm_case.rezoning_site_address, rezoning_site_address) or
-                            not fields_are_same(known_nm_case.rezoning_site_address_url, rezoning_site_address_url) or
-                            not fields_are_same(known_nm_case.meeting_location, meeting_location) or
-                            not fields_are_same(known_nm_case.rezoning_request, rezoning_request) or
-                            not fields_are_same(known_nm_case.rezoning_request_url, rezoning_request_url)
-                    ):
-                        known_nm_case.meeting_datetime_details = meeting_datetime_details
-                        known_nm_case.rezoning_site_address = rezoning_site_address
-                        known_nm_case.rezoning_site_address_url = rezoning_site_address_url
-                        known_nm_case.meeting_location = meeting_location
-                        known_nm_case.rezoning_request = rezoning_request
-                        known_nm_case.rezoning_request_url = rezoning_request_url
-
-                        known_nm_case.save()
-                        logger.info("**********************")
-                        logger.info("Updating a Neighborhood Meeting (" + str(known_nm_case) + ")")
-                        logger.info("scrape meeting_datetime_details:" + meeting_datetime_details)
-                        logger.info("scrape rezoning_site_address_url:" + rezoning_site_address_url)
-                        logger.info("**********************")
-                else:
-                    # create a new instance
-                    logger.info("**********************")
-                    logger.info("Creating new Neighborhood Meeting")
-                    logger.info("meeting_datetime_details:" + meeting_datetime_details)
-                    logger.info("rezoning_site_address_url:" + rezoning_site_address_url)
-                    logger.info("**********************")
-
-                    NeighborhoodMeeting.objects.create(meeting_datetime_details=meeting_datetime_details,
-                                                       meeting_location=meeting_location,
-                                                       rezoning_site_address=rezoning_site_address,
-                                                       rezoning_site_address_url=rezoning_site_address_url,
-                                                       rezoning_request=rezoning_request,
-                                                       rezoning_request_url=rezoning_request_url)
+            if nm_data:
+                upsert_neighborhood_meeting(nm_data)
 
 
 def design_alternate_cases(page_content):

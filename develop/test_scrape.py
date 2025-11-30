@@ -708,3 +708,340 @@ class GetGenericTextTestCase(SimpleTestCase):
 
         self.assertIsNone(result)
         mock_logger.info.assert_called()
+
+
+class NeighborhoodMeetingsTestCaseSimple(SimpleTestCase):
+    def test_extract_neighborhood_meeting_row_data_valid(self):
+        """Test extraction of row data"""
+        html = """<tr>
+            <td>Monday, Jan 15, 2024 at 6:00 PM</td>
+            <td>Community Center</td>
+            <td><a href="map.html">123 Main St</a></td>
+            <td><a href="case.pdf">Z-123-24</a></td>
+        </tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                mock_text.side_effect = [
+                    "Monday, Jan 15, 2024 at 6:00 PM",
+                    "Community Center",
+                    "123 Main St",
+                    "Z-123-24"
+                ]
+                mock_link.side_effect = ["map.html", "case.pdf"]
+
+                data = extract_neighborhood_meeting_row_data(row_tds)
+
+        self.assertIsNotNone(data)
+        self.assertEqual(data["meeting_datetime_details"], "Monday, Jan 15, 2024 at 6:00 PM")
+        self.assertEqual(data["meeting_location"], "Community Center")
+        self.assertEqual(data["rezoning_site_address"], "123 Main St")
+        self.assertEqual(data["rezoning_site_address_url"], "map.html")
+        self.assertEqual(data["rezoning_request"], "Z-123-24")
+        self.assertEqual(data["rezoning_request_url"], "case.pdf")
+
+    def test_extract_neighborhood_meeting_row_data_insufficient_columns(self):
+        """Test that None is returned with insufficient columns"""
+        html = """<tr><td>Col1</td><td>Col2</td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        data = extract_neighborhood_meeting_row_data(row_tds)
+
+        self.assertIsNone(data)
+
+    def test_apply_special_exceptions_brt_case(self):
+        """Test that BRT special case URL is applied"""
+        data = {
+            "rezoning_site_address": "City-initiated rezoning of various properties located near planned Bus Rapid Transit (BRT) stations along New Bern Avenue",
+            "rezoning_site_address_url": None
+        }
+
+        result = apply_special_exceptions(data)
+
+        self.assertEqual(result["rezoning_site_address_url"], "https://raleighnc.gov/planning/COR")
+
+    def test_apply_special_exceptions_no_change(self):
+        """Test that non-special cases are unchanged"""
+        data = {
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html"
+        }
+
+        result = apply_special_exceptions(data)
+
+        self.assertEqual(result["rezoning_site_address_url"], "map.html")
+
+    def test_validate_neighborhood_meeting_data_valid(self):
+        """Test validation of complete data"""
+        data = {
+            "meeting_datetime_details": "Monday, Jan 15, 2024 at 6:00 PM",
+            "meeting_location": "Community Center",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        result = validate_neighborhood_meeting_data(data)
+        self.assertTrue(result)
+
+    def test_validate_neighborhood_meeting_data_missing_required_field(self):
+        """Test that missing required field fails validation"""
+        data = {
+            "meeting_datetime_details": None,
+            "meeting_location": "Community Center",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        result = validate_neighborhood_meeting_data(data)
+        self.assertFalse(result)
+
+    def test_validate_neighborhood_meeting_data_none(self):
+        """Test that None data fails validation"""
+        result = validate_neighborhood_meeting_data(None)
+        self.assertFalse(result)
+
+    def test_is_acknowledged_missing_data_true(self):
+        """Test detection of acknowledged missing data cases"""
+        result = is_acknowledged_missing_data("10854 Globe Rd")
+        self.assertTrue(result)
+
+    def test_is_acknowledged_missing_data_false(self):
+        """Test that normal addresses are not acknowledged"""
+        result = is_acknowledged_missing_data("123 Main St")
+        self.assertFalse(result)
+
+    @patch('develop.management.commands.scrape.email_admins')
+    @patch('develop.management.commands.scrape.send_email_notice')
+    @patch('develop.management.commands.scrape.logger')
+    def test_handle_neighborhood_meeting_validation_error(self, mock_logger, mock_email, mock_admins):
+        """Test that validation errors are logged and emails are sent"""
+        mock_admins.return_value = ["admin@example.com"]
+
+        html = """<tr><td>Col1</td><td>Col2</td></tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row_tds = souped.find_all("td")
+
+        data = {
+            "meeting_datetime_details": None,
+            "rezoning_site_address": None,
+            "rezoning_site_address_url": None,
+            "meeting_location": None
+        }
+        handle_neighborhood_meeting_validation_error(row_tds, data)
+
+        mock_logger.info.assert_called()
+        mock_email.assert_called_once()
+
+    @patch('develop.management.commands.scrape.fields_are_same')
+    @patch('develop.management.commands.scrape.logger')
+    def test_update_neighborhood_meeting_if_changed_updates(self, mock_logger, mock_fields_are_same):
+        """Test that neighborhood meeting is updated when fields differ"""
+        mock_fields_are_same.return_value = False
+
+        mock_nm = MagicMock()
+        mock_nm.meeting_datetime_details = "Old date"
+
+        data = {
+            "meeting_datetime_details": "New date",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "meeting_location": "Community Center",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        result = update_neighborhood_meeting_if_changed(mock_nm, data)
+
+        self.assertTrue(result)
+        self.assertEqual(mock_nm.meeting_datetime_details, "New date")
+        mock_nm.save.assert_called_once()
+
+    @patch('develop.management.commands.scrape.fields_are_same')
+    @patch('develop.management.commands.scrape.logger')
+    def test_update_neighborhood_meeting_if_changed_no_update(self, mock_logger, mock_fields_are_same):
+        """Test that neighborhood meeting is not updated when fields are the same"""
+        mock_fields_are_same.return_value = True
+
+        mock_nm = MagicMock()
+
+        data = {
+            "meeting_datetime_details": "Same date",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "meeting_location": "Community Center",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        result = update_neighborhood_meeting_if_changed(mock_nm, data)
+
+        self.assertFalse(result)
+        mock_nm.save.assert_not_called()
+
+    @patch('develop.management.commands.scrape.NeighborhoodMeeting.objects.create')
+    @patch('develop.management.commands.scrape.logger')
+    def test_create_new_neighborhood_meeting(self, mock_logger, mock_create):
+        """Test that new neighborhood meeting is created"""
+        data = {
+            "meeting_datetime_details": "Monday, Jan 15, 2024 at 6:00 PM",
+            "meeting_location": "Community Center",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        create_new_neighborhood_meeting(data)
+
+        mock_create.assert_called_once_with(
+            meeting_datetime_details="Monday, Jan 15, 2024 at 6:00 PM",
+            meeting_location="Community Center",
+            rezoning_site_address="123 Main St",
+            rezoning_site_address_url="map.html",
+            rezoning_request="Z-123-24",
+            rezoning_request_url="case.pdf"
+        )
+        mock_logger.info.assert_called()
+
+    @patch('develop.management.commands.scrape.email_admins')
+    @patch('develop.management.commands.scrape.send_email_notice')
+    def test_process_neighborhood_meeting_row_valid(self, mock_email, mock_admins):
+        """Test processing a valid neighborhood meeting row"""
+        mock_admins.return_value = ["admin@example.com"]
+
+        html = """<tr>
+            <td>Monday, Jan 15, 2024 at 6:00 PM</td>
+            <td>Community Center</td>
+            <td><a href="map.html">123 Main St</a></td>
+            <td><a href="case.pdf">Z-123-24</a></td>
+        </tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row = souped.find("tr")
+
+        with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                mock_text.side_effect = [
+                    "Monday, Jan 15, 2024 at 6:00 PM",
+                    "Community Center",
+                    "123 Main St",
+                    "Z-123-24"
+                ]
+                mock_link.side_effect = ["map.html", "case.pdf"]
+
+                data = process_neighborhood_meeting_row(row)
+
+        self.assertIsNotNone(data)
+        self.assertEqual(data["meeting_datetime_details"], "Monday, Jan 15, 2024 at 6:00 PM")
+
+    @patch('develop.management.commands.scrape.email_admins')
+    @patch('develop.management.commands.scrape.send_email_notice')
+    def test_process_neighborhood_meeting_row_acknowledged_missing_data(self, mock_email, mock_admins):
+        """Test that acknowledged missing data cases don't trigger emails"""
+        mock_admins.return_value = ["admin@example.com"]
+
+        html = """<tr>
+            <td>Date</td>
+            <td>Location</td>
+            <td>10854 Globe Rd</td>
+            <td>Request</td>
+        </tr>"""
+        souped = BeautifulSoup(html, "html.parser")
+        row = souped.find("tr")
+
+        with patch('develop.management.commands.scrape.get_generic_text') as mock_text:
+            with patch('develop.management.commands.scrape.get_generic_link') as mock_link:
+                mock_text.side_effect = ["Date", "Location", "10854 Globe Rd", "Request"]
+                mock_link.side_effect = [None, "case.pdf"]
+
+                data = process_neighborhood_meeting_row(row)
+
+        self.assertIsNone(data)
+        # Verify email was NOT sent for acknowledged case
+        mock_email.assert_not_called()
+
+    @patch('develop.management.commands.scrape.determine_if_known_case')
+    @patch('develop.management.commands.scrape.create_new_neighborhood_meeting')
+    @patch('develop.management.commands.scrape.NeighborhoodMeeting.objects.all')
+    def test_upsert_neighborhood_meeting_creates_new(self, mock_all, mock_create, mock_determine):
+        """Test that upsert creates new neighborhood meeting when it doesn't exist"""
+        mock_determine.return_value = None
+        mock_all.return_value = []
+
+        data = {
+            "meeting_datetime_details": "Monday, Jan 15, 2024 at 6:00 PM",
+            "meeting_location": "Community Center",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        upsert_neighborhood_meeting(data)
+
+        mock_create.assert_called_once()
+
+    @patch('develop.management.commands.scrape.determine_if_known_case')
+    @patch('develop.management.commands.scrape.update_neighborhood_meeting_if_changed')
+    @patch('develop.management.commands.scrape.NeighborhoodMeeting.objects.all')
+    def test_upsert_neighborhood_meeting_updates_existing(self, mock_all, mock_update, mock_determine):
+        """Test that upsert updates existing neighborhood meeting"""
+        mock_existing = MagicMock()
+        mock_determine.return_value = mock_existing
+        mock_all.return_value = [mock_existing]
+
+        data = {
+            "meeting_datetime_details": "Monday, Jan 15, 2024 at 6:00 PM",
+            "meeting_location": "Community Center",
+            "rezoning_site_address": "123 Main St",
+            "rezoning_site_address_url": "map.html",
+            "rezoning_request": "Z-123-24",
+            "rezoning_request_url": "case.pdf"
+        }
+
+        upsert_neighborhood_meeting(data)
+
+        mock_update.assert_called_once()
+
+
+class NeighborhoodMeetingsTestCaseDjango(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """Create test neighborhood meetings"""
+        NeighborhoodMeeting.objects.create(
+            meeting_datetime_details="Monday, Jan 15, 2024 at 6:00 PM",
+            meeting_location="Community Center",
+            rezoning_site_address="123 Main St",
+            rezoning_site_address_url="map.html",
+            rezoning_request="Z-123-24",
+            rezoning_request_url="case.pdf"
+        )
+
+    def test_determine_if_known_case_match(self):
+        """Test that matching neighborhood meeting is found"""
+        known_cases = NeighborhoodMeeting.objects.all()
+        result = determine_if_known_case(
+            known_cases,
+            "Monday, Jan 15, 2024 at 6:00 PM",
+            "123 Main St"
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.rezoning_site_address, "123 Main St")
+
+    def test_determine_if_known_case_no_match(self):
+        """Test that non-matching case returns None"""
+        known_cases = NeighborhoodMeeting.objects.all()
+        result = determine_if_known_case(
+            known_cases,
+            "Different Date",
+            "Different Address"
+        )
+
+        self.assertIsNone(result)

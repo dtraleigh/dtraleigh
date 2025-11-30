@@ -1,205 +1,174 @@
-"""This command is used to query the APIs, compare the results with the DB and make appropriate changes."""
+"""Check Raleigh case-tracking pages for unexpected table structure changes."""
 import logging
-from bs4 import BeautifulSoup
-import requests
 import sys
 from datetime import datetime
+
+import requests
+from bs4 import BeautifulSoup
 from prettytable import PrettyTable
 
 from django.core.management.base import BaseCommand
 from develop.models import *
-from datetime import datetime
+from .emails import send_email_notice, email_admins
 
-from .emails import *
 logger = logging.getLogger("django")
 
 
-def get_page_content(page_link):
-    n = datetime.now()
+# ---------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------
 
+def get_page_content(page_link):
+    """Download page content and return a BeautifulSoup instance."""
     try:
-        page_response = requests.get(page_link, timeout=10)
+        response = requests.get(page_link, timeout=10)
+        response.raise_for_status()
+        return BeautifulSoup(response.content, "html.parser")
+
     except requests.exceptions.RequestException as e:
-        print(n.strftime("%H:%M %m-%d-%y") + ": Connection problem to " + page_link)
+        logger.error(f"Connection error to {page_link}: {e}")
         sys.exit(1)
 
-    if page_response.status_code == 200:
-        return BeautifulSoup(page_response.content, "html.parser")
-    else:
+
+def normalize_text(text):
+    """Normalize text by stripping whitespace, replacing NBSPs, and collapsing spaces."""
+    return " ".join(text.replace("\xa0", " ").split())
+
+
+def extract_header_row(table, *, row_index=0):
+    """Extract <th> header row."""
+    thead = table.find("thead")
+    if not thead:
+        return None
+    rows = thead.find_all("tr")
+    if not rows:
+        return None
+    header_cells = rows[row_index].find_all(["th", "td"])
+    return [normalize_text(cell.get_text()) for cell in header_cells]
+
+
+def compare_headers(actual, expected, label):
+    """
+    Compare actual header list vs expected.
+    Returns None if OK, or a formatted PrettyTable diff string if mismatched.
+    """
+    if actual == expected:
         return None
 
+    # Defensive: ensure actual/expected are lists
+    actual = list(actual or [])
+    expected = list(expected or [])
+
+    # Compute maximum length and pad both lists
+    max_len = max(len(actual), len(expected))
+    actual_padded = actual + [""] * (max_len - len(actual))
+    expected_padded = expected + [""] * (max_len - len(expected))
+
+    # Create headers for the prettytable so it knows column count
+    # Use generic column names so table renders nicely.
+    column_names = ["Type"] + [f"Col {i+1}" for i in range(max_len)]
+
+    table = PrettyTable()
+    table.field_names = column_names
+
+    table.add_row(["Actual"] + actual_padded)
+    table.add_row(["Expected"] + expected_padded)
+
+    return f"{label} table has changed.\n{table}\n"
+
+
+
+# ---------------------------------------------------------
+# Management Command
+# ---------------------------------------------------------
 
 class Command(BaseCommand):
+    help = "Checks published Raleigh case pages for header changes."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Print detailed header extraction and comparison output.",
+        )
+
     def handle(self, *args, **options):
-        sr_page_link = "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases"
+        debug = options.get("debug", False)
+
+        def debug_print(msg):
+            """Only print when debug mode is enabled."""
+            if debug:
+                self.stdout.write(msg)
+
+        # URLs
         zon_page_link = "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases"
         tc_page_link = "https://raleighnc.gov/planning/services/text-changes/text-change-cases"
         neighbor_page_link = "https://raleighnc.gov/planning/services/rezoning-process/neighborhood-meetings"
-        message = ""
 
-        # scrape the target websites and verify that the table headers are what we expect.
+        # Expected headers
+        ZON_EXPECTED = ["Case Number, Application & Status", "Location & Map Link", "Council District", "Staff Contact"]
+        TC_EXPECTED = ["Case #", "Case Name", "Description", "Status", "Contact"]
+        NEIGHBOR_EXPECTED = [
+            "Date & Time", "Meeting Location", "Site Location & Map",
+            "Request", "Council District", "Applicant Contact", "Staff Contact"
+        ]
 
-        # Site Review tables
-        sr_expected = ["Case Number", "Project Name/Location/Description", "CAC", "Status*", "Contact"]
-        sr_expected_2022 = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
-        sr_tables = get_page_content(sr_page_link).find_all("table")
-        for sr_table in sr_tables:
-            x = PrettyTable()
-            sr_actual = []
-            table_thead = sr_table.find("thead")
-            if not table_thead:
-                continue
-            thead_row = table_thead.find_all("th")
-            if not thead_row:
-                thead_row = table_thead.find_all("td")
+        report_messages = []
 
-            for header in thead_row:
-                sr_actual.append(header.get_text().strip())
-
-            if sr_actual == sr_expected or sr_actual == sr_expected_2022:
-                pass
-            else:
-                message = "SR Table has changed.\n"
-                try:
-                    x.add_row(sr_actual)
-                    x.add_row(sr_expected)
-                    message += str(x)
-                except Exception as e:
-                    print(e)
-                    message += "Problem with table. Please check site reviews."
-
-        # AAD tables
-        # aad_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
-        # aad_tables = get_page_content(aad_page_link).find_all("table")
-        # for aad_table in aad_tables:
-        #     x = PrettyTable()
-        #     aad_actual = []
-        #     table_thead = aad_table.find("thead")
-        #     thead_row = table_thead.find_all("td")
-        #
-        #     for header in thead_row:
-        #         aad_actual.append(header.get_text().strip())
-        #
-        #     if aad_actual == aad_expected:
-        #         pass
-        #     else:
-        #         message = "AAD Table has changed.\n"
-        #         try:
-        #             x.add_row(aad_actual)
-        #             x.add_row(aad_expected)
-        #             message += str(x)
-        #         except Exception as e:
-        #             print(e)
-        #             message += "Problem with table. Please check AADs."
-
-        # TCC tables
-        tcc_expected = ["Case Number", "Project Name/Location/Description", "Description", "Status", "Contact"]
-        tcc_tables = get_page_content(tc_page_link).find_all("table")
-        for tcc_table in tcc_tables[:1]:
-            x = PrettyTable()
-            tcc_actual = []
-            table_thead = tcc_table.find("thead")
-            thead_row = table_thead.find_all("td")
-
-            for header in thead_row:
-                tcc_actual.append(header.get_text().strip())
-
-            if len(tcc_actual) > 0:
-                if tcc_actual == tcc_expected:
-                    pass
-                else:
-                    message = "TCC Table has changed.\n"
-                    try:
-                        x.add_row(tcc_actual)
-                        x.add_row(tcc_expected)
-                        message += str(x)
-                    except Exception as e:
-                        print(e)
-                        message += "Problem with table. Please check TCCs."
-
-        # Zoning tables
-        zon_expected = ["Case Number, Application & Status", "Location & Map Link", "Council District", "Staff Contact"]
+        # ------------------------------------------
+        # 1. Zoning Cases
+        # ------------------------------------------
         zon_tables = get_page_content(zon_page_link).find_all("table")
-        # for zon_table in zon_tables:
-        x = PrettyTable()
-        zon_actual = []
-        table_thead = zon_tables[0].find("thead")
-        thead_row = table_thead.find_all("th")
-        if not thead_row:
-            thead_row = table_thead.find_all("td")
+        if zon_tables:
+            actual = extract_header_row(zon_tables[0])
+            if actual:
+                debug_print(f"[DEBUG] Zoning extracted: {actual}")
+                diff = compare_headers(actual, ZON_EXPECTED, "Zoning")
+                if diff:
+                    debug_print("[DEBUG] Difference found:\n" + diff)
+                    report_messages.append(diff)
 
-        for header in thead_row:
-            zon_actual.append(header.get_text().strip().replace("\n", ""))
+        # ------------------------------------------
+        # 2. Text Change Cases (only check the first table)
+        # ------------------------------------------
+        tc_tables = get_page_content(tc_page_link).find_all("table")
+        if tc_tables:
+            actual = extract_header_row(tc_tables[0])
+            if actual:
+                debug_print(f"[DEBUG] Text Change extracted: {actual}")
+                diff = compare_headers(actual, TC_EXPECTED, "Text Change Cases")
+                if diff:
+                    debug_print("[DEBUG] Difference found:\n" + diff)
+                    report_messages.append(diff)
 
-        if zon_actual == zon_expected:
-            pass
-        else:
-            try:
-                x.add_row(zon_actual)
-                x.add_row(zon_expected)
-                message = "Zon Table has changed.\n"
-                message += str(x)
-            except Exception as e:
-                print(e)
-                message += "Problem with table. Please check zoning."
-
-        # Neighborhood meetings tables
-        # neighbor_expected = ["Meeting Details", "Rezoning Site Address", "Applicant/Link to Meeting Information",
-        #                      "Council District", "Staff Contact"]
-        neighbor_expected = ['Date & Time', 'Meeting Location', 'Site Location & Map', 'Request',
-                                                 'Council District', 'Applicant Contact', 'Staff Contact']
+        # ------------------------------------------
+        # 3. Neighborhood Meetings (skip first)
+        # ------------------------------------------
         neighbor_tables = get_page_content(neighbor_page_link).find_all("table")
-        for count, neighbor_table in enumerate(neighbor_tables):
-            # June 2, 22: It's a table inside a table. So skip the first one. :(
-            if count == 0:
+
+        for table in neighbor_tables:
+            actual = extract_header_row(table)
+            if not actual:
                 continue
 
-            x = PrettyTable()
-            neighbor_actual = []
-            # thead_row = neighbor_table.find_all("tr")[0]
-            thead_row = neighbor_table.find("thead")
-            thead_row_items = thead_row.find_all("th")
+            debug_print(f"[DEBUG] Neighborhood extracted: {actual}")
 
-            for header in thead_row_items:
-                neighbor_actual.append(header.get_text().strip().replace("\n", ""))
+            diff = compare_headers(actual, NEIGHBOR_EXPECTED, "Neighborhood Meetings")
+            if diff:
+                debug_print("[DEBUG] Difference found:\n" + diff)
+                report_messages.append(diff)
 
-            if neighbor_actual == neighbor_expected:
-                pass
-            else:
-                try:
-                    print(neighbor_actual)
-                    # print(neighbor_expected)
-                    x.add_row(neighbor_actual)
-                    x.add_row(neighbor_expected)
-                    message = "Neighborhood Table has changed.\n"
-                    message += str(x)
-                except Exception as e:
-                    print(e)
-                    message += "Problem with neighborhood tables, please check."
+        # ------------------------------------------
+        # Email if differences found
+        # ------------------------------------------
+        if report_messages:
+            full_report = "\n".join(report_messages)
 
-        # DA case tables
-        # da_expected = ["Case Number", "Project Name/Location/Description", "Status*", "Contact"]
-        # da_tables = get_page_content(da_page_link).find_all("table")
-        # for da_table in da_tables:
-        #     x = PrettyTable()
-        #     da_actual = []
-        #     table_thead = da_table.find("thead")
-        #     thead_row = table_thead.find_all("td")
-        #
-        #     for header in thead_row:
-        #         da_actual.append(header.get_text().strip())
-        #
-        #     if da_actual == da_expected:
-        #         pass
-        #     else:
-        #         try:
-        #             x.add_row(da_actual)
-        #             x.add_row(da_expected)
-        #             message = "DA Case Table has changed.\n"
-        #             message += str(x)
-        #         except Exception as e:
-        #             print(e)
-        #             message += "Problem with da case tables, please check."
+            debug_print("[DEBUG] Sending email notification.")
+            send_email_notice(full_report, email_admins())
 
-        if message:
-            send_email_notice(message, email_admins())
+            self.stdout.write(self.style.WARNING("Differences detected – email sent."))
+        else:
+            if debug:
+                self.stdout.write(self.style.SUCCESS("All table headers match expectations."))
+            # When NOT in debug mode, cron stays silent unless something changed.
