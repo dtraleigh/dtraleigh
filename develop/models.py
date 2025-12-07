@@ -55,7 +55,7 @@ class Subscriber(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, verbose_name="Date Subscribed")
     name = models.CharField(max_length=254)
     email = models.EmailField(unique=True)
-    send_emails = models.BooleanField(default=True)
+    send_emails = models.BooleanField(default=True, verbose_name="Email and post to Discourse")
     comments = models.CharField(max_length=100, blank=True, null=True)
     role = models.CharField(max_length=100, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
