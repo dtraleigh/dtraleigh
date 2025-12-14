@@ -1,9 +1,13 @@
+import logging
+
 import requests
 
 from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 from rpd.models import *
 from rpd.functions import is_glenwood_south
+
+logger = logging.getLogger("django")
 
 """
 Notes. After scanning all incidents in downtown from beginning to today, we see:
@@ -71,14 +75,22 @@ def get_downtown_incidents_for_month(year, month):
     try:
         if response_json["exceededTransferLimit"]:
             print(f"Exceeded response limit for {year}, month {month}")
+            logger.warning(f"Exceeded response limit for {year}, month {month}")
     except KeyError:
         pass
 
     if "features" not in response_json:
-        print(f"ERROR: 'features' key not found in response for {year}, month {month}")
+        error_msg = f"'features' key not found in response for {year}, month {month}"
+        print(f"ERROR: {error_msg}")
         print(f"HTTP Status Code: {response.status_code}")
         print(f"Response content: {response.text}")
         print(f"Parsed JSON: {response_json}")
+
+        logger.error(error_msg)
+        logger.error(f"HTTP Status Code: {response.status_code}")
+        logger.error(f"Response content: {response.text}")
+        logger.error(f"Parsed JSON: {response_json}")
+
         return []
 
     return response_json["features"]
