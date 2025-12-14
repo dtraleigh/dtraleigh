@@ -74,6 +74,13 @@ def get_downtown_incidents_for_month(year, month):
     except KeyError:
         pass
 
+    if "features" not in response_json:
+        print(f"ERROR: 'features' key not found in response for {year}, month {month}")
+        print(f"HTTP Status Code: {response.status_code}")
+        print(f"Response content: {response.text}")
+        print(f"Parsed JSON: {response_json}")
+        return []
+
     return response_json["features"]
 
 
