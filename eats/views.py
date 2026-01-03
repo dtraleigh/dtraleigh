@@ -4,11 +4,12 @@ from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Count, Q, F, ExpressionWrapper, fields
 from eats.models import *
 from eats.forms import *
-import datetime
 from itertools import chain
+from django.db.models.functions import TruncYear
+from datetime import date, timedelta
 
 
 def home(request):
@@ -366,3 +367,376 @@ def edit_ref_link_page(request, ref_id):
 
     return render(request, "edit_ref_link.html", {"ref_link": ref_link,
                                                   "link_form": link_form})
+
+
+def stats(request):
+    """Generate comprehensive statistics view for downtown businesses"""
+
+    # Current snapshot
+    snapshot = {
+        'total_open': Business.objects.filter(close_date__isnull=True).count(),
+        'total_closed': Business.objects.filter(close_date__isnull=False).count(),
+        'eats_open': Business.objects.filter(close_date__isnull=True, is_eats=True).count(),
+        'drinks_open': Business.objects.filter(close_date__isnull=True, is_drinks=True).count(),
+        'coffee_open': Business.objects.filter(close_date__isnull=True, is_coffee=True).count(),
+    }
+
+    # Calculate net growth per year
+    years = range(2016, date.today().year + 1)
+    yearly_data = []
+
+    for year in years:
+        # Exclude initial data load for openings in 2016
+        if year == 2016:
+            openings = Business.objects.filter(
+                open_date__year=year
+            ).exclude(open_date=date(2016, 3, 14)).count()
+        else:
+            openings = Business.objects.filter(open_date__year=year).count()
+
+        closings = Business.objects.filter(close_date__year=year).count()
+        net = openings - closings
+
+        yearly_data.append({
+            'year': year,
+            'openings': openings,
+            'closings': closings,
+            'net_growth': net
+        })
+
+    # Running total of open businesses at end of each year
+    running_total = []
+    for year in years:
+        year_end = date(year, 12, 31)
+
+        # Businesses that opened on or before year end AND
+        # (never closed OR closed after year end)
+        open_at_year_end = Business.objects.filter(
+            Q(open_date__lte=year_end) &
+            (Q(close_date__isnull=True) | Q(close_date__gt=year_end))
+        ).count()
+
+        running_total.append({
+            'year': year,
+            'open_businesses': open_at_year_end
+        })
+
+    # Openings by year by category (excluding initial load)
+    eats_by_year = list(Business.objects
+                        .filter(is_eats=True)
+                        .exclude(open_date=date(2016, 3, 14))
+                        .annotate(year=TruncYear('open_date'))
+                        .values('year')
+                        .annotate(count=Count('id'))
+                        .order_by('year'))
+
+    drinks_by_year = list(Business.objects
+                          .filter(is_drinks=True)
+                          .exclude(open_date=date(2016, 3, 14))
+                          .annotate(year=TruncYear('open_date'))
+                          .values('year')
+                          .annotate(count=Count('id'))
+                          .order_by('year'))
+
+    coffee_by_year = list(Business.objects
+                          .filter(is_coffee=True)
+                          .exclude(open_date=date(2016, 3, 14))
+                          .annotate(year=TruncYear('open_date'))
+                          .values('year')
+                          .annotate(count=Count('id'))
+                          .order_by('year'))
+
+    # Closings by year by category
+    eats_closings_by_year = list(Business.objects
+                                 .filter(is_eats=True, close_date__isnull=False)
+                                 .annotate(year=TruncYear('close_date'))
+                                 .values('year')
+                                 .annotate(count=Count('id'))
+                                 .order_by('year'))
+
+    drinks_closings_by_year = list(Business.objects
+                                   .filter(is_drinks=True, close_date__isnull=False)
+                                   .annotate(year=TruncYear('close_date'))
+                                   .values('year')
+                                   .annotate(count=Count('id'))
+                                   .order_by('year'))
+
+    coffee_closings_by_year = list(Business.objects
+                                   .filter(is_coffee=True, close_date__isnull=False)
+                                   .annotate(year=TruncYear('close_date'))
+                                   .values('year')
+                                   .annotate(count=Count('id'))
+                                   .order_by('year'))
+
+    # District-level analysis
+    districts_data = []
+    for district in District.objects.all():
+        district_yearly = []
+
+        for year in years:
+            if year == 2016:
+                openings = Business.objects.filter(
+                    district=district,
+                    open_date__year=year
+                ).exclude(open_date=date(2016, 3, 14)).count()
+            else:
+                openings = Business.objects.filter(
+                    district=district,
+                    open_date__year=year
+                ).count()
+
+            closings = Business.objects.filter(
+                district=district,
+                close_date__year=year
+            ).count()
+
+            district_yearly.append({
+                'year': year,
+                'openings': openings,
+                'closings': closings,
+                'net': openings - closings
+            })
+
+        districts_data.append({
+            'district': district,
+            'currently_open': Business.objects.filter(
+                district=district, close_date__isnull=True
+            ).count(),
+            'total_opened': Business.objects.filter(
+                district=district
+            ).exclude(open_date=date(2016, 3, 14)).count(),
+            'total_closed': Business.objects.filter(
+                district=district, close_date__isnull=False
+            ).count(),
+            'yearly_data': district_yearly
+        })
+
+    # Recent trends (last 12 months)
+    one_year_ago = date.today() - timedelta(days=365)
+    recent_trends = {
+        'openings': Business.objects.filter(open_date__gte=one_year_ago).count(),
+        'closings': Business.objects.filter(close_date__gte=one_year_ago).count(),
+        'eats_openings': Business.objects.filter(open_date__gte=one_year_ago, is_eats=True).count(),
+        'eats_closings': Business.objects.filter(close_date__gte=one_year_ago, is_eats=True).count(),
+        'drinks_openings': Business.objects.filter(open_date__gte=one_year_ago, is_drinks=True).count(),
+        'drinks_closings': Business.objects.filter(close_date__gte=one_year_ago, is_drinks=True).count(),
+        'coffee_openings': Business.objects.filter(open_date__gte=one_year_ago, is_coffee=True).count(),
+        'coffee_closings': Business.objects.filter(close_date__gte=one_year_ago, is_coffee=True).count(),
+    }
+
+    # Business longevity (for closed businesses, excluding initial load)
+    closed_businesses = Business.objects.filter(
+        close_date__isnull=False
+    ).exclude(
+        open_date=date(2016, 3, 14)
+    ).annotate(
+        days_open=ExpressionWrapper(
+            F('close_date') - F('open_date'),
+            output_field=fields.DurationField()
+        )
+    )
+
+    if closed_businesses.count() > 0:
+        avg_days = sum([b.days_open.days for b in closed_businesses]) / closed_businesses.count()
+        avg_longevity = {
+            'days': round(avg_days, 1),
+            'years': round(avg_days / 365.25, 2)
+        }
+    else:
+        avg_longevity = None
+
+    context = {
+        'snapshot': snapshot,
+        'yearly_data': yearly_data,
+        'running_total': running_total,
+        'eats_by_year': eats_by_year,
+        'drinks_by_year': drinks_by_year,
+        'coffee_by_year': coffee_by_year,
+        'eats_closings_by_year': eats_closings_by_year,
+        'drinks_closings_by_year': drinks_closings_by_year,
+        'coffee_closings_by_year': coffee_closings_by_year,
+        'districts_data': districts_data,
+        'recent_trends': recent_trends,
+        'avg_longevity': avg_longevity,
+    }
+
+    return render(request, 'stats.html', context)
+
+
+def district_stats(request, district_id):
+    """Generate statistics view for a specific district"""
+
+    district = District.objects.get(id=district_id)
+
+    # Current snapshot for this district
+    snapshot = {
+        'total_open': Business.objects.filter(district=district, close_date__isnull=True).count(),
+        'total_closed': Business.objects.filter(district=district, close_date__isnull=False).count(),
+        'eats_open': Business.objects.filter(district=district, close_date__isnull=True, is_eats=True).count(),
+        'drinks_open': Business.objects.filter(district=district, close_date__isnull=True, is_drinks=True).count(),
+        'coffee_open': Business.objects.filter(district=district, close_date__isnull=True, is_coffee=True).count(),
+    }
+
+    # Calculate net growth per year for this district
+    years = range(2016, date.today().year + 1)
+    yearly_data = []
+
+    for year in years:
+        # Exclude initial data load for openings in 2016
+        if year == 2016:
+            openings = Business.objects.filter(
+                district=district,
+                open_date__year=year
+            ).exclude(open_date=date(2016, 3, 14)).count()
+        else:
+            openings = Business.objects.filter(
+                district=district,
+                open_date__year=year
+            ).count()
+
+        closings = Business.objects.filter(
+            district=district,
+            close_date__year=year
+        ).count()
+        net = openings - closings
+
+        yearly_data.append({
+            'year': year,
+            'openings': openings,
+            'closings': closings,
+            'net_growth': net
+        })
+
+    # Running total of open businesses at end of each year
+    running_total = []
+    for year in years:
+        year_end = date(year, 12, 31)
+
+        open_at_year_end = Business.objects.filter(
+            district=district,
+            open_date__lte=year_end
+        ).filter(
+            Q(close_date__isnull=True) | Q(close_date__gt=year_end)
+        ).count()
+
+        running_total.append({
+            'year': year,
+            'open_businesses': open_at_year_end
+        })
+
+    # Openings by year by category (excluding initial load)
+    eats_by_year = list(Business.objects
+                        .filter(district=district, is_eats=True)
+                        .exclude(open_date=date(2016, 3, 14))
+                        .annotate(year=TruncYear('open_date'))
+                        .values('year')
+                        .annotate(count=Count('id'))
+                        .order_by('year'))
+
+    drinks_by_year = list(Business.objects
+                          .filter(district=district, is_drinks=True)
+                          .exclude(open_date=date(2016, 3, 14))
+                          .annotate(year=TruncYear('open_date'))
+                          .values('year')
+                          .annotate(count=Count('id'))
+                          .order_by('year'))
+
+    coffee_by_year = list(Business.objects
+                          .filter(district=district, is_coffee=True)
+                          .exclude(open_date=date(2016, 3, 14))
+                          .annotate(year=TruncYear('open_date'))
+                          .values('year')
+                          .annotate(count=Count('id'))
+                          .order_by('year'))
+
+    # Closings by year by category
+    eats_closings_by_year = list(Business.objects
+                                 .filter(district=district, is_eats=True, close_date__isnull=False)
+                                 .annotate(year=TruncYear('close_date'))
+                                 .values('year')
+                                 .annotate(count=Count('id'))
+                                 .order_by('year'))
+
+    drinks_closings_by_year = list(Business.objects
+                                   .filter(district=district, is_drinks=True, close_date__isnull=False)
+                                   .annotate(year=TruncYear('close_date'))
+                                   .values('year')
+                                   .annotate(count=Count('id'))
+                                   .order_by('year'))
+
+    coffee_closings_by_year = list(Business.objects
+                                   .filter(district=district, is_coffee=True, close_date__isnull=False)
+                                   .annotate(year=TruncYear('close_date'))
+                                   .values('year')
+                                   .annotate(count=Count('id'))
+                                   .order_by('year'))
+
+    # Recent trends (last 12 months)
+    one_year_ago = date.today() - timedelta(days=365)
+    recent_trends = {
+        'openings': Business.objects.filter(district=district, open_date__gte=one_year_ago).count(),
+        'closings': Business.objects.filter(district=district, close_date__gte=one_year_ago).count(),
+        'eats_openings': Business.objects.filter(district=district, open_date__gte=one_year_ago, is_eats=True).count(),
+        'eats_closings': Business.objects.filter(district=district, close_date__gte=one_year_ago, is_eats=True).count(),
+        'drinks_openings': Business.objects.filter(district=district, open_date__gte=one_year_ago,
+                                                   is_drinks=True).count(),
+        'drinks_closings': Business.objects.filter(district=district, close_date__gte=one_year_ago,
+                                                   is_drinks=True).count(),
+        'coffee_openings': Business.objects.filter(district=district, open_date__gte=one_year_ago,
+                                                   is_coffee=True).count(),
+        'coffee_closings': Business.objects.filter(district=district, close_date__gte=one_year_ago,
+                                                   is_coffee=True).count(),
+    }
+
+    # Business longevity (for closed businesses in this district, excluding initial load)
+    closed_businesses = Business.objects.filter(
+        district=district,
+        close_date__isnull=False
+    ).exclude(
+        open_date=date(2016, 3, 14)
+    ).annotate(
+        days_open=ExpressionWrapper(
+            F('close_date') - F('open_date'),
+            output_field=fields.DurationField()
+        )
+    )
+
+    if closed_businesses.count() > 0:
+        avg_days = sum([b.days_open.days for b in closed_businesses]) / closed_businesses.count()
+        avg_longevity = {
+            'days': round(avg_days, 1),
+            'years': round(avg_days / 365.25, 2)
+        }
+    else:
+        avg_longevity = None
+
+    # List of all currently open businesses in this district
+    open_businesses = Business.objects.filter(
+        district=district,
+        close_date__isnull=True
+    ).order_by('name')
+
+    # List of all closed businesses in this district
+    closed_businesses_list = Business.objects.filter(
+        district=district,
+        close_date__isnull=False
+    ).order_by('-close_date')
+
+    context = {
+        'district': district,
+        'snapshot': snapshot,
+        'yearly_data': yearly_data,
+        'running_total': running_total,
+        'eats_by_year': eats_by_year,
+        'drinks_by_year': drinks_by_year,
+        'coffee_by_year': coffee_by_year,
+        'eats_closings_by_year': eats_closings_by_year,
+        'drinks_closings_by_year': drinks_closings_by_year,
+        'coffee_closings_by_year': coffee_closings_by_year,
+        'recent_trends': recent_trends,
+        'avg_longevity': avg_longevity,
+        'open_businesses': open_businesses,
+        'closed_businesses_list': closed_businesses_list,
+    }
+
+    return render(request, 'district_stats.html', context)

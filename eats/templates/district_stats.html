@@ -1,0 +1,392 @@
+{% extends "eats_base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h1>{{ district.name }} Statistics</h1>
+    <p class="lead">{{ district.description }}</p>
+    <p><a href="{% url 'stats' %}" class="btn btn-default">← Back to Downtown-Wide Stats</a></p>
+  </div>
+</div>
+
+<!-- Current Snapshot -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Current Snapshot</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Currently Open</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>All Businesses</strong></td>
+          <td>{{ snapshot.total_open }}</td>
+        </tr>
+        <tr>
+          <td>Food (Eats)</td>
+          <td>{{ snapshot.eats_open }}</td>
+        </tr>
+        <tr>
+          <td>Bars (Drinks)</td>
+          <td>{{ snapshot.drinks_open }}</td>
+        </tr>
+        <tr>
+          <td>Coffee</td>
+          <td>{{ snapshot.coffee_open }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><small>Total businesses that have closed: {{ snapshot.total_closed }}</small></p>
+  </div>
+</div>
+
+<!-- Recent Trends -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Last 12 Months</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Openings</th>
+          <th>Closings</th>
+          <th>Net Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>All Businesses</strong></td>
+          <td>{{ recent_trends.openings }}</td>
+          <td>{{ recent_trends.closings }}</td>
+          <td>{% widthratio recent_trends.openings 1 1 %}{% widthratio recent_trends.closings 1 -1 %}</td>
+        </tr>
+        <tr>
+          <td>Food (Eats)</td>
+          <td>{{ recent_trends.eats_openings }}</td>
+          <td>{{ recent_trends.eats_closings }}</td>
+          <td>{% widthratio recent_trends.eats_openings 1 1 %}{% widthratio recent_trends.eats_closings 1 -1 %}</td>
+        </tr>
+        <tr>
+          <td>Bars (Drinks)</td>
+          <td>{{ recent_trends.drinks_openings }}</td>
+          <td>{{ recent_trends.drinks_closings }}</td>
+          <td>{% widthratio recent_trends.drinks_openings 1 1 %}{% widthratio recent_trends.drinks_closings 1 -1 %}</td>
+        </tr>
+        <tr>
+          <td>Coffee</td>
+          <td>{{ recent_trends.coffee_openings }}</td>
+          <td>{{ recent_trends.coffee_closings }}</td>
+          <td>{% widthratio recent_trends.coffee_openings 1 1 %}{% widthratio recent_trends.coffee_closings 1 -1 %}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Yearly Growth -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Year-by-Year Growth</h2>
+    <p><small>Note: 2016 openings exclude the initial data load from March 14, 2016</small></p>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Openings</th>
+          <th>Closings</th>
+          <th>Net Growth</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for year in yearly_data %}
+        <tr>
+          <td>{{ year.year }}</td>
+          <td>{{ year.openings }}</td>
+          <td>{{ year.closings }}</td>
+          <td>
+            {% if year.net_growth > 0 %}
+              <span style="color: green;">+{{ year.net_growth }}</span>
+            {% elif year.net_growth < 0 %}
+              <span style="color: red;">{{ year.net_growth }}</span>
+            {% else %}
+              {{ year.net_growth }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Running Total -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Total Open Businesses Over Time</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Open Businesses at Year End</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in running_total %}
+        <tr>
+          <td>{{ item.year }}</td>
+          <td>{{ item.open_businesses }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Business Longevity -->
+{% if avg_longevity %}
+<div class="row">
+  <div class="col-md-12">
+    <h2>Business Longevity</h2>
+    <p>Average time closed businesses stayed open: <strong>{{ avg_longevity.years }} years</strong> ({{ avg_longevity.days }} days)</p>
+    <p><small>Based on businesses that have closed (excluding initial data load entries)</small></p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Category Trends -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Openings by Category Over Time</h2>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-4">
+    <h4>Food (Eats)</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Openings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in eats_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-4">
+    <h4>Bars (Drinks)</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Openings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in drinks_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-4">
+    <h4>Coffee</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Openings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in coffee_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <h2>Closings by Category Over Time</h2>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-4">
+    <h4>Food (Eats)</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Closings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in eats_closings_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-4">
+    <h4>Bars (Drinks)</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Closings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in drinks_closings_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-4">
+    <h4>Coffee</h4>
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Closings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in coffee_closings_by_year %}
+        <tr>
+          <td>{{ item.year|date:"Y" }}</td>
+          <td>{{ item.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2">No data</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Currently Open Businesses -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Currently Open Businesses</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Opened</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for business in open_businesses %}
+        <tr>
+          <td>
+            {% if business.link %}
+              <a href="{{ business.link }}" target="_blank">{{ business.name }}</a>
+            {% else %}
+              {{ business.name }}
+            {% endif %}
+          </td>
+          <td>{{ business.open_date|date:"M d, Y" }}</td>
+          <td>
+            {% if business.is_eats %}Eats{% endif %}
+            {% if business.is_drinks %}{% if business.is_eats %}, {% endif %}Drinks{% endif %}
+            {% if business.is_coffee %}{% if business.is_eats or business.is_drinks %}, {% endif %}Coffee{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Closed Businesses -->
+<div class="row">
+  <div class="col-md-12">
+    <h2>Closed Businesses</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Opened</th>
+          <th>Closed</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for business in closed_businesses_list %}
+        <tr>
+          <td>{{ business.name }}</td>
+          <td>{{ business.open_date|date:"M d, Y" }}</td>
+          <td>{{ business.close_date|date:"M d, Y" }}</td>
+          <td>
+            {% if business.is_eats %}Eats{% endif %}
+            {% if business.is_drinks %}{% if business.is_eats %}, {% endif %}Drinks{% endif %}
+            {% if business.is_coffee %}{% if business.is_eats or business.is_drinks %}, {% endif %}Coffee{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <p><a href="{% url 'stats' %}" class="btn btn-default">← Back to Downtown-Wide Stats</a></p>
+  </div>
+</div>
+
+{% endblock %}

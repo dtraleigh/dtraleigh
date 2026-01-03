@@ -7,6 +7,8 @@ urlpatterns = [
     path('__debug__/', include('debug_toolbar.urls')),
     path("test/", views.home_test),
     path("tips/", views.tips_main),
+    path("stats/", views.stats, name="stats"),
+    path("stats/district/<int:district_id>/", views.district_stats, name="district_stats"),
     path("manage/", views.eats_login),
     path("manage/main/", views.main),
     path("manage/main/logout/", views.eats_logout),
