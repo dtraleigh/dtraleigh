@@ -5,6 +5,7 @@ import re
 from bs4 import BeautifulSoup
 from fuzzywuzzy import fuzz
 from datetime import datetime
+import traceback
 
 from django.core.management.base import BaseCommand
 
@@ -719,11 +720,11 @@ def update_zoning_if_changed(known_zon, status, plan_url, location_url):
         logger.info(f"known_zon: {str(known_zon)}")
 
         if not fields_are_same(old_status, status):
-            logger.info(f"Status: {old_status} → {status}")
+            logger.info(f"Status: {old_status} -> {status}")
         if not fields_are_same(old_plan_url, plan_url):
-            logger.info(f"Plan URL: {old_plan_url} → {plan_url}")
+            logger.info(f"Plan URL: {old_plan_url} -> {plan_url}")
         if not fields_are_same(old_location_url, location_url):
-            logger.info(f"Location URL: {old_location_url} → {location_url}")
+            logger.info(f"Location URL: {old_location_url} -> {location_url}")
 
         logger.info("**********************")
         return True
@@ -1067,7 +1068,7 @@ def is_acknowledged_missing_data(rezoning_site_address):
     Returns:
         Boolean indicating if this is an acknowledged exception
     """
-    acknowledged = ["10854 Globe Rd"]
+    acknowledged = ["10854 Globe Rd", "New Bern Ave Re-Rezoning"]
     return rezoning_site_address in acknowledged
 
 
@@ -1084,7 +1085,16 @@ def handle_neighborhood_meeting_validation_error(row_tds, data):
         ["rezoning_site_address_url", data.get("rezoning_site_address_url")],
         ["meeting_location", data.get("meeting_location")]
     ]
-    message = "scrape.neighborhood_meetings: Problem scraping this row\n" + str(scraped_info)
+
+    # Capture condensed call stack
+    stack = traceback.extract_stack()
+    call_chain = " -> ".join([f"{frame.name}:{frame.lineno}" for frame in stack[:-1]])
+
+    message = (
+        "scrape.neighborhood_meetings: Problem scraping this row\n"
+        f"{scraped_info}\n\n"
+        f"Call chain: {call_chain}"
+    )
     logger.info(message)
     send_email_notice(message, email_admins())
 
