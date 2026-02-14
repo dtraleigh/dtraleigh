@@ -1068,7 +1068,7 @@ def is_acknowledged_missing_data(rezoning_site_address):
     Returns:
         Boolean indicating if this is an acknowledged exception
     """
-    acknowledged = ["10854 Globe Rd", "New Bern Ave Re-Rezoning"]
+    acknowledged = ["10854 Globe Rd", "New Bern Avenue Re-Rezoning"]
     return rezoning_site_address in acknowledged
 
 
