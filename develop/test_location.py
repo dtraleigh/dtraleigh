@@ -141,4 +141,8 @@ class LocationTestCase(TestCase):
         url8 = "https://raleighnc.gov/projects/transit-overlay-district-tod-mapping"
         self.assertEqual(get_pins_from_location_url(url8), None)
 
+        # URL with lat/lon parameters instead of ?pin= should return None, not a garbage coordinate string
+        url9 = "https://maps.raleighnc.gov/iMAPS/?lat=35.897569591112465&y=35.897569591112465"
+        self.assertEqual(get_pins_from_location_url(url9), None)
+
 

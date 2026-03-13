@@ -3,6 +3,7 @@ import requests
 import geopy
 import re
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs
 from geopy.geocoders import Nominatim
 # from geopy.extra.rate_limiter import RateLimiter
 
@@ -168,7 +169,7 @@ def is_itb(lat, lon):
 def get_lat_lon_by_pin(pin):
     """This uses the County's address point API and given a pin, we return the x (lon) and y (lat) coordinates"""
     if pin:
-        url = f"http://maps.wakegov.com/arcgis/rest/services/Property/Addresses/MapServer/0/query?where=PIN_NUM={str(pin)}&outFields=*&outSR=4326&f=json"
+        url = f"http://maps.wakegov.com/arcgis/rest/services/Property/Addresses/MapServer/0/query?where=PIN_NUM='{str(pin)}'&outFields=*&outSR=4326&f=json"
     else:
         return None, None
 
@@ -201,7 +202,7 @@ def get_lat_lon_by_pin(pin):
 
 def get_parcel_by_pin(pin):
     """This function will use a pin and return the parcel information that comes from the county's parcel endpoint"""
-    url = f"http://maps.wakegov.com/arcgis/rest/services/Property/Addresses/MapServer/0/query?where=PIN_NUM={pin}&outFields=*&outSR=4326&f=json"
+    url = f"http://maps.wakegov.com/arcgis/rest/services/Property/Addresses/MapServer/0/query?where=PIN_NUM='{pin}'&outFields=*&outSR=4326&f=json"
 
     response = requests.request("GET", url, headers={}, data={})
 
@@ -217,13 +218,13 @@ def get_parcel_by_pin(pin):
 def get_pins_from_location_url(location_url):
     """This function takes in a location_url. We use the location_url string, extract the pins, and return them."""
     if location_url:
-        try:
-            return location_url.replace(" ", "").split("=")[1].split(",")
-        except IndexError:
-            message = location_url
-            message += "\nlocation.get_pins_from_location_url: This url does not have pins"
-            send_email_notice(message, email_admins())
-            return None
+        params = parse_qs(urlparse(location_url.replace(" ", "")).query)
+        if "pin" in params:
+            return params["pin"][0].split(",")
+        message = location_url
+        message += "\nlocation.get_pins_from_location_url: This url does not have pins"
+        send_email_notice(message, email_admins())
+        return None
     else:
         return None
 
