@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     #"parcels",
     "django_tables2",
     "parking",
-    "transit"
+    "transit",
+    "newsletter",
 ]
 
 MIDDLEWARE = [
