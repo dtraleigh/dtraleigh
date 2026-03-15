@@ -21,6 +21,7 @@ class Subscriber(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
+    bounced_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.email} ({self.status})"
@@ -58,6 +59,7 @@ class SendLog(models.Model):
     ]
 
     sent_post = models.ForeignKey(SentPost, on_delete=models.SET_NULL, null=True, blank=True)
+    subscriber = models.ForeignKey("Subscriber", on_delete=models.SET_NULL, null=True, blank=True)
     event_type = models.CharField(max_length=30, choices=EVENT_CHOICES)
     detail = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

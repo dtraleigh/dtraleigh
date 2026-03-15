@@ -8,7 +8,7 @@ class SubscriberAdmin(admin.ModelAdmin):
     list_display = ("email", "status", "created_at", "confirmed_at")
     list_filter = ("status",)
     search_fields = ("email",)
-    readonly_fields = ("token", "created_at", "confirmed_at", "unsubscribed_at")
+    readonly_fields = ("token", "created_at", "confirmed_at", "unsubscribed_at", "bounced_at")
 
 
 @admin.register(SentPost)
@@ -19,6 +19,6 @@ class SentPostAdmin(admin.ModelAdmin):
 
 @admin.register(SendLog)
 class SendLogAdmin(admin.ModelAdmin):
-    list_display = ("event_type", "sent_post", "created_at")
+    list_display = ("event_type", "subscriber", "sent_post", "created_at")
     list_filter = ("event_type",)
     readonly_fields = ("created_at",)
