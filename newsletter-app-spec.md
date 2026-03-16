@@ -204,16 +204,33 @@ The `send_newsletter()` function renders these templates per subscriber, injecti
 
 ### Management Command: `send_newsletter`
 
-Create `newsletter/management/commands/send_newsletter.py`:
+`newsletter/management/commands/send_newsletter.py`:
+
+```
+manage.py send_newsletter [--seed]
+```
+
+#### Normal mode
 
 1. Fetch the RSS feed from `https://dtraleigh.com/feed/` using `feedparser`.
 2. For each entry in the feed, check if its GUID (or link, as fallback) exists in the `SentPost` table.
 3. For any new entry:
    a. Extract the title, link, and content (prefer `content:encoded` for full HTML, fall back to `summary`/`description`).
-   b. Render the newsletter email template with this content.
-   c. Call `send_newsletter()` to send to all confirmed subscribers.
-   d. Create a `SentPost` record with the GUID, title, and recipient count.
+   b. Generate plain text by stripping HTML tags (`django.utils.html.strip_tags`).
+   c. Create a `SentPost` record with `recipient_count=0` *before* sending (idempotency guard).
+   d. Call `send_newsletter()` to send to all confirmed subscribers.
+   e. Update the `SentPost.recipient_count` with the returned count.
 4. Handle multiple new posts: if the feed has more than one unsent entry, send them in chronological order (oldest first). Controlled by the `NEWSLETTER_SEND_ALL_NEW` Django setting (default `True`): when `True`, sends all unsent posts; when `False`, sends only the most recent unsent post.
+
+#### `--seed` mode
+
+Marks all current feed entries as already-sent without emailing anyone. Creates `SentPost` records with `recipient_count=0`. Safe to run multiple times (skips already-existing GUIDs).
+
+Run this once before enabling the cron job to avoid sending existing posts to initial subscribers:
+
+```
+manage.py send_newsletter --seed
+```
 
 ### Cron Configuration
 
@@ -227,11 +244,12 @@ The site owner will configure the actual cron job and paths on Opalstack.
 
 ### Idempotency
 
-The command must be safe to run repeatedly. The `SentPost` table is the guard against duplicate sends. Use database-level uniqueness on the GUID field. If the command crashes mid-send (after some subscribers received the email but before the `SentPost` is created), the next run will re-send to everyone. To mitigate this:
+The command must be safe to run repeatedly. The `SentPost` table is the guard against duplicate sends. Use database-level uniqueness on the GUID field.
 
 - Create the `SentPost` record *before* starting the send (with `recipient_count=0`)
 - Update `recipient_count` after all sends complete
-- If the record exists but `recipient_count` is 0, that indicates a failed previous attempt — the command should either skip it or retry, based on a flag
+- If the record exists but `recipient_count` is 0, that indicates a failed previous attempt — the command retries the send on the next run
+- Retries are time-limited: if a `SentPost` with `recipient_count=0` is older than 24 hours, the command abandons it and logs a warning via `logger.warning()` (no further retries)
 
 ---
 
@@ -287,7 +305,7 @@ Execute these phases in order. Each phase is independently testable.
 1. **Phase 1**: Models and admin — verify you can create and manage subscribers in the admin.
 2. **Phase 2**: Views, templates, forms, email helper, and URL configuration. Includes `django-ratelimit` for subscribe throttling, `NEWSLETTER_USE_SES` toggle (defaults to `False` to use Django's built-in email for testing), bounced-subscriber handling, and a placeholder `ses-webhook/` endpoint. Verify the signup form works, confirmation links work, unsubscribe links work.
 3. **Phase 3**: SES integration — adds boto3/SES send path gated by `NEWSLETTER_USE_SES`, `send_newsletter()` function with per-subscriber personalization (unsubscribe links via Django email templates), `NEWSLETTER_MAILING_ADDRESS` setting, and Django `EmailMultiAlternatives` fallback for testing. Test with a real email address in SES sandbox mode (you can verify individual addresses in sandbox).
-4. **Phase 4**: RSS poller — test with `manage.py send_newsletter` manually. Verify it detects new posts and sends.
+4. **Phase 4**: RSS poller — seed existing posts with `manage.py send_newsletter --seed`, then test with `manage.py send_newsletter` manually. Verify it detects new posts and sends.
 5. **Phase 5**: Bounce webhook — deploy and test by sending to a known-bad address.
 
 ---
@@ -300,6 +318,8 @@ Before enabling the newsletter for real subscribers, ensure all of these are com
 - [ ] **Set `NEWSLETTER_USE_SES=True`** — Switch from Django's built-in email to SES for production sending.
 - [ ] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES).
 - [ ] **Complete AWS Setup Checklist** (see section above) — domain verification, DKIM, SES production access, IAM user, SNS topic, webhook subscription.
+- [ ] **Seed existing posts** — Run `manage.py send_newsletter --seed` to mark current feed entries as already-sent before enabling the cron job.
+- [ ] **Verify admin email logging** — Ensure Django's `ADMINS` setting and email logging handler are configured so that `logger.warning()` calls (e.g., abandoned newsletter sends) trigger admin email notifications.
 - [ ] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
 - [ ] **Test end-to-end** in SES sandbox mode — subscribe, confirm, receive a newsletter, unsubscribe, verify bounce webhook.
 - [ ] **Request SES production access** — Move out of sandbox to send to unverified addresses.
@@ -321,9 +341,9 @@ All email sending is mocked (`@patch`) so no real emails are sent. Rate limiting
 - **`SendConfirmationEmailTest(TestCase)`** — Email helper: Django backend calls `send_mail` and creates `confirmation_sent` SendLog, failure creates `error` SendLog and re-raises, confirmation URL contains subscriber token.
 - **`SendNewsletterTest(TestCase)`** — Newsletter sending: sends only to confirmed subscribers, creates per-subscriber SendLog, partial failure logs error and continues, rendered email contains unsubscribe URL/post URL/mailing address.
 
-### Phase 4 (with implementation)
+### Phase 4 (implemented)
 
-- **`SendNewsletterCommandTest(TestCase)`** — Management command: parses RSS feed, creates SentPost for new entries, skips already-sent GUIDs (idempotency), sends in chronological order, respects `NEWSLETTER_SEND_ALL_NEW` setting.
+- **`SendNewsletterCommandTest(TestCase)`** — Management command: `--seed` creates SentPost records without sending, seed skips existing GUIDs, new entries create SentPost and call `send_newsletter`, already-sent GUIDs are skipped, failed attempts (recipient_count=0) are retried within 24h cutoff, retries abandoned after 24h with warning log, multiple entries sent oldest-first, `NEWSLETTER_SEND_ALL_NEW=False` sends only most recent, content:encoded preferred over summary with fallback, plain text has HTML tags stripped.
 
 ### Phase 5 (with implementation)
 

@@ -1,7 +1,10 @@
+import time
 import uuid
-from unittest.mock import patch
+from datetime import timedelta
+from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.utils import timezone
 
 from .forms import SubscribeForm
 from .models import SendLog, SentPost, Subscriber
@@ -291,3 +294,249 @@ class SendNewsletterTest(TestCase):
         rendered_html = call_args[3]  # 4th positional arg is html_body
         self.assertIn("https://dtraleigh.com/post", rendered_html)
         self.assertIn("DTRaleigh, Raleigh, NC", rendered_html)
+
+
+def _make_feed_entry(guid="https://dtraleigh.com/?p=100", title="Test Post",
+                     link="https://dtraleigh.com/test-post/",
+                     html_content="<p>Hello world</p>",
+                     summary="Hello world summary",
+                     published_parsed=None):
+    """Create a mock feedparser entry."""
+    entry = MagicMock()
+    entry.get = lambda key, default="": {
+        "id": guid,
+        "title": title,
+        "link": link,
+        "summary": summary,
+        "published_parsed": published_parsed or time.strptime("2026-03-10", "%Y-%m-%d"),
+    }.get(key, default)
+    entry.id = guid
+    entry.title = title
+    entry.link = link
+    entry.summary = summary
+    entry.content = [{"value": html_content}]
+    entry.published_parsed = published_parsed or time.strptime("2026-03-10", "%Y-%m-%d")
+    # Make hasattr(entry, "content") work correctly
+    type(entry).content = property(lambda self: [{"value": html_content}])
+    return entry
+
+
+def _make_feed(*entries):
+    """Create a mock feedparser feed result."""
+    feed = MagicMock()
+    feed.bozo = False
+    feed.entries = list(entries)
+    return feed
+
+
+@override_settings(
+    NEWSLETTER_USE_SES=False,
+    NEWSLETTER_BASE_URL="https://apps.dtraleigh.com",
+    NEWSLETTER_FROM_EMAIL="newsletter@dtraleigh.com",
+    NEWSLETTER_MAILING_ADDRESS="Raleigh, NC",
+    NEWSLETTER_SEND_ALL_NEW=True,
+)
+class SendNewsletterCommandTest(TestCase):
+    """Tests for the send_newsletter management command."""
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_seed_creates_sent_posts_without_sending(self, mock_parse, mock_send):
+        entry1 = _make_feed_entry(guid="guid-1", title="Post 1")
+        entry2 = _make_feed_entry(guid="guid-2", title="Post 2")
+        mock_parse.return_value = _make_feed(entry1, entry2)
+
+        from django.core.management import call_command
+        call_command("send_newsletter", "--seed")
+
+        self.assertEqual(SentPost.objects.count(), 2)
+        self.assertTrue(SentPost.objects.filter(guid="guid-1").exists())
+        self.assertTrue(SentPost.objects.filter(guid="guid-2").exists())
+        # recipient_count should be 0 for seeded posts
+        for sp in SentPost.objects.all():
+            self.assertEqual(sp.recipient_count, 0)
+        mock_send.assert_not_called()
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_seed_skips_already_existing_guids(self, mock_parse, mock_send):
+        SentPost.objects.create(guid="guid-1", title="Existing Post", recipient_count=5)
+        entry1 = _make_feed_entry(guid="guid-1", title="Post 1")
+        entry2 = _make_feed_entry(guid="guid-2", title="Post 2")
+        mock_parse.return_value = _make_feed(entry1, entry2)
+
+        from django.core.management import call_command
+        call_command("send_newsletter", "--seed")
+
+        self.assertEqual(SentPost.objects.count(), 2)
+        # Existing post should not be modified
+        existing = SentPost.objects.get(guid="guid-1")
+        self.assertEqual(existing.recipient_count, 5)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_new_entry_creates_sent_post_and_sends(self, mock_parse, mock_send):
+        mock_send.return_value = 3
+        entry = _make_feed_entry(guid="guid-new", title="New Post",
+                                 html_content="<p>Content</p>",
+                                 link="https://dtraleigh.com/new-post/")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        sent_post = SentPost.objects.get(guid="guid-new")
+        self.assertEqual(sent_post.title, "New Post")
+        self.assertEqual(sent_post.recipient_count, 3)
+        mock_send.assert_called_once()
+        call_args = mock_send.call_args[0]
+        self.assertEqual(call_args[0], "New Post")  # subject
+        self.assertIn("<p>Content</p>", call_args[1])  # html_content
+        self.assertIn("Content", call_args[2])  # text_content (stripped)
+        self.assertNotIn("<p>", call_args[2])  # no HTML tags in text
+        self.assertEqual(call_args[3], "https://dtraleigh.com/new-post/")  # post_url
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_already_sent_guid_is_skipped(self, mock_parse, mock_send):
+        SentPost.objects.create(guid="guid-1", title="Already Sent", recipient_count=5)
+        entry = _make_feed_entry(guid="guid-1", title="Already Sent")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_not_called()
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_failed_previous_attempt_is_retried(self, mock_parse, mock_send):
+        mock_send.return_value = 2
+        failed_post = SentPost.objects.create(guid="guid-failed", title="Failed Post", recipient_count=0)
+        entry = _make_feed_entry(guid="guid-failed", title="Failed Post")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_called_once()
+        # Should reuse the existing SentPost, not create a new one
+        self.assertEqual(SentPost.objects.filter(guid="guid-failed").count(), 1)
+        failed_post.refresh_from_db()
+        self.assertEqual(failed_post.recipient_count, 2)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_multiple_entries_sent_oldest_first(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        older = _make_feed_entry(guid="guid-old", title="Old Post",
+                                 published_parsed=time.strptime("2026-03-01", "%Y-%m-%d"))
+        newer = _make_feed_entry(guid="guid-new", title="New Post",
+                                 published_parsed=time.strptime("2026-03-10", "%Y-%m-%d"))
+        # Feed returns newer first (typical RSS order)
+        mock_parse.return_value = _make_feed(newer, older)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        self.assertEqual(mock_send.call_count, 2)
+        # First call should be the older post
+        first_title = mock_send.call_args_list[0][0][0]
+        second_title = mock_send.call_args_list[1][0][0]
+        self.assertEqual(first_title, "Old Post")
+        self.assertEqual(second_title, "New Post")
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    @override_settings(NEWSLETTER_SEND_ALL_NEW=False)
+    def test_send_all_new_false_sends_only_most_recent(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        older = _make_feed_entry(guid="guid-old", title="Old Post",
+                                 published_parsed=time.strptime("2026-03-01", "%Y-%m-%d"))
+        newer = _make_feed_entry(guid="guid-new", title="New Post",
+                                 published_parsed=time.strptime("2026-03-10", "%Y-%m-%d"))
+        mock_parse.return_value = _make_feed(newer, older)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_called_once()
+        sent_title = mock_send.call_args[0][0]
+        self.assertEqual(sent_title, "New Post")
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_no_new_entries_does_nothing(self, mock_parse, mock_send):
+        SentPost.objects.create(guid="guid-1", title="Sent", recipient_count=5)
+        entry = _make_feed_entry(guid="guid-1", title="Sent")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_not_called()
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_content_encoded_preferred_over_summary(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        entry = _make_feed_entry(guid="guid-1", title="Post",
+                                 html_content="<p>Full content</p>",
+                                 summary="Just a summary")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        html_arg = mock_send.call_args[0][1]
+        self.assertIn("Full content", html_arg)
+        self.assertNotIn("Just a summary", html_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_falls_back_to_summary_when_no_content(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        entry = _make_feed_entry(guid="guid-1", title="Post", summary="Summary text")
+        # Remove the content attribute to simulate no content:encoded
+        del type(entry).content
+        entry.content = None
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        html_arg = mock_send.call_args[0][1]
+        self.assertIn("Summary text", html_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_plain_text_has_tags_stripped(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        entry = _make_feed_entry(guid="guid-1", title="Post",
+                                 html_content="<p>Hello <strong>world</strong></p>")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        text_arg = mock_send.call_args[0][2]
+        self.assertIn("Hello", text_arg)
+        self.assertIn("world", text_arg)
+        self.assertNotIn("<p>", text_arg)
+        self.assertNotIn("<strong>", text_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_retry_abandoned_after_cutoff(self, mock_parse, mock_send):
+        failed_post = SentPost.objects.create(guid="guid-old-fail", title="Old Failure", recipient_count=0)
+        # Backdate sent_at to exceed the 24h cutoff
+        SentPost.objects.filter(pk=failed_post.pk).update(sent_at=timezone.now() - timedelta(hours=25))
+        entry = _make_feed_entry(guid="guid-old-fail", title="Old Failure")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_not_called()
+        failed_post.refresh_from_db()
+        self.assertEqual(failed_post.recipient_count, 0)
