@@ -306,6 +306,31 @@ Before enabling the newsletter for real subscribers, ensure all of these are com
 
 ---
 
+## Test Strategy
+
+Tests live in `newsletter/tests.py` and follow the project's existing patterns. Run with `python manage.py test newsletter`.
+
+### Phases 1–3 (implemented)
+
+All email sending is mocked (`@patch`) so no real emails are sent. Rate limiting is disabled in tests via `RATELIMIT_ENABLE=False`.
+
+- **`SubscribeFormTest(SimpleTestCase)`** — Form validation: valid/invalid/empty email, honeypot field not required. No DB needed.
+- **`SubscribeViewTest(TestCase)`** — Full subscribe flow: GET renders form, POST creates subscriber and sends confirmation, honeypot silently rejects, invalid email re-renders form, already-confirmed shows success (no status leak), unconfirmed resets token and resends, unsubscribed resets to unconfirmed, bounced shows bounced template.
+- **`ConfirmViewTest(TestCase)`** — Token confirmation: unconfirmed → confirmed with timestamp, already confirmed shows "already" page, unsubscribed/bounced/invalid tokens show invalid page.
+- **`UnsubscribeViewTest(TestCase)`** — Unsubscribe flow: GET shows confirmation with email, POST sets unsubscribed with timestamp, one-click POST (no form data) works, invalid token shows invalid page.
+- **`SendConfirmationEmailTest(TestCase)`** — Email helper: Django backend calls `send_mail` and creates `confirmation_sent` SendLog, failure creates `error` SendLog and re-raises, confirmation URL contains subscriber token.
+- **`SendNewsletterTest(TestCase)`** — Newsletter sending: sends only to confirmed subscribers, creates per-subscriber SendLog, partial failure logs error and continues, rendered email contains unsubscribe URL/post URL/mailing address.
+
+### Phase 4 (with implementation)
+
+- **`SendNewsletterCommandTest(TestCase)`** — Management command: parses RSS feed, creates SentPost for new entries, skips already-sent GUIDs (idempotency), sends in chronological order, respects `NEWSLETTER_SEND_ALL_NEW` setting.
+
+### Phase 5 (with implementation)
+
+- **`SESWebhookTest(TestCase)`** — SNS webhook: handles SubscriptionConfirmation, processes bounce notifications (sets subscriber to bounced, creates SendLog), processes complaint notifications (sets subscriber to unsubscribed), rejects messages with invalid signatures, returns 200 for all handled messages.
+
+---
+
 ## Notes
 
 - The site owner's existing Django project structure should be respected. Examine the project layout before creating files.
