@@ -144,6 +144,12 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_TIMEOUT = 10
 
+# Newsletter configuration
+NEWSLETTER_USE_SES = env.bool("NEWSLETTER_USE_SES", default=False)
+NEWSLETTER_FROM_EMAIL = env("NEWSLETTER_FROM_EMAIL", default="newsletter@dtraleigh.com")
+NEWSLETTER_BASE_URL = env("NEWSLETTER_BASE_URL", default="https://apps.dtraleigh.com")
+NEWSLETTER_SEND_ALL_NEW = env.bool("NEWSLETTER_SEND_ALL_NEW", default=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
