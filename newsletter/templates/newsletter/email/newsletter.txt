@@ -1,0 +1,11 @@
+{{ text_content }}
+
+Read on the web: {{ post_url }}
+
+---
+
+You're receiving this because you subscribed at dtraleigh.com.
+
+Unsubscribe: {{ unsubscribe_url }}
+
+{{ mailing_address }}

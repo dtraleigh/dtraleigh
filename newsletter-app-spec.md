@@ -145,6 +145,7 @@ NEWSLETTER_USE_SES = env.bool("NEWSLETTER_USE_SES", default=False)
 NEWSLETTER_FROM_EMAIL = env("NEWSLETTER_FROM_EMAIL", default="newsletter@dtraleigh.com")
 NEWSLETTER_BASE_URL = env("NEWSLETTER_BASE_URL", default="https://apps.dtraleigh.com")
 NEWSLETTER_SEND_ALL_NEW = env.bool("NEWSLETTER_SEND_ALL_NEW", default=True)
+NEWSLETTER_MAILING_ADDRESS = env("NEWSLETTER_MAILING_ADDRESS", default="DTRaleigh, Raleigh, NC [UPDATE BEFORE GO-LIVE]")
 
 # AWS SES Configuration (add in Phase 3)
 AWS_SES_ACCESS_KEY_ID = env("AWS_SES_ACCESS_KEY_ID")
@@ -164,7 +165,7 @@ The utility module `newsletter/email.py` was created in Phase 2 with Django's bu
 - When `NEWSLETTER_USE_SES` is `True`, uses `boto3` SES client's `send_email` or `send_raw_email`; when `False`, uses Django's built-in `send_mail` (for local testing)
 - Log the send in SendLog
 
-#### `send_newsletter(subject, html_content, text_content, post_url)`
+#### `send_newsletter(subject, html_content, text_content, post_url, sent_post)`
 
 - Queries all `confirmed` subscribers
 - For each subscriber, sends an email via SES with:
@@ -173,8 +174,10 @@ The utility module `newsletter/email.py` was created in Phase 2 with Django's bu
   - A `List-Unsubscribe-Post` header: `List-Unsubscribe=One-Click`
   - Both HTML and plain text MIME parts
 - Use `send_raw_email` to set custom headers (the simpler `send_email` API doesn't support `List-Unsubscribe`)
-- Send in batches with appropriate pacing (SES default rate is 14/second in production mode)
+- Send with pacing of ~10/sec (`time.sleep(0.1)`) to stay comfortably under SES's 14/sec default rate limit
+- Log each send/error in SendLog, linked to the `sent_post` parameter
 - Return count of successful sends
+- When `NEWSLETTER_USE_SES` is `False`, uses Django's `EmailMultiAlternatives` with the same custom headers (feature-parity fallback for testing)
 
 ### Email Templates
 
@@ -188,12 +191,12 @@ Simple and professional. Include:
 
 #### Newsletter Email
 
-- Post title as the email subject (or "DTRaleigh: {post title}")
-- The blog post content (from RSS `description` or `content:encoded`)
-- A "Read on the web" link to the original post
-- Footer with: unsubscribe link, the physical mailing address (CAN-SPAM requirement — site owner will provide), and a brief identifier like "You're receiving this because you subscribed at dtraleigh.com"
+Implemented as Django templates rendered per-subscriber by `send_newsletter()`:
 
-For HTML email formatting: use table-based layout for maximum client compatibility. Keep it simple — a single-column layout with basic styling is fine. Avoid relying on CSS that email clients strip (floats, flexbox, grid, external stylesheets). Inline all CSS.
+- **`newsletter/templates/newsletter/email/newsletter.html`** — Table-based single-column layout (600px max width), all CSS inline. Includes `{{ html_content|safe }}` slot for blog post content, "Read on the web" button linking to `{{ post_url }}`, and footer with unsubscribe link, `NEWSLETTER_MAILING_ADDRESS`, and "you subscribed" note.
+- **`newsletter/templates/newsletter/email/newsletter.txt`** — Plain text equivalent with the same template variables.
+
+The `send_newsletter()` function renders these templates per subscriber, injecting their personalized unsubscribe URL. The email subject uses the post title directly (Phase 4 management command provides it).
 
 ---
 
@@ -272,6 +275,7 @@ These steps are done in the AWS Console or CLI, not by the Django app:
    - `NEWSLETTER_FROM_EMAIL`
    - `NEWSLETTER_BASE_URL`
    - `NEWSLETTER_SEND_ALL_NEW` (optional, defaults to `True`)
+   - `NEWSLETTER_MAILING_ADDRESS` (CAN-SPAM physical address for email footer)
 9. **Set up the cron job** on Opalstack for the `send_newsletter` management command.
 
 ---
@@ -282,9 +286,23 @@ Execute these phases in order. Each phase is independently testable.
 
 1. **Phase 1**: Models and admin — verify you can create and manage subscribers in the admin.
 2. **Phase 2**: Views, templates, forms, email helper, and URL configuration. Includes `django-ratelimit` for subscribe throttling, `NEWSLETTER_USE_SES` toggle (defaults to `False` to use Django's built-in email for testing), bounced-subscriber handling, and a placeholder `ses-webhook/` endpoint. Verify the signup form works, confirmation links work, unsubscribe links work.
-3. **Phase 3**: SES integration — wire up the confirmation email. Test with a real email address in SES sandbox mode (you can verify individual addresses in sandbox).
+3. **Phase 3**: SES integration — adds boto3/SES send path gated by `NEWSLETTER_USE_SES`, `send_newsletter()` function with per-subscriber personalization (unsubscribe links via Django email templates), `NEWSLETTER_MAILING_ADDRESS` setting, and Django `EmailMultiAlternatives` fallback for testing. Test with a real email address in SES sandbox mode (you can verify individual addresses in sandbox).
 4. **Phase 4**: RSS poller — test with `manage.py send_newsletter` manually. Verify it detects new posts and sends.
 5. **Phase 5**: Bounce webhook — deploy and test by sending to a known-bad address.
+
+---
+
+## Go Live Checklist
+
+Before enabling the newsletter for real subscribers, ensure all of these are complete:
+
+- [ ] **Set `NEWSLETTER_MAILING_ADDRESS`** — CAN-SPAM requires a valid physical postal address in every marketing email. A PO Box is acceptable. Update the env var to replace the placeholder.
+- [ ] **Set `NEWSLETTER_USE_SES=True`** — Switch from Django's built-in email to SES for production sending.
+- [ ] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES).
+- [ ] **Complete AWS Setup Checklist** (see section above) — domain verification, DKIM, SES production access, IAM user, SNS topic, webhook subscription.
+- [ ] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
+- [ ] **Test end-to-end** in SES sandbox mode — subscribe, confirm, receive a newsletter, unsubscribe, verify bounce webhook.
+- [ ] **Request SES production access** — Move out of sandbox to send to unverified addresses.
 
 ---
 
@@ -293,5 +311,5 @@ Execute these phases in order. Each phase is independently testable.
 - The site owner's existing Django project structure should be respected. Examine the project layout before creating files.
 - Use the project's existing database backend (likely PostgreSQL on Opalstack, but confirm).
 - Follow the project's existing patterns for settings, URL includes, and template structure.
-- The CAN-SPAM physical mailing address is a placeholder the site owner will fill in.
+- The CAN-SPAM physical mailing address is configured via `NEWSLETTER_MAILING_ADDRESS` setting — must be updated before go-live (see Go Live Checklist).
 - For HTML email templates, start simple. A plain single-column table layout with inline CSS is sufficient. Fancy design can come later.
