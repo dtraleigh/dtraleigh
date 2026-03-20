@@ -133,6 +133,7 @@ Add to requirements:
 boto3
 feedparser
 django-ratelimit  (already added in Phase 2)
+cryptography      (used in Phase 5 for SNS signature verification)
 ```
 
 ### Django Settings
@@ -266,7 +267,7 @@ SES publishes bounce and complaint notifications to an SNS topic. The SNS topic 
   1. **SubscriptionConfirmation**: When first setting up, SNS sends a confirmation. The view should fetch the `SubscribeURL` from the payload to confirm the subscription. This can be done automatically with a GET request to that URL.
   2. **Notification** with bounce: Parse the bounced email address(es) from the SES bounce notification JSON. Set matching subscriber(s) to `bounced` status. Log in SendLog.
   3. **Notification** with complaint: Parse the complained email address(es). Set matching subscriber(s) to `unsubscribed` status. Log in SendLog.
-- Verify the SNS message signature to prevent spoofed requests. The `boto3` library doesn't do this directly — you'll need to verify the signing certificate URL is from `sns.amazonaws.com`, fetch the cert, and validate the signature. Alternatively, use the `python-certvalidator` package or implement manual verification.
+- Verify the SNS message signature to prevent spoofed requests. The `boto3` library doesn't do this directly — implemented in `newsletter/sns.py` using the `cryptography` library: validates the `SigningCertURL` domain (`sns.<region>.amazonaws.com`), fetches and caches the X.509 certificate, builds the canonical signing string per the SNS spec, and verifies the RSA signature (SHA1 for SignatureVersion 1, SHA256 for SignatureVersion 2).
 - Return 200 OK for all handled messages.
 
 ---

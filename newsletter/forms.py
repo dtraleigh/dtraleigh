@@ -9,6 +9,9 @@ class SubscribeForm(forms.Form):
             "placeholder": "you@example.com",
         }),
     )
+    def clean_email(self):
+        return self.cleaned_data["email"].lower()
+
     # Honeypot field — should remain empty. Bots tend to fill it in.
     website = forms.CharField(
         required=False,

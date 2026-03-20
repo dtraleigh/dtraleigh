@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 from datetime import timedelta
@@ -30,6 +31,11 @@ class SubscribeFormTest(SimpleTestCase):
     def test_honeypot_field_not_required(self):
         form = SubscribeForm(data={"email": "test@example.com"})
         self.assertTrue(form.is_valid())
+
+    def test_email_normalized_to_lowercase(self):
+        form = SubscribeForm(data={"email": "Test@EXAMPLE.com", "website": ""})
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["email"], "test@example.com")
 
 
 @override_settings(RATELIMIT_ENABLE=False)
@@ -540,3 +546,230 @@ class SendNewsletterCommandTest(TestCase):
         mock_send.assert_not_called()
         failed_post.refresh_from_db()
         self.assertEqual(failed_post.recipient_count, 0)
+
+
+def _make_sns_payload(message_type, message_body, sns_type="Notification"):
+    """Build a minimal SNS payload dict for testing."""
+    return {
+        "Type": sns_type,
+        "MessageId": str(uuid.uuid4()),
+        "TopicArn": "arn:aws:sns:us-east-1:123456789:test-topic",
+        "Message": json.dumps(message_body) if isinstance(message_body, dict) else message_body,
+        "Timestamp": "2026-03-19T12:00:00.000Z",
+        "SignatureVersion": "1",
+        "Signature": "dGVzdA==",
+        "SigningCertURL": "https://sns.us-east-1.amazonaws.com/test.pem",
+    }
+
+
+def _make_bounce_payload(email_address):
+    """Build an SNS payload containing an SES bounce notification."""
+    return _make_sns_payload(
+        message_type="Notification",
+        message_body={
+            "notificationType": "Bounce",
+            "bounce": {
+                "bouncedRecipients": [{"emailAddress": email_address}],
+                "bounceType": "Permanent",
+            },
+        },
+    )
+
+
+def _make_complaint_payload(email_address):
+    """Build an SNS payload containing an SES complaint notification."""
+    return _make_sns_payload(
+        message_type="Notification",
+        message_body={
+            "notificationType": "Complaint",
+            "complaint": {
+                "complainedRecipients": [{"emailAddress": email_address}],
+            },
+        },
+    )
+
+
+class SESWebhookTest(TestCase):
+    """Tests for the SES bounce/complaint webhook via SNS."""
+
+    @patch("newsletter.views.verify_sns_signature", return_value=True)
+    @patch("newsletter.views.requests.get")
+    def test_handles_subscription_confirmation(self, mock_get, mock_verify):
+        subscribe_url = "https://sns.us-east-1.amazonaws.com/confirm?token=abc"
+        payload = _make_sns_payload(
+            message_type="SubscriptionConfirmation",
+            message_body="You have chosen to subscribe",
+            sns_type="SubscriptionConfirmation",
+        )
+        payload["SubscribeURL"] = subscribe_url
+        payload["Token"] = "abc123"
+
+        response = self.client.post(
+            "/newsletter/ses-webhook/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_AMZ_SNS_MESSAGE_TYPE="SubscriptionConfirmation",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_get.assert_called_once_with(subscribe_url, timeout=10)
+
+    @patch("newsletter.views.verify_sns_signature", return_value=True)
+    def test_processes_bounce_notification(self, mock_verify):
+        subscriber = Subscriber.objects.create(
+            email="bounce@example.com", status=Subscriber.STATUS_CONFIRMED
+        )
+        payload = _make_bounce_payload("bounce@example.com")
+
+        response = self.client.post(
+            "/newsletter/ses-webhook/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_AMZ_SNS_MESSAGE_TYPE="Notification",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.STATUS_BOUNCED)
+        self.assertIsNotNone(subscriber.bounced_at)
+        log = SendLog.objects.get(subscriber=subscriber)
+        self.assertEqual(log.event_type, SendLog.EVENT_BOUNCE)
+
+    @patch("newsletter.views.verify_sns_signature", return_value=True)
+    def test_processes_complaint_notification(self, mock_verify):
+        subscriber = Subscriber.objects.create(
+            email="complainer@example.com", status=Subscriber.STATUS_CONFIRMED
+        )
+        payload = _make_complaint_payload("complainer@example.com")
+
+        response = self.client.post(
+            "/newsletter/ses-webhook/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_AMZ_SNS_MESSAGE_TYPE="Notification",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.STATUS_UNSUBSCRIBED)
+        self.assertIsNotNone(subscriber.unsubscribed_at)
+        log = SendLog.objects.get(subscriber=subscriber)
+        self.assertEqual(log.event_type, SendLog.EVENT_COMPLAINT)
+
+    @patch("newsletter.views.verify_sns_signature", return_value=False)
+    def test_rejects_invalid_signature(self, mock_verify):
+        subscriber = Subscriber.objects.create(
+            email="test@example.com", status=Subscriber.STATUS_CONFIRMED
+        )
+        payload = _make_bounce_payload("test@example.com")
+
+        response = self.client.post(
+            "/newsletter/ses-webhook/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_AMZ_SNS_MESSAGE_TYPE="Notification",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.STATUS_CONFIRMED)
+        self.assertFalse(SendLog.objects.exists())
+
+    @patch("newsletter.views.verify_sns_signature", return_value=True)
+    def test_returns_200_for_unmatched_bounce_email(self, mock_verify):
+        payload = _make_bounce_payload("unknown@example.com")
+
+        response = self.client.post(
+            "/newsletter/ses-webhook/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_AMZ_SNS_MESSAGE_TYPE="Notification",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SendLog.objects.exists())
+
+
+class SNSVerificationTest(SimpleTestCase):
+    """Unit tests for SNS signature verification helpers."""
+
+    def test_build_canonical_message_notification(self):
+        from newsletter.sns import _build_canonical_message
+
+        body = {
+            "Type": "Notification",
+            "MessageId": "msg-123",
+            "TopicArn": "arn:aws:sns:us-east-1:123:topic",
+            "Message": "Hello",
+            "Timestamp": "2026-03-19T12:00:00.000Z",
+            "Subject": "Test Subject",
+        }
+        result = _build_canonical_message(body)
+        expected = (
+            "Message\nHello\n"
+            "MessageId\nmsg-123\n"
+            "Subject\nTest Subject\n"
+            "Timestamp\n2026-03-19T12:00:00.000Z\n"
+            "TopicArn\narn:aws:sns:us-east-1:123:topic\n"
+            "Type\nNotification\n"
+        )
+        self.assertEqual(result, expected)
+
+    def test_build_canonical_message_notification_without_subject(self):
+        from newsletter.sns import _build_canonical_message
+
+        body = {
+            "Type": "Notification",
+            "MessageId": "msg-123",
+            "TopicArn": "arn:aws:sns:us-east-1:123:topic",
+            "Message": "Hello",
+            "Timestamp": "2026-03-19T12:00:00.000Z",
+        }
+        result = _build_canonical_message(body)
+        # Subject should be omitted entirely when not present
+        self.assertNotIn("Subject", result)
+
+    def test_build_canonical_message_subscription_confirmation(self):
+        from newsletter.sns import _build_canonical_message
+
+        body = {
+            "Type": "SubscriptionConfirmation",
+            "MessageId": "msg-456",
+            "TopicArn": "arn:aws:sns:us-east-1:123:topic",
+            "Message": "Confirm",
+            "Timestamp": "2026-03-19T12:00:00.000Z",
+            "SubscribeURL": "https://sns.us-east-1.amazonaws.com/confirm",
+            "Token": "token-abc",
+        }
+        result = _build_canonical_message(body)
+        expected = (
+            "Message\nConfirm\n"
+            "MessageId\nmsg-456\n"
+            "SubscribeURL\nhttps://sns.us-east-1.amazonaws.com/confirm\n"
+            "Timestamp\n2026-03-19T12:00:00.000Z\n"
+            "Token\ntoken-abc\n"
+            "TopicArn\narn:aws:sns:us-east-1:123:topic\n"
+            "Type\nSubscriptionConfirmation\n"
+        )
+        self.assertEqual(result, expected)
+
+    def test_validate_cert_url_rejects_non_https(self):
+        from newsletter.sns import _validate_cert_url
+
+        self.assertFalse(_validate_cert_url("http://sns.us-east-1.amazonaws.com/cert.pem"))
+
+    def test_validate_cert_url_rejects_non_amazonaws(self):
+        from newsletter.sns import _validate_cert_url
+
+        self.assertFalse(_validate_cert_url("https://evil.example.com/cert.pem"))
+
+    def test_validate_cert_url_rejects_non_pem(self):
+        from newsletter.sns import _validate_cert_url
+
+        self.assertFalse(_validate_cert_url("https://sns.us-east-1.amazonaws.com/cert.txt"))
+
+    def test_validate_cert_url_accepts_valid(self):
+        from newsletter.sns import _validate_cert_url
+
+        self.assertTrue(_validate_cert_url("https://sns.us-east-1.amazonaws.com/cert.pem"))
+        self.assertTrue(_validate_cert_url("https://sns.eu-west-1.amazonaws.com/path/to/cert.pem"))

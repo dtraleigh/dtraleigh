@@ -1,6 +1,8 @@
+import json
 import logging
 import uuid
 
+import requests
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -10,7 +12,8 @@ from django_ratelimit.decorators import ratelimit
 
 from .email import send_confirmation_email
 from .forms import SubscribeForm
-from .models import Subscriber
+from .models import SendLog, Subscriber
+from .sns import verify_sns_signature
 
 logger = logging.getLogger(__name__)
 
@@ -112,5 +115,77 @@ def unsubscribe(request, token):
 @csrf_exempt
 @require_POST
 def ses_webhook(request):
-    """Placeholder for Phase 5: SES bounce/complaint webhook via SNS."""
+    """Handle SES bounce/complaint notifications delivered via SNS."""
+    try:
+        payload = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return HttpResponse(status=400)
+
+    if not verify_sns_signature(payload):
+        logger.warning("SNS signature verification failed for ses-webhook request")
+        return HttpResponse(status=403)
+
+    message_type = request.headers.get("x-amz-sns-message-type", "")
+
+    if message_type == "SubscriptionConfirmation":
+        subscribe_url = payload.get("SubscribeURL")
+        if subscribe_url:
+            try:
+                requests.get(subscribe_url, timeout=10)
+                logger.info("Confirmed SNS subscription: %s", payload.get("TopicArn"))
+            except Exception:
+                logger.error("Failed to confirm SNS subscription", exc_info=True)
+        return HttpResponse(status=200)
+
+    if message_type == "Notification":
+        try:
+            message = json.loads(payload.get("Message", "{}"))
+        except (json.JSONDecodeError, ValueError):
+            logger.warning("Failed to parse SNS notification Message")
+            return HttpResponse(status=200)
+
+        notification_type = message.get("notificationType")
+        if notification_type == "Bounce":
+            _process_bounce(message)
+        elif notification_type == "Complaint":
+            _process_complaint(message)
+
     return HttpResponse(status=200)
+
+
+def _process_bounce(message):
+    """Mark bounced subscribers and log the event."""
+    recipients = message.get("bounce", {}).get("bouncedRecipients", [])
+    for recipient in recipients:
+        email_addr = recipient.get("emailAddress", "").lower()
+        try:
+            subscriber = Subscriber.objects.get(email__iexact=email_addr)
+            subscriber.status = Subscriber.STATUS_BOUNCED
+            subscriber.bounced_at = timezone.now()
+            subscriber.save(update_fields=["status", "bounced_at"])
+            SendLog.objects.create(
+                subscriber=subscriber,
+                event_type=SendLog.EVENT_BOUNCE,
+                detail=f"Bounce for {email_addr}",
+            )
+        except Subscriber.DoesNotExist:
+            logger.info("Bounce for unknown email: %s", email_addr)
+
+
+def _process_complaint(message):
+    """Mark complained subscribers as unsubscribed and log the event."""
+    recipients = message.get("complaint", {}).get("complainedRecipients", [])
+    for recipient in recipients:
+        email_addr = recipient.get("emailAddress", "").lower()
+        try:
+            subscriber = Subscriber.objects.get(email__iexact=email_addr)
+            subscriber.status = Subscriber.STATUS_UNSUBSCRIBED
+            subscriber.unsubscribed_at = timezone.now()
+            subscriber.save(update_fields=["status", "unsubscribed_at"])
+            SendLog.objects.create(
+                subscriber=subscriber,
+                event_type=SendLog.EVENT_COMPLAINT,
+                detail=f"Complaint for {email_addr}",
+            )
+        except Subscriber.DoesNotExist:
+            logger.info("Complaint for unknown email: %s", email_addr)
