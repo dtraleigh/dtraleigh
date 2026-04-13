@@ -272,30 +272,31 @@ SES publishes bounce and complaint notifications to an SNS topic. The SNS topic 
 
 ---
 
-## AWS Setup Checklist (Manual Steps for Site Owner)
+## AWS Setup (Completed 2026-04-13)
 
-These steps are done in the AWS Console or CLI, not by the Django app:
+### Account structure
 
-1. **Verify domain in SES**: Add your sending domain and configure the three DKIM CNAME records in your DNS.
-2. **Request SES production access**: Move out of sandbox mode. Describe use case as "double opt-in blog newsletter."
-3. **Create IAM user**: Create a user with programmatic access. Attach a policy scoped to:
-   - `ses:SendEmail`
-   - `ses:SendRawEmail`
-   - Save the access key and secret for Django settings.
-4. **Create SNS topic**: Name it something like `dtraleigh-ses-notifications`.
-5. **Configure SES notifications**: In SES, set bounce and complaint notifications to publish to the SNS topic.
-6. **Create SNS subscription**: Add an HTTPS subscription pointing to `https://apps.dtraleigh.com/newsletter/ses-webhook/`. Deploy the webhook view first so it can handle the confirmation request.
-7. **DNS records**: Add SPF, DKIM (from SES), and DMARC records to your domain's DNS.
-8. **Configure environment variables** on Opalstack for the Django app:
-   - `NEWSLETTER_USE_SES=True` (must be set to `True` for production SES sending)
-   - `AWS_SES_ACCESS_KEY_ID`
-   - `AWS_SES_SECRET_ACCESS_KEY`
-   - `AWS_SES_REGION`
-   - `NEWSLETTER_FROM_EMAIL`
-   - `NEWSLETTER_BASE_URL`
-   - `NEWSLETTER_SEND_ALL_NEW` (optional, defaults to `True`)
-   - `NEWSLETTER_MAILING_ADDRESS` (CAN-SPAM physical address for email footer)
-9. **Set up the cron job** on Opalstack for the `send_newsletter` management command.
+- **Root account** — used only for IAM permission management.
+- **`dtraleigh` IAM user** — used for all AWS console/CLI setup work. Granted `AmazonSESFullAccess` (managed policy) and an inline policy for SNS setup permissions during initial configuration. These setup permissions should be removed after go-live.
+- **`dtraleigh-newsletter-app` IAM user** — programmatic-only user whose credentials the Django app uses. Has a single inline policy scoped to `ses:SendEmail` and `ses:SendRawEmail` only.
+
+### What was configured
+
+1. **SES domain identity** — `dtraleigh.com` verified with Easy DKIM (2048-bit). Three DKIM CNAME records added to DNS. Identity status: Verified, DKIM: Successful.
+2. **DNS records** — DKIM CNAMEs added. SPF TXT record updated to include `include:amazonses.com`. DMARC consolidated to a single `_dmarc` TXT record with `p=none` and `rua` reporting to `dmarc_agg@vali.email`. Subdomain `_dmarc.community` record left untouched (scoped to `community.dtraleigh.com`).
+3. **SNS topic** — `dtraleigh-ses-notifications` (Standard) in `us-east-1`. ARN: `arn:aws:sns:us-east-1:649503295188:dtraleigh-ses-notifications`.
+4. **SES → SNS notifications** — Bounce and complaint notifications for `dtraleigh.com` routed to the SNS topic via `aws ses set-identity-notification-topic`. Email feedback forwarding disabled.
+5. **SNS → webhook subscription** — HTTPS subscription to `https://apps.dtraleigh.com/newsletter/ses-webhook/`. Status: Confirmed (auto-confirmed by the Django `ses_webhook` view).
+6. **SES production access** — Requested (marketing mail type). Pending approval.
+7. **Environment variables** — Set on Opalstack: `NEWSLETTER_USE_SES=True`, `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY`, `AWS_SES_REGION=us-east-1`, `NEWSLETTER_FROM_EMAIL=newsletter@dtraleigh.com`, `NEWSLETTER_BASE_URL=https://apps.dtraleigh.com`.
+8. **Existing posts seeded** — `manage.py send_newsletter --seed` run on production. All current RSS entries marked as already-sent.
+9. **End-to-end test** — Subscribe, confirm, and newsletter send verified via SES sandbox with `cophead567@gmail.com` as a verified recipient.
+
+### Post-go-live cleanup
+
+Once the newsletter is running in production, remove the setup permissions from the `dtraleigh` IAM user:
+- Detach the `AmazonSESFullAccess` managed policy.
+- Delete the inline policy containing the SNS setup permissions.
 
 ---
 
@@ -315,15 +316,18 @@ Execute these phases in order. Each phase is independently testable.
 
 Before enabling the newsletter for real subscribers, ensure all of these are complete:
 
+- [x] **Set `NEWSLETTER_USE_SES=True`** — Switch from Django's built-in email to SES for production sending.
+- [x] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES). Set to `newsletter@dtraleigh.com`.
+- [x] **Complete AWS setup** (see section above) — domain verification, DKIM, IAM users, SNS topic, webhook subscription.
+- [x] **Seed existing posts** — Run `manage.py send_newsletter --seed` to mark current feed entries as already-sent.
+- [x] **Test end-to-end** in SES sandbox mode — subscribe, confirm, receive a newsletter via SES.
+- [x] **Request SES production access** — Requested 2026-04-13. Approved same day.
 - [ ] **Set `NEWSLETTER_MAILING_ADDRESS`** — CAN-SPAM requires a valid physical postal address in every marketing email. A PO Box is acceptable. Update the env var to replace the placeholder.
-- [ ] **Set `NEWSLETTER_USE_SES=True`** — Switch from Django's built-in email to SES for production sending.
-- [ ] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES).
-- [ ] **Complete AWS Setup Checklist** (see section above) — domain verification, DKIM, SES production access, IAM user, SNS topic, webhook subscription.
-- [ ] **Seed existing posts** — Run `manage.py send_newsletter --seed` to mark current feed entries as already-sent before enabling the cron job.
-- [ ] **Verify admin email logging** — Ensure Django's `ADMINS` setting and email logging handler are configured so that `logger.warning()` calls (e.g., abandoned newsletter sends) trigger admin email notifications.
+- [x] **SES production access approved** — Approved 2026-04-13. Can now send to any address.
 - [ ] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
-- [ ] **Test end-to-end** in SES sandbox mode — subscribe, confirm, receive a newsletter, unsubscribe, verify bounce webhook.
-- [ ] **Request SES production access** — Move out of sandbox to send to unverified addresses.
+- [ ] **Add a subscribe link** — No page currently links to `/newsletter/subscribe/`. Add a visible link or widget on the site.
+- [ ] **Clean up IAM setup permissions** — Detach `AmazonSESFullAccess` and delete the SNS inline policy from the `dtraleigh` IAM user.
+- [ ] **Verify admin email logging** — Ensure Django's logging config routes `newsletter` logger warnings (e.g., abandoned sends) to `AdminEmailHandler` so they email `ADMINS`. Currently only the `django` logger is configured in `myproject/settings.py`.
 
 ---
 

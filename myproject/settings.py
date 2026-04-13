@@ -136,7 +136,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = False
 FILE_UPLOAD_PERMISSIONS = 0o664
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
@@ -179,12 +179,25 @@ LOGGING = {
             "maxBytes": 50 * 1024 * 1024,  # 50MB
             "backupCount": 0,  # No backup files - delete old logs
         },
+        "newsletter_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "newsletter-debug.txt",
+            "formatter": "verbose",
+            "maxBytes": 50 * 1024 * 1024,  # 50MB
+            "backupCount": 0,
+        },
     },
     "loggers": {
         "django": {
             "handlers": ["file"],
             "level": "INFO",
             "propagate": True,
+        },
+        "newsletter": {
+            "handlers": ["newsletter_file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }

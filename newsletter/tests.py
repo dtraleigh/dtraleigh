@@ -358,9 +358,10 @@ class SendNewsletterCommandTest(TestCase):
         self.assertEqual(SentPost.objects.count(), 2)
         self.assertTrue(SentPost.objects.filter(guid="guid-1").exists())
         self.assertTrue(SentPost.objects.filter(guid="guid-2").exists())
-        # recipient_count should be 0 for seeded posts
+        # recipient_count should be 0 for seeded posts, and seeded flag set
         for sp in SentPost.objects.all():
             self.assertEqual(sp.recipient_count, 0)
+            self.assertTrue(sp.seeded)
         mock_send.assert_not_called()
 
     @patch("newsletter.management.commands.send_newsletter.send_newsletter")
@@ -396,8 +397,8 @@ class SendNewsletterCommandTest(TestCase):
         self.assertEqual(sent_post.recipient_count, 3)
         mock_send.assert_called_once()
         call_args = mock_send.call_args[0]
-        self.assertEqual(call_args[0], "New Post")  # subject
-        self.assertIn("<p>Content</p>", call_args[1])  # html_content
+        self.assertEqual(call_args[0], "DTRaleigh: New Post")  # subject
+        self.assertIn("<p>Content</p>", call_args[1])  # html_content (preview)
         self.assertIn("Content", call_args[2])  # text_content (stripped)
         self.assertNotIn("<p>", call_args[2])  # no HTML tags in text
         self.assertEqual(call_args[3], "https://dtraleigh.com/new-post/")  # post_url
@@ -433,6 +434,63 @@ class SendNewsletterCommandTest(TestCase):
 
     @patch("newsletter.management.commands.send_newsletter.send_newsletter")
     @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_seeded_post_is_not_retried(self, mock_parse, mock_send):
+        # A row with recipient_count=0 but seeded=True must NOT be treated as
+        # a failed-send retry. Without this guard, --seed followed by adding
+        # confirmed subscribers within 24h would mail every seeded post.
+        SentPost.objects.create(
+            guid="guid-seeded", title="Seeded Post",
+            recipient_count=0, seeded=True,
+        )
+        entry = _make_feed_entry(guid="guid-seeded", title="Seeded Post")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        mock_send.assert_not_called()
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_seeded_post_past_cutoff_is_not_abandoned(self, mock_parse, mock_send):
+        # Seeded rows older than 24h must not trigger the "abandoning" warning
+        # path either — they should be silently ignored as already-sent.
+        seeded_post = SentPost.objects.create(
+            guid="guid-old-seed", title="Old Seed",
+            recipient_count=0, seeded=True,
+        )
+        SentPost.objects.filter(pk=seeded_post.pk).update(
+            sent_at=timezone.now() - timedelta(hours=25)
+        )
+        entry = _make_feed_entry(guid="guid-old-seed", title="Old Seed")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        with self.assertNoLogs("newsletter.management.commands.send_newsletter", level="WARNING"):
+            call_command("send_newsletter")
+
+        mock_send.assert_not_called()
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_seed_does_not_flip_existing_failed_send_to_seeded(self, mock_parse, mock_send):
+        # A pre-existing failed-send row (count=0, seeded=False) must NOT be
+        # silently converted into a seed marker by re-running --seed. The
+        # failed-send retry path should remain intact.
+        failed_post = SentPost.objects.create(
+            guid="guid-failed", title="Failed Post", recipient_count=0
+        )
+        entry = _make_feed_entry(guid="guid-failed", title="Failed Post")
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter", "--seed")
+
+        failed_post.refresh_from_db()
+        self.assertFalse(failed_post.seeded)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
     def test_multiple_entries_sent_oldest_first(self, mock_parse, mock_send):
         mock_send.return_value = 1
         older = _make_feed_entry(guid="guid-old", title="Old Post",
@@ -447,10 +505,10 @@ class SendNewsletterCommandTest(TestCase):
 
         self.assertEqual(mock_send.call_count, 2)
         # First call should be the older post
-        first_title = mock_send.call_args_list[0][0][0]
-        second_title = mock_send.call_args_list[1][0][0]
-        self.assertEqual(first_title, "Old Post")
-        self.assertEqual(second_title, "New Post")
+        first_subject = mock_send.call_args_list[0][0][0]
+        second_subject = mock_send.call_args_list[1][0][0]
+        self.assertEqual(first_subject, "DTRaleigh: Old Post")
+        self.assertEqual(second_subject, "DTRaleigh: New Post")
 
     @patch("newsletter.management.commands.send_newsletter.send_newsletter")
     @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
@@ -467,8 +525,8 @@ class SendNewsletterCommandTest(TestCase):
         call_command("send_newsletter")
 
         mock_send.assert_called_once()
-        sent_title = mock_send.call_args[0][0]
-        self.assertEqual(sent_title, "New Post")
+        sent_subject = mock_send.call_args[0][0]
+        self.assertEqual(sent_subject, "DTRaleigh: New Post")
 
     @patch("newsletter.management.commands.send_newsletter.send_newsletter")
     @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
@@ -530,6 +588,27 @@ class SendNewsletterCommandTest(TestCase):
         self.assertIn("world", text_arg)
         self.assertNotIn("<p>", text_arg)
         self.assertNotIn("<strong>", text_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_plain_text_decodes_html_entities(self, mock_parse, mock_send):
+        # WordPress RSS content:encoded contains entities like &#8217; for
+        # curly apostrophes. strip_tags alone leaves them literal in plain
+        # text; the command must also html.unescape() the result.
+        mock_send.return_value = 1
+        entry = _make_feed_entry(
+            guid="guid-1", title="Post",
+            html_content="<p>It&#8217;s a test &amp; an example</p>",
+        )
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        text_arg = mock_send.call_args[0][2]
+        self.assertIn("It\u2019s a test & an example", text_arg)
+        self.assertNotIn("&#8217;", text_arg)
+        self.assertNotIn("&amp;", text_arg)
 
     @patch("newsletter.management.commands.send_newsletter.send_newsletter")
     @patch("newsletter.management.commands.send_newsletter.feedparser.parse")

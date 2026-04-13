@@ -1,6 +1,6 @@
 {{ text_content }}
 
-Read on the web: {{ post_url }}
+Continue reading on DTRaleigh: {{ post_url }}
 
 ---
 

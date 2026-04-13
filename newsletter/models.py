@@ -35,6 +35,7 @@ class SentPost(models.Model):
     title = models.CharField(max_length=500)
     sent_at = models.DateTimeField(auto_now_add=True)
     recipient_count = models.IntegerField(default=0)
+    seeded = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.title} ({self.sent_at.strftime('%Y-%m-%d')})"

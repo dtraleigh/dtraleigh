@@ -1,7 +1,9 @@
+import html
 import logging
 from datetime import timedelta
 
 import feedparser
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -45,7 +47,11 @@ class Command(BaseCommand):
             guid = self._get_guid(entry)
             _, created = SentPost.objects.get_or_create(
                 guid=guid,
-                defaults={"title": entry.get("title", ""), "recipient_count": 0},
+                defaults={
+                    "title": entry.get("title", ""),
+                    "recipient_count": 0,
+                    "seeded": True,
+                },
             )
             if created:
                 created_count += 1
@@ -62,6 +68,9 @@ class Command(BaseCommand):
             guid = self._get_guid(entry)
             try:
                 sent_post = SentPost.objects.get(guid=guid)
+                if sent_post.seeded:
+                    # Seeded marker — treat as already sent, never retry.
+                    continue
                 if sent_post.recipient_count == 0:
                     if sent_post.sent_at >= cutoff:
                         # Failed previous attempt within cutoff — retry
@@ -90,8 +99,10 @@ class Command(BaseCommand):
         for entry in new_entries:
             guid = self._get_guid(entry)
             title = entry.get("title", "Untitled")
-            html_content = self._get_html_content(entry)
-            text_content = strip_tags(html_content)
+            subject = f"DTRaleigh: {title}"
+            full_html = self._get_html_content(entry)
+            html_content = self._get_preview_content(full_html)
+            text_content = html.unescape(strip_tags(html_content))
             post_url = entry.get("link", "")
 
             # Create or retrieve SentPost before sending (idempotency guard)
@@ -102,7 +113,7 @@ class Command(BaseCommand):
                 )
 
             self.stdout.write(f"Sending newsletter for: {title}")
-            count = send_newsletter(title, html_content, text_content, post_url, sent_post)
+            count = send_newsletter(subject, html_content, text_content, post_url, sent_post)
 
             sent_post.recipient_count = count
             sent_post.save(update_fields=["recipient_count"])
@@ -110,6 +121,29 @@ class Command(BaseCommand):
 
     def _get_guid(self, entry):
         return entry.get("id") or entry.get("link", "")
+
+    def _get_preview_content(self, full_html):
+        """Extract the first image and first paragraph from blog post HTML."""
+        soup = BeautifulSoup(full_html, "html.parser")
+        parts = []
+
+        # Find the first image (may be inside a <figure> or standalone <img>)
+        first_img = soup.find("img")
+        if first_img:
+            # Include the parent <figure> if it exists (preserves caption/styling)
+            figure = first_img.find_parent("figure")
+            if figure:
+                parts.append(str(figure))
+            else:
+                parts.append(str(first_img))
+
+        # Find the first <p> with actual text content
+        for p in soup.find_all("p"):
+            if p.get_text(strip=True):
+                parts.append(str(p))
+                break
+
+        return "\n".join(parts) if parts else full_html
 
     def _get_html_content(self, entry):
         # feedparser stores content:encoded in entry.content
