@@ -8,3 +8,4 @@ buildings/geojson_files/*
 */fixtures/*
 fixtures/*
 */migrations/*
+.claude*
