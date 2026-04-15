@@ -146,7 +146,10 @@ EMAIL_TIMEOUT = 10
 
 # Newsletter configuration
 NEWSLETTER_USE_SES = env.bool("NEWSLETTER_USE_SES", default=False)
-NEWSLETTER_FROM_EMAIL = env("NEWSLETTER_FROM_EMAIL", default="newsletter@dtraleigh.com")
+NEWSLETTER_FROM_EMAIL = env(
+    "NEWSLETTER_FROM_EMAIL",
+    default="DTRaleigh Newsletter <newsletter@dtraleigh.com>",
+)
 NEWSLETTER_BASE_URL = env("NEWSLETTER_BASE_URL", default="https://apps.dtraleigh.com")
 NEWSLETTER_SEND_ALL_NEW = env.bool("NEWSLETTER_SEND_ALL_NEW", default=True)
 NEWSLETTER_MAILING_ADDRESS = env(

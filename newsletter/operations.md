@@ -24,34 +24,34 @@ In AWS Console: IAM > Users > `dtraleigh-newsletter-app` > Security credentials 
 
 ## Log Locations
 
-### Opalstack — cron output
+There are two separate log files for the newsletter app. Keep them separate — don't point the cron redirect at `newsletter-debug.txt` or you'll get rotation conflicts between the shell's append handle and Django's `RotatingFileHandler`.
 
-The cron job appends stdout/stderr to the log file specified in the crontab line:
+### `newsletter-debug.txt` — Django application log
+
+Project root (`~/apps/dtraleigh/myproject/newsletter-debug.txt`). Rotating file, 50MB max. Configured in `myproject/settings.py` under `LOGGING`. Captures log entries from:
+
+- `newsletter.email` (confirmation sent, send failures)
+- `newsletter.views` (webhook activity, SNS subscription confirmations)
+- `newsletter.sns` (signature verification failures)
+- `newsletter.management.commands.send_newsletter` (abandoned retry warnings)
+
+Format is timestamped/structured via the `verbose` formatter.
+
+### `newsletter-cron.txt` — cron stdout/stderr
+
+Project root (`~/apps/dtraleigh/myproject/newsletter-cron.txt`). Captures the `send_newsletter` management command's stdout ("Sending newsletter for: ...", "Sent to N subscribers", "No new posts found") plus any tracebacks or shell errors cron catches. This is appended to by the shell redirect in the crontab line and is **not** rotated automatically — watch its size over time and truncate/rotate manually if needed.
+
+### Cron line
 
 ```
->> /path/to/logs/newsletter.log 2>&1
+*/15 * * * * cd ~/apps/dtraleigh/myproject && ~/apps/dtraleigh/env/bin/python -W ignore manage.py send_newsletter >> ~/apps/dtraleigh/myproject/newsletter-cron.txt 2>&1
 ```
 
-This captures the management command's output: "Sending newsletter for: ...", "Sent to N subscribers", "No new posts found", etc.
+The `cd` matters: Django's `LOGGING` config uses a relative filename (`"newsletter-debug.txt"`), which resolves against the process's current working directory. Without `cd`, Django would write to `~/newsletter-debug.txt` instead of the project directory.
 
-### Django application logs
+### `debug.txt` — everything else
 
-- **`debug.txt`** — project root, rotating file (50MB max). Contains log entries from the `django` logger (all apps except newsletter).
-- **`newsletter-debug.txt`** — project root, rotating file (50MB max). Dedicated to the newsletter app. Contains all log entries from `newsletter.email`, `newsletter.views`, `newsletter.sns`, and `newsletter.management.commands.send_newsletter` at INFO level and above.
-
-Both are configured in `myproject/settings.py` under the `LOGGING` setting.
-
-### What gets logged where
-
-| Event | Logger | Level | Destination |
-|---|---|---|---|
-| Confirmation email sent | `newsletter.email` | INFO | Root logger (console/nowhere by default) |
-| Failed to send confirmation/newsletter | `newsletter.email` | ERROR | Root logger |
-| SNS signature verification failed | `newsletter.views`, `newsletter.sns` | WARNING | Root logger |
-| SNS subscription confirmed | `newsletter.views` | INFO | Root logger |
-| Bounce/complaint for unknown email | `newsletter.views` | INFO | Root logger |
-| Abandoned retry after 24h | `newsletter.management.commands.send_newsletter` | WARNING | Root logger |
-| All management command output | stdout | — | Cron log file |
+Project root. Rotating file, 50MB max. Contains log entries from the `django` logger (all other apps). Unrelated to newsletter operations — mentioned here only so you know it exists.
 
 ---
 

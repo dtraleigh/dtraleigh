@@ -143,7 +143,10 @@ Add these settings via `django-environ` (the project's existing env-var library 
 ```python
 # Newsletter configuration (added in Phase 2)
 NEWSLETTER_USE_SES = env.bool("NEWSLETTER_USE_SES", default=False)
-NEWSLETTER_FROM_EMAIL = env("NEWSLETTER_FROM_EMAIL", default="newsletter@dtraleigh.com")
+NEWSLETTER_FROM_EMAIL = env(
+    "NEWSLETTER_FROM_EMAIL",
+    default="DTRaleigh Newsletter <newsletter@dtraleigh.com>",
+)
 NEWSLETTER_BASE_URL = env("NEWSLETTER_BASE_URL", default="https://apps.dtraleigh.com")
 NEWSLETTER_SEND_ALL_NEW = env.bool("NEWSLETTER_SEND_ALL_NEW", default=True)
 NEWSLETTER_MAILING_ADDRESS = env("NEWSLETTER_MAILING_ADDRESS", default="DTRaleigh, Raleigh, NC [UPDATE BEFORE GO-LIVE]")
@@ -288,7 +291,7 @@ SES publishes bounce and complaint notifications to an SNS topic. The SNS topic 
 4. **SES → SNS notifications** — Bounce and complaint notifications for `dtraleigh.com` routed to the SNS topic via `aws ses set-identity-notification-topic`. Email feedback forwarding disabled.
 5. **SNS → webhook subscription** — HTTPS subscription to `https://apps.dtraleigh.com/newsletter/ses-webhook/`. Status: Confirmed (auto-confirmed by the Django `ses_webhook` view).
 6. **SES production access** — Requested (marketing mail type). Pending approval.
-7. **Environment variables** — Set on Opalstack: `NEWSLETTER_USE_SES=True`, `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY`, `AWS_SES_REGION=us-east-1`, `NEWSLETTER_FROM_EMAIL=newsletter@dtraleigh.com`, `NEWSLETTER_BASE_URL=https://apps.dtraleigh.com`.
+7. **Environment variables** — Set on Opalstack: `NEWSLETTER_USE_SES=True`, `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY`, `AWS_SES_REGION=us-east-1`, `NEWSLETTER_FROM_EMAIL=DTRaleigh Newsletter <newsletter@dtraleigh.com>`, `NEWSLETTER_BASE_URL=https://apps.dtraleigh.com`.
 8. **Existing posts seeded** — `manage.py send_newsletter --seed` run on production. All current RSS entries marked as already-sent.
 9. **End-to-end test** — Subscribe, confirm, and newsletter send verified via SES sandbox with `cophead567@gmail.com` as a verified recipient.
 
@@ -317,14 +320,14 @@ Execute these phases in order. Each phase is independently testable.
 Before enabling the newsletter for real subscribers, ensure all of these are complete:
 
 - [x] **Set `NEWSLETTER_USE_SES=True`** — Switch from Django's built-in email to SES for production sending.
-- [x] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES). Set to `newsletter@dtraleigh.com`.
+- [x] **Set `NEWSLETTER_FROM_EMAIL`** — Confirm the sending address (must be verified in SES). Use RFC 5322 `Display Name <address>` format so inboxes show a friendly sender name instead of the local part. Set to `DTRaleigh Newsletter <newsletter@dtraleigh.com>`.
 - [x] **Complete AWS setup** (see section above) — domain verification, DKIM, IAM users, SNS topic, webhook subscription.
 - [x] **Seed existing posts** — Run `manage.py send_newsletter --seed` to mark current feed entries as already-sent.
 - [x] **Test end-to-end** in SES sandbox mode — subscribe, confirm, receive a newsletter via SES.
 - [x] **Request SES production access** — Requested 2026-04-13. Approved same day.
-- [ ] **Set `NEWSLETTER_MAILING_ADDRESS`** — CAN-SPAM requires a valid physical postal address in every marketing email. A PO Box is acceptable. Update the env var to replace the placeholder.
+- [x] **Set `NEWSLETTER_MAILING_ADDRESS`** — CAN-SPAM requires a valid physical postal address in every marketing email. A PO Box is acceptable. Update the env var to replace the placeholder.
 - [x] **SES production access approved** — Approved 2026-04-13. Can now send to any address.
-- [ ] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
+- [x] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
 - [ ] **Add a subscribe link** — No page currently links to `/newsletter/subscribe/`. Add a visible link or widget on the site.
 - [ ] **Clean up IAM setup permissions** — Detach `AmazonSESFullAccess` and delete the SNS inline policy from the `dtraleigh` IAM user.
 - [ ] **Verify admin email logging** — Ensure Django's logging config routes `newsletter` logger warnings (e.g., abandoned sends) to `AdminEmailHandler` so they email `ADMINS`. Currently only the `django` logger is configured in `myproject/settings.py`.
