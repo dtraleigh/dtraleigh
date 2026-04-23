@@ -626,6 +626,67 @@ class SendNewsletterCommandTest(TestCase):
         failed_post.refresh_from_db()
         self.assertEqual(failed_post.recipient_count, 0)
 
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_youtube_iframe_converted_to_thumbnail(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        html_content = (
+            '<figure class="wp-block-embed is-type-video wp-block-embed-youtube">'
+            '<div class="wp-block-embed__wrapper">'
+            '<iframe src="https://www.youtube.com/embed/abc123XYZ" '
+            'width="730" height="411"></iframe>'
+            '</div></figure>'
+            '<p>Some text here.</p>'
+        )
+        entry = _make_feed_entry(guid="guid-yt", title="YT Post",
+                                 html_content=html_content)
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        html_arg = mock_send.call_args[0][1]
+        self.assertIn("img.youtube.com/vi/abc123XYZ/hqdefault.jpg", html_arg)
+        self.assertIn("youtube.com/watch?v=abc123XYZ", html_arg)
+        self.assertNotIn("<iframe", html_arg)
+        self.assertIn("Some text here.", html_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_image_takes_priority_over_youtube_iframe(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        html_content = (
+            '<img src="https://example.com/photo.jpg" />'
+            '<iframe src="https://www.youtube.com/embed/abc123XYZ"></iframe>'
+            '<p>Text content.</p>'
+        )
+        entry = _make_feed_entry(guid="guid-both", title="Both Post",
+                                 html_content=html_content)
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        html_arg = mock_send.call_args[0][1]
+        self.assertIn("example.com/photo.jpg", html_arg)
+        self.assertNotIn("img.youtube.com", html_arg)
+
+    @patch("newsletter.management.commands.send_newsletter.send_newsletter")
+    @patch("newsletter.management.commands.send_newsletter.feedparser.parse")
+    def test_no_image_no_youtube_returns_paragraph(self, mock_parse, mock_send):
+        mock_send.return_value = 1
+        html_content = "<p>Just a paragraph.</p>"
+        entry = _make_feed_entry(guid="guid-plain", title="Plain Post",
+                                 html_content=html_content)
+        mock_parse.return_value = _make_feed(entry)
+
+        from django.core.management import call_command
+        call_command("send_newsletter")
+
+        html_arg = mock_send.call_args[0][1]
+        self.assertIn("Just a paragraph.", html_arg)
+        self.assertNotIn("<img", html_arg)
+
 
 def _make_sns_payload(message_type, message_body, sns_type="Notification"):
     """Build a minimal SNS payload dict for testing."""

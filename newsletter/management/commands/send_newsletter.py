@@ -1,5 +1,6 @@
 import html
 import logging
+import re
 from datetime import timedelta
 
 import feedparser
@@ -136,6 +137,11 @@ class Command(BaseCommand):
                 parts.append(str(figure))
             else:
                 parts.append(str(first_img))
+        else:
+            # Fall back to YouTube embed thumbnail
+            youtube_thumb = self._get_youtube_thumbnail(soup)
+            if youtube_thumb:
+                parts.append(youtube_thumb)
 
         # Find the first <p> with actual text content
         for p in soup.find_all("p"):
@@ -144,6 +150,24 @@ class Command(BaseCommand):
                 break
 
         return "\n".join(parts) if parts else full_html
+
+    def _get_youtube_thumbnail(self, soup):
+        """Extract a YouTube video thumbnail as a clickable image from an iframe embed."""
+        iframe = soup.find("iframe", src=re.compile(r"youtube\.com/embed/"))
+        if not iframe:
+            return None
+        match = re.search(r"youtube\.com/embed/([\w-]+)", iframe.get("src", ""))
+        if not match:
+            return None
+        video_id = match.group(1)
+        thumb_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        return (
+            f'<a href="{video_url}" style="display:block;text-decoration:none;">'
+            f'<img src="{thumb_url}" alt="Watch video on YouTube" '
+            f'style="width:100%;max-width:600px;height:auto;display:block;" />'
+            f'</a>'
+        )
 
     def _get_html_content(self, entry):
         # feedparser stores content:encoded in entry.content
