@@ -1,6 +1,8 @@
 .env
 .idea*
 debug.txt
+newsletter-debug.txt
+newsletter-cron.txt
 static/*
 *.pyc
 archived_data/*

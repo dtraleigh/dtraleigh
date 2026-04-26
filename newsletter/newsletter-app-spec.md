@@ -51,6 +51,7 @@ Tracks which RSS entries have already been mailed to prevent duplicate sends.
 | `title` | CharField | max_length=500 |
 | `sent_at` | DateTimeField | auto_now_add |
 | `recipient_count` | IntegerField | how many confirmed subscribers received it |
+| `seeded` | BooleanField | default=False — `True` for rows created by `--seed`; distinguishes intentionally-skipped posts from failed sends so the 24h retry path doesn't re-mail them |
 
 #### SendLog
 
