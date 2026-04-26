@@ -281,7 +281,7 @@ SES publishes bounce and complaint notifications to an SNS topic. The SNS topic 
 ### Account structure
 
 - **Root account** — used only for IAM permission management.
-- **`dtraleigh` IAM user** — used for all AWS console/CLI setup work. Granted `AmazonSESFullAccess` (managed policy) and an inline policy for SNS setup permissions during initial configuration. These setup permissions should be removed after go-live.
+- **`dtraleigh` IAM user** — used for AWS console/CLI work. During setup, held a single inline policy `dtraleigh-newsletter-setup` with `ses:*` and SNS create/subscribe/configure permissions. After go-live, replaced with a read-only inline policy (see "Post-go-live cleanup" below) that retains only the read verbs needed by the health-check commands in `operations.md`.
 - **`dtraleigh-newsletter-app` IAM user** — programmatic-only user whose credentials the Django app uses. Has a single inline policy scoped to `ses:SendEmail` and `ses:SendRawEmail` only.
 
 ### What was configured
@@ -298,9 +298,34 @@ SES publishes bounce and complaint notifications to an SNS topic. The SNS topic 
 
 ### Post-go-live cleanup
 
-Once the newsletter is running in production, remove the setup permissions from the `dtraleigh` IAM user:
-- Detach the `AmazonSESFullAccess` managed policy.
-- Delete the inline policy containing the SNS setup permissions.
+Once the newsletter is running in production, the `dtraleigh` IAM user no longer needs write access to SES or SNS — setup is complete and the Django app uses the separate `dtraleigh-newsletter-app` user for sending. Replace the broad setup policy with a read-only one so the health-check commands in `operations.md` still work but credential leaks have minimal blast radius.
+
+IAM inline policies cannot be renamed in place, so the cleanup is delete-and-recreate:
+
+1. Delete the existing `dtraleigh-newsletter-setup` inline policy on the `dtraleigh` IAM user.
+2. Add a new inline policy (suggested name: `dtraleigh-aws-readonly`) with the JSON below.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SESReadOnly",
+            "Effect": "Allow",
+            "Action": ["ses:Get*", "ses:List*", "ses:Describe*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SNSReadOnly",
+            "Effect": "Allow",
+            "Action": ["sns:Get*", "sns:List*"],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+This covers `aws ses get-send-quota`, `aws sesv2 get-account`, `aws ses get-identity-verification-attributes`, and `aws sns list-subscriptions-by-topic` (the health-check commands in `operations.md`) while blocking any send, identity-modification, or SNS-modification action. If a future change requires elevated rights again (e.g., adding a second verified domain), temporarily reattach a setup policy and remove it when done.
 
 ---
 
@@ -330,8 +355,8 @@ Before enabling the newsletter for real subscribers, ensure all of these are com
 - [x] **SES production access approved** — Approved 2026-04-13. Can now send to any address.
 - [x] **Set up the cron job** for `manage.py send_newsletter` on Opalstack.
 - [ ] **Add a subscribe link** — No page currently links to `/newsletter/subscribe/`. Add a visible link or widget on the site.
-- [ ] **Clean up IAM setup permissions** — Detach `AmazonSESFullAccess` and delete the SNS inline policy from the `dtraleigh` IAM user.
-- [ ] **Verify admin email logging** — Ensure Django's logging config routes `newsletter` logger warnings (e.g., abandoned sends) to `AdminEmailHandler` so they email `ADMINS`. Currently only the `django` logger is configured in `myproject/settings.py`.
+- [x] **Clean up IAM setup permissions** — On the `dtraleigh` IAM user, delete the `dtraleigh-newsletter-setup` inline policy and replace it with a read-only inline policy (see "Post-go-live cleanup" above for the JSON). Inline policies can't be renamed in place, hence delete-and-recreate.
+- [x] **Verify admin email logging** — `myproject/settings.py` `LOGGING` config routes `newsletter` logger WARNINGs and above to `AdminEmailHandler` (gated by `RequireDebugFalse` so it only fires in production). Volume protection: `send_newsletter()` logs per-recipient send failures at INFO (file + SendLog only) and emits a single WARNING summary at the end of each run, so a transient SES outage produces one admin email regardless of recipient count.
 
 ---
 

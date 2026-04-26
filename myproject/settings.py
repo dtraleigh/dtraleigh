@@ -173,6 +173,11 @@ LOGGING = {
             "format": "%(levelname)s %(message)s"
         },
     },
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+    },
     "handlers": {
         "file": {
             "level": "INFO",
@@ -190,6 +195,12 @@ LOGGING = {
             "maxBytes": 50 * 1024 * 1024,  # 50MB
             "backupCount": 0,
         },
+        "mail_admins": {
+            "level": "WARNING",
+            "class": "django.utils.log.AdminEmailHandler",
+            "filters": ["require_debug_false"],
+            "include_html": False,
+        },
     },
     "loggers": {
         "django": {
@@ -198,7 +209,7 @@ LOGGING = {
             "propagate": True,
         },
         "newsletter": {
-            "handlers": ["newsletter_file"],
+            "handlers": ["newsletter_file", "mail_admins"],
             "level": "INFO",
             "propagate": False,
         },

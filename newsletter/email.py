@@ -152,6 +152,7 @@ def send_newsletter(subject, html_content, text_content, post_url, sent_post):
     mailing_address = settings.NEWSLETTER_MAILING_ADDRESS
     subscribers = Subscriber.objects.filter(status=Subscriber.STATUS_CONFIRMED)
     success_count = 0
+    failure_count = 0
 
     for subscriber in subscribers:
         unsubscribe_url = f"{base_url}/newsletter/unsubscribe/{subscriber.token}/"
@@ -196,10 +197,26 @@ def send_newsletter(subject, html_content, text_content, post_url, sent_post):
                 event_type=SendLog.EVENT_ERROR,
                 detail=f"Failed to send newsletter: {e}",
             )
-            logger.error("Failed to send newsletter to %s: %s", subscriber.email, e)
+            # Per-recipient failures stay at INFO so a transient SES outage
+            # doesn't fan out into one admin email per subscriber. The summary
+            # log below escalates to WARNING once the run is complete.
+            logger.info("Failed to send newsletter to %s: %s", subscriber.email, e)
+            failure_count += 1
 
         # Pace sends to stay under SES rate limit (14/sec default)
         if settings.NEWSLETTER_USE_SES:
             time.sleep(0.1)
+
+    total = success_count + failure_count
+    if failure_count:
+        logger.warning(
+            "Newsletter %r send completed with failures: %d sent, %d failed of %d total. "
+            "See SendLog for per-recipient details.",
+            subject, success_count, failure_count, total,
+        )
+    else:
+        logger.info(
+            "Newsletter %r send complete: %d sent.", subject, success_count,
+        )
 
     return success_count
