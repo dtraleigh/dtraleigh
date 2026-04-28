@@ -185,6 +185,26 @@ python manage.py send_newsletter --seed
 
 **Important:** Only run `--seed` when there are no confirmed subscribers, or when the cron job is disabled. Seeded records are protected from being retried, but it's safest to seed while sending is paused.
 
+### Resend an already-sent newsletter
+
+If a post needs to go out again — e.g., you published, edits were made, and you want subscribers to get the corrected version:
+
+```bash
+python manage.py resend_newsletter "https://dtraleigh.com/?p=12597"
+```
+
+The guid is the value stored in `SentPost.guid` (visible in the Django admin under Sent Posts, or via `aws ses ...` / shell queries above). The command:
+
+1. Re-fetches the post from the live RSS feed, so the latest edits are picked up
+2. Shows you the title, guid, original send time, and recipient count
+3. Prompts for confirmation before sending
+
+Pass `--yes` to skip the prompt. Errors out if the guid isn't in `SentPost` or the post is no longer in the RSS feed.
+
+The original `SentPost.sent_at` is preserved (history isn't rewritten); the resend is recorded as a new `SendLog` entry with detail like `"Resend to 47 subscribers (originally 45)."` and `recipient_count` is updated to the latest send count.
+
+**Use sparingly.** Subscribers will receive the email a second time, which can feel spammy. The normal cron flow (`send_newsletter`) is unaffected — it still skips this guid as already sent.
+
 ### Remove a subscriber manually
 
 ```bash
