@@ -153,7 +153,7 @@ NEWSLETTER_FROM_EMAIL = env(
 NEWSLETTER_BASE_URL = env("NEWSLETTER_BASE_URL", default="https://apps.dtraleigh.com")
 NEWSLETTER_SEND_ALL_NEW = env.bool("NEWSLETTER_SEND_ALL_NEW", default=True)
 NEWSLETTER_MAILING_ADDRESS = env(
-    "NEWSLETTER_MAILING_ADDRESS", default="DTRaleigh, Raleigh, NC"
+    "NEWSLETTER_MAILING_ADDRESS", default="1457 Kelly Road #301 Apex NC 27502"
 )
 
 # AWS SES Configuration
