@@ -18,18 +18,23 @@ from .sns import verify_sns_signature
 logger = logging.getLogger(__name__)
 
 
+TITLE_PREFIX = "The Raleigh Connoisseur"
+
+
 @ratelimit(key="ip", rate="5/h", method="POST", block=False)
 def subscribe(request):
     if request.method == "POST":
         was_limited = getattr(request, "limited", False)
         if was_limited:
-            return render(request, "newsletter/subscribe_success.html")
+            return render(request, "newsletter/subscribe_success.html",
+                          {"page_title": f"{TITLE_PREFIX} - Subscription Pending"})
 
         form = SubscribeForm(request.POST)
         if form.is_valid():
             # Honeypot check — silently reject if filled
             if form.cleaned_data.get("website"):
-                return render(request, "newsletter/subscribe_success.html")
+                return render(request, "newsletter/subscribe_success.html",
+                              {"page_title": f"{TITLE_PREFIX} - Subscription Pending"})
 
             email = form.cleaned_data["email"]
 
@@ -38,11 +43,13 @@ def subscribe(request):
 
                 if subscriber.status == Subscriber.STATUS_CONFIRMED:
                     # Already confirmed — show same success message to avoid leaking status
-                    return render(request, "newsletter/subscribe_success.html")
+                    return render(request, "newsletter/subscribe_success.html",
+                                  {"page_title": f"{TITLE_PREFIX} - Subscription Pending"})
 
                 elif subscriber.status == Subscriber.STATUS_BOUNCED:
                     # Bounced — don't re-subscribe, show a specific message
-                    return render(request, "newsletter/subscribe_bounced.html")
+                    return render(request, "newsletter/subscribe_bounced.html",
+                                  {"page_title": f"{TITLE_PREFIX} - Subscription Issue"})
 
                 elif subscriber.status == Subscriber.STATUS_UNCONFIRMED:
                     # Resend confirmation with a fresh token
@@ -62,30 +69,38 @@ def subscribe(request):
                 subscriber = Subscriber.objects.create(email=email)
                 send_confirmation_email(subscriber)
 
-            return render(request, "newsletter/subscribe_success.html")
+            return render(request, "newsletter/subscribe_success.html",
+                          {"page_title": f"{TITLE_PREFIX} - Subscription Pending"})
     else:
         form = SubscribeForm()
 
-    return render(request, "newsletter/subscribe.html", {"form": form})
+    return render(request, "newsletter/subscribe.html", {
+        "form": form,
+        "page_title": f"{TITLE_PREFIX} - Subscribe",
+    })
 
 
 def confirm(request, token):
     try:
         subscriber = Subscriber.objects.get(token=token)
     except Subscriber.DoesNotExist:
-        return render(request, "newsletter/confirm_invalid.html")
+        return render(request, "newsletter/confirm_invalid.html",
+                      {"page_title": f"{TITLE_PREFIX} - Invalid Link"})
 
     if subscriber.status == Subscriber.STATUS_UNCONFIRMED:
         subscriber.status = Subscriber.STATUS_CONFIRMED
         subscriber.confirmed_at = timezone.now()
         subscriber.save(update_fields=["status", "confirmed_at"])
-        return render(request, "newsletter/confirm_success.html")
+        return render(request, "newsletter/confirm_success.html",
+                      {"page_title": f"{TITLE_PREFIX} - Subscription Confirmed"})
 
     if subscriber.status == Subscriber.STATUS_CONFIRMED:
-        return render(request, "newsletter/confirm_already.html")
+        return render(request, "newsletter/confirm_already.html",
+                      {"page_title": f"{TITLE_PREFIX} - Already Subscribed"})
 
     # Any other status (unsubscribed, bounced) — token is no longer valid
-    return render(request, "newsletter/confirm_invalid.html")
+    return render(request, "newsletter/confirm_invalid.html",
+                  {"page_title": f"{TITLE_PREFIX} - Invalid Link"})
 
 
 @csrf_exempt
@@ -99,16 +114,19 @@ def unsubscribe(request, token):
     try:
         subscriber = Subscriber.objects.get(token=token)
     except Subscriber.DoesNotExist:
-        return render(request, "newsletter/confirm_invalid.html")
+        return render(request, "newsletter/confirm_invalid.html",
+                      {"page_title": f"{TITLE_PREFIX} - Invalid Link"})
 
     if request.method == "POST":
         subscriber.status = Subscriber.STATUS_UNSUBSCRIBED
         subscriber.unsubscribed_at = timezone.now()
         subscriber.save(update_fields=["status", "unsubscribed_at"])
-        return render(request, "newsletter/unsubscribe_success.html")
+        return render(request, "newsletter/unsubscribe_success.html",
+                      {"page_title": f"{TITLE_PREFIX} - Unsubscribed"})
 
     return render(request, "newsletter/unsubscribe_confirm.html", {
         "subscriber": subscriber,
+        "page_title": f"{TITLE_PREFIX} - Unsubscribe",
     })
 
 
