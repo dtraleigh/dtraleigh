@@ -3,12 +3,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.views.generic.base import RedirectView
 
 from develop import views as develop_views
 from buildings import views as buildings_views
 from newBernTOD import views as newbern_views
 
+FAVICON_URL = "https://dtraleigh-ralcon-media.s3.amazonaws.com/wp-content/uploads/2018/09/cropped-community_logo1_512x512-1.jpg"
+
 urlpatterns = [
+    path("favicon.ico", RedirectView.as_view(url=FAVICON_URL, permanent=True)),
     path(
         "robots.txt",
         TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
