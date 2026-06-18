@@ -1,6 +1,7 @@
 import logging
 import json
 import requests
+import time
 import pytz
 
 from bs4 import BeautifulSoup
@@ -18,19 +19,57 @@ from develop.management.commands.emails import *
 logger = logging.getLogger("django")
 
 
-def get_api_json(url):
-    response = None
+def is_throttle_response(data):
+    """ArcGIS returns rate-limit errors with HTTP 200 and an error body like:
+    {'error': {'code': 429, 'message': 'Unable to perform query. Too many requests.',
+               'details': ['API calls quota exceeded ... Retry after 60 sec.']}}
+    Return the error dict if this is a 429 throttle, else None."""
+    if isinstance(data, dict) and isinstance(data.get("error"), dict):
+        if data["error"].get("code") == 429:
+            return data["error"]
+    return None
 
-    try:
-        response = requests.get(url)
-    except requests.exceptions.ChunkedEncodingError:
+
+def get_api_json(url, max_retries=3, default_backoff=60):
+    """Hit an API and return the parsed JSON.
+
+    Handles ArcGIS rate limiting (HTTP 429, or a 200 response whose body is a
+    429 error) by backing off and retrying up to max_retries times.
+    """
+    for attempt in range(max_retries + 1):
+        response = None
+
+        try:
+            response = requests.get(url)
+        except requests.exceptions.ChunkedEncodingError:
+            n = datetime.now().strftime("%H:%M %m-%d-%y")
+            logger.info(f"{n}: problem hitting the api. ({url})")
+            return response
+
+        if response.status_code == 200:
+            data = response.json()
+
+            throttle = is_throttle_response(data)
+            if throttle is None:
+                return data
+        elif response.status_code == 429:
+            throttle = {"details": [response.text]}
+        else:
+            return response
+
+        # We were throttled. Back off and retry unless we're out of attempts.
+        if attempt >= max_retries:
+            n = datetime.now().strftime("%H:%M %m-%d-%y")
+            logger.warning(f"{n}: API throttled and out of retries. ({url}) {throttle}")
+            return data if response.status_code == 200 else response
+
+        backoff = default_backoff
         n = datetime.now().strftime("%H:%M %m-%d-%y")
-        logger.info(f"{n}: problem hitting the api. ({url})")
-
-    if response.status_code == 200:
-        return response.json()
-
-    return response
+        logger.warning(
+            f"{n}: API throttled, backing off {backoff}s "
+            f"(attempt {attempt + 1}/{max_retries}). ({url})"
+        )
+        time.sleep(backoff)
 
 
 def get_total_developments():
