@@ -1,6 +1,5 @@
 """Check Raleigh case-tracking pages for unexpected table structure changes."""
 import logging
-import sys
 from datetime import datetime
 
 import requests
@@ -10,6 +9,7 @@ from prettytable import PrettyTable
 from django.core.management.base import BaseCommand
 from develop.models import *
 from .emails import send_email_notice, email_admins
+from .actions import fetch_raleigh_page
 
 logger = logging.getLogger("django")
 
@@ -21,13 +21,36 @@ logger = logging.getLogger("django")
 def get_page_content(page_link):
     """Download page content and return a BeautifulSoup instance."""
     try:
-        response = requests.get(page_link, timeout=10)
-        response.raise_for_status()
+        response = fetch_raleigh_page(page_link)
+        if response.status_code != 200:
+            logger.error(f"{page_link} returned {response.status_code}, not 200.")
+            return None
         return BeautifulSoup(response.content, "html.parser")
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         logger.error(f"Connection error to {page_link}: {e}")
-        sys.exit(1)
+        return None
+
+
+def get_tables(page_link, report_messages):
+    """Return the tables on a page.
+
+    An unreachable page, or one with no tables at all, is exactly the kind of
+    change this command exists to catch, so record it in report_messages rather
+    than returning an empty list silently.
+    """
+    page_content = get_page_content(page_link)
+
+    if page_content is None:
+        report_messages.append(f"Could not fetch {page_link} - no headers could be checked.")
+        return []
+
+    tables = page_content.find_all("table")
+
+    if not tables:
+        report_messages.append(f"{page_link} loaded but contains no tables at all.")
+
+    return tables
 
 
 def normalize_text(text):
@@ -118,7 +141,7 @@ class Command(BaseCommand):
         # ------------------------------------------
         # 1. Zoning Cases
         # ------------------------------------------
-        zon_tables = get_page_content(zon_page_link).find_all("table")
+        zon_tables = get_tables(zon_page_link, report_messages)
         if zon_tables:
             actual = extract_header_row(zon_tables[0])
             if actual:
@@ -131,7 +154,7 @@ class Command(BaseCommand):
         # ------------------------------------------
         # 2. Text Change Cases (only check the first table)
         # ------------------------------------------
-        tc_tables = get_page_content(tc_page_link).find_all("table")
+        tc_tables = get_tables(tc_page_link, report_messages)
         if tc_tables:
             actual = extract_header_row(tc_tables[0])
             if actual:
@@ -144,7 +167,7 @@ class Command(BaseCommand):
         # ------------------------------------------
         # 3. Neighborhood Meetings (skip first)
         # ------------------------------------------
-        neighbor_tables = get_page_content(neighbor_page_link).find_all("table")
+        neighbor_tables = get_tables(neighbor_page_link, report_messages)
 
         for table in neighbor_tables:
             actual = extract_header_row(table)

@@ -1,6 +1,5 @@
 import logging
 import requests
-import sys
 import re
 from bs4 import BeautifulSoup
 from fuzzywuzzy import fuzz
@@ -39,23 +38,59 @@ class Command(BaseCommand):
             logger.info(f"{n}: Web scrape finished.")
 
 
+# Markers Cloudflare puts in a challenge page. If their bot protection is ever
+# tightened to serve an interstitial with HTTP 200 instead of 403, the response
+# still parses as valid HTML, so a status check alone would not catch it and the
+# scrape would silently stop finding cases.
+CHALLENGE_MARKERS = (
+    "just a moment",
+    "enable javascript and cookies to continue",
+    "cf-browser-verification",
+    "__cf_chl_opt",
+    "cf_chl_",
+)
+
+
+def looks_like_challenge(page_content):
+    """Return True if the HTML looks like a bot-protection interstitial."""
+    head = page_content[:4096].decode("utf-8", errors="ignore").lower()
+
+    return any(marker in head for marker in CHALLENGE_MARKERS)
+
+
 def get_page_content(page_link):
     n = datetime.now().strftime("%H:%M %m-%d-%y")
 
-    try:
-        page_response = requests.get(page_link, timeout=10)
-    except requests.exceptions.RequestException as e:
-        logger.info(f"{n}: Connection problem to {page_link}")
-        logger.info(e)
-        sys.exit(1)
-
-    if page_response.status_code == 200:
-        return BeautifulSoup(page_response.content, "html.parser")
-    else:
-        message = f"scrape.get_page_content did not return 200 at {n}.\n"
-        message += f"link: {page_link}"
+    def notify(reason, response=None):
+        message = f"scrape.get_page_content failed at {n}.\n"
+        message += f"reason: {reason}\n"
+        message += f"link: {page_link}\n"
+        # Cloudflare diagnostics (CF-RAY especially) make an intermittent
+        # failure traceable after the fact.
+        message += f"cloudflare: {describe_cf_response(response)}"
+        logger.info(message)
         send_email_notice(message, email_admins())
         return None
+
+    try:
+        page_response = fetch_raleigh_page(page_link)
+    except Exception as e:
+        return notify(f"Connection problem: {e}")
+
+    if page_response.status_code != 200:
+        return notify(f"did not return 200 (got {page_response.status_code})", page_response)
+
+    if looks_like_challenge(page_response.content):
+        return notify("returned 200 but the body looks like a bot-protection challenge", page_response)
+
+    soup = BeautifulSoup(page_response.content, "html.parser")
+
+    # A 200 with no table means the page was restructured or we were served a
+    # placeholder. Either way the parsers below would silently find nothing.
+    if not soup.find("table"):
+        return notify("returned 200 but contains no table", page_response)
+
+    return soup
 
 
 def get_rows_in_table(table, page):

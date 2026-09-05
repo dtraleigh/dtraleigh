@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from django.test import SimpleTestCase
 
-from develop.management.commands.actions import get_api_json, get_total_developments
+from develop.management.commands.actions import get_api_json, get_total_developments, fetch_raleigh_page
 from develop.management.commands.location import get_lat_lon_by_pin, get_parcel_by_pin
 from develop.management.commands.scrape import get_page_content
 from develop.views import get_ncod_data
@@ -146,5 +146,5 @@ class RaleighWebPagesAPITest(SimpleTestCase):
         self.assertIsNotNone(soup.find("table"))
 
     def test_development_status_page_returns_200(self):
-        response = requests.get(self.DEV_STATUS_URL, timeout=10)
+        response = fetch_raleigh_page(self.DEV_STATUS_URL)
         self.assertEqual(response.status_code, 200)

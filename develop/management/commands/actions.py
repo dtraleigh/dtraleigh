@@ -1,6 +1,8 @@
 import logging
+import random
 import json
 import requests
+from curl_cffi import requests as curl_requests
 import time
 import pytz
 
@@ -17,6 +19,144 @@ from django.conf import settings
 from develop.management.commands.emails import *
 
 logger = logging.getLogger("django")
+
+# Raleigh's CMS (raleighnc.gov / www.raleighnc.gov) sits behind a Cloudflare
+# managed challenge that rejects python-requests on the TLS handshake, so plain
+# requests.get() returns 403 with a "Just a moment..." interstitial. curl_cffi
+# replays a real Chrome TLS fingerprint, which clears the challenge.
+#
+# The User-Agent has to match the TLS fingerprint. A UA naming us as a bot while
+# the handshake says Chrome is a contradiction, and Cloudflare scores that
+# mismatch - plus the word "bot" itself, since we are not on their verified-bot
+# list - as suspicious. That is very likely what kept us hovering at the
+# challenge threshold. We still identify ourselves and give the city a way to
+# reach us, just in headers that do not fight the fingerprint.
+#
+# Note: maps.raleighnc.gov (the ArcGIS endpoints in get_api_json) is NOT behind
+# Cloudflare and still uses plain requests.
+RALEIGH_IMPERSONATE = "chrome"
+RALEIGH_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+# Not a standard header, but it is the one thing in the request that tells the
+# city who we are now that the UA has to look like Chrome. Swap in a real
+# mailbox here if you would rather they could email you directly.
+RALEIGH_CONTACT_HEADERS = {
+    "X-Contact": "https://dtraleigh.com - civic data scraper, hourly",
+}
+RALEIGH_TIMEOUT = 30
+
+# Cloudflare scores each request on its own, so a challenge is usually cleared by
+# simply asking again - but not within a few seconds. Spread the attempts over a
+# couple of minutes; on an hourly cron that costs nothing and covers a much wider
+# window than the original 15s.
+RALEIGH_MAX_RETRIES = 3
+RALEIGH_BACKOFF = 15
+
+_raleigh_session = None
+
+# Statuses worth a second attempt. A Cloudflare challenge (403) is frequently
+# transient - it reflects a bot score that varies with the reputation of the
+# shared host IP we go out on, so the same request often succeeds moments later.
+# The 52x range is Cloudflare's "origin misbehaved" family.
+RETRYABLE_STATUSES = (403, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524)
+
+
+def reset_raleigh_session():
+    """Drop the cached session so the next call starts with fresh cookies."""
+    global _raleigh_session
+
+    _raleigh_session = None
+
+
+def get_raleigh_session():
+    """Return a shared session so Cloudflare's __cf_bm cookie is reused."""
+    global _raleigh_session
+
+    if _raleigh_session is None:
+        _raleigh_session = curl_requests.Session(impersonate=RALEIGH_IMPERSONATE)
+        _raleigh_session.headers.update({"User-Agent": RALEIGH_USER_AGENT})
+        _raleigh_session.headers.update(RALEIGH_CONTACT_HEADERS)
+
+    return _raleigh_session
+
+
+def describe_cf_response(response):
+    """Summarize Cloudflare's diagnostic headers for logs and alert emails.
+
+    CF-RAY is the identifier Cloudflare (or the city's IT staff) needs to look
+    up why a specific request was challenged, so it is worth capturing. Its
+    suffix is also the Cloudflare PoP that served us, which is worth comparing
+    between successes and failures.
+    """
+    if response is None:
+        return "no response"
+
+    parts = [f"status={response.status_code}"]
+
+    for header in ("cf-ray", "cf-cache-status", "cf-mitigated"):
+        value = response.headers.get(header)
+
+        if value:
+            parts.append(f"{header}={value}")
+
+    return ", ".join(parts)
+
+
+def fetch_raleigh_page(page_link, timeout=RALEIGH_TIMEOUT, max_retries=RALEIGH_MAX_RETRIES):
+    """Fetch a raleighnc.gov page past Cloudflare's managed challenge.
+
+    Retries transient failures with a jittered backoff, starting a new session
+    each time so the retry is not carrying a poisoned challenge cookie.
+
+    Returns a response object exposing .status_code and .content, so callers can
+    keep the same checks they used with requests.get(). If every attempt raised,
+    the last exception is re-raised for the caller to report.
+    """
+    last_error = None
+
+    for attempt in range(max_retries + 1):
+        response = None
+
+        try:
+            response = get_raleigh_session().get(page_link, timeout=timeout)
+
+            if response.status_code not in RETRYABLE_STATUSES:
+                # Log the successes too: without them the alert emails are a
+                # sample of failures only, and there is no way to tell whether
+                # the failures cluster on a PoP, a cache miss, or a time of day.
+                logger.info(
+                    f"fetched {page_link} on attempt {attempt + 1} "
+                    f"({describe_cf_response(response)})"
+                )
+
+                return response
+
+        except Exception as e:
+            last_error = e
+
+        n = datetime.now().strftime("%H:%M %m-%d-%y")
+        detail = describe_cf_response(response) if response is not None else f"error={last_error}"
+
+        if attempt >= max_retries:
+            logger.warning(f"{n}: giving up on {page_link} after {attempt + 1} attempts ({detail})")
+
+            if response is not None:
+                return response
+
+            raise last_error
+
+        backoff = RALEIGH_BACKOFF * (2 ** attempt) + random.uniform(0, 2)
+        logger.warning(
+            f"{n}: retrying {page_link} in {backoff:.1f}s "
+            f"(attempt {attempt + 1}/{max_retries}) ({detail})"
+        )
+
+        # A fresh session picks up a new __cf_bm cookie rather than replaying
+        # whatever state got us challenged.
+        reset_raleigh_session()
+        time.sleep(backoff)
 
 
 def is_throttle_response(data):
@@ -127,17 +267,25 @@ def fields_are_same(object_item, api_or_web_scrape_item):
 def get_status_legend_text():
     page_link = "https://www.raleighnc.gov/development"
 
-    page_response = requests.get(page_link, timeout=10)
+    page_response = fetch_raleigh_page(page_link)
 
     if page_response.status_code == 200:
         page_content = BeautifulSoup(page_response.content, "html.parser")
 
         # Status Abbreviations
+        # As of 08-2026 this heading is no longer on the page; guard rather than
+        # raising AttributeError on the chained lookups below.
         status_abbreviations_title = page_content.find("h3", {"id": "StatusAbbreviations"})
 
-        status_section = status_abbreviations_title.findNext("div")
+        if not status_abbreviations_title:
+            return "Unable to scrape the status legend."
 
-        status_ul = status_section.find("ul")
+        status_section = status_abbreviations_title.findNext("div")
+        status_ul = status_section.find("ul") if status_section else None
+
+        if not status_ul:
+            return "Unable to scrape the status legend."
+
         status_legend = ""
 
         for li in status_ul.findAll("li"):
