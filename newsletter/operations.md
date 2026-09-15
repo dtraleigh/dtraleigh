@@ -41,13 +41,23 @@ Format is timestamped/structured via the `verbose` formatter.
 
 Project root (`~/apps/dtraleigh/myproject/newsletter-cron.txt`). Captures the `send_newsletter` management command's stdout ("Sending newsletter for: ...", "Sent to N subscribers", "No new posts found") plus any tracebacks or shell errors cron catches. This is appended to by the shell redirect in the crontab line and is **not** rotated automatically — watch its size over time and truncate/rotate manually if needed.
 
+Every line the command prints is prefixed with the time it was printed:
+
+```
+[2026-09-15 18:59:04] No new posts found.
+[2026-09-15 18:59:04] Sending newsletter for: A Real Post
+[2026-09-15 18:59:04]   Sent to 42 subscribers.
+```
+
+That comes from `TimestampedOutputWrapper` in `send_newsletter.py`, which wraps the command's stdout and stderr, so anything printed from that command is stamped without the call site having to do it. The clock is the same one the `verbose` log formatter uses, so lines here line up with `newsletter-debug.txt`. Tracebacks and shell errors are written straight to the redirect by Python or the shell and so are **not** stamped — use the stamped line above a traceback to place it.
+
 ### Cron line
 
 ```
 */15 * * * * cd ~/apps/dtraleigh/myproject && ~/apps/dtraleigh/env/bin/python -W ignore manage.py send_newsletter >> ~/apps/dtraleigh/myproject/newsletter-cron.txt 2>&1
 ```
 
-The `cd` matters: Django's `LOGGING` config uses a relative filename (`"newsletter-debug.txt"`), which resolves against the process's current working directory. Without `cd`, Django would write to `~/newsletter-debug.txt` instead of the project directory.
+The log paths no longer depend on that `cd`. `LOGGING` in `myproject/settings.py` anchors both `debug.txt` and `newsletter-debug.txt` to `BASE_DIR`, so they land in the project directory whatever the working directory is. (They used to be bare relative filenames, which is why a cron entry without a `cd` wrote them to the home directory instead — if you find stray copies at `~/debug.txt` or `~/newsletter-debug.txt`, that is where they came from and they can be deleted.) The `cd` is still worth keeping: the redirect target above is relative to it in most people's crontabs, and any relative path a command uses resolves against it.
 
 ### `debug.txt` — everything else
 

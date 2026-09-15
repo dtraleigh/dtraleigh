@@ -423,11 +423,14 @@ class TextChangesTestCaseSimple(SimpleTestCase):
         self.assertEqual(mock_tc.project_name, "New Name")
         mock_tc.save.assert_called_once()
 
+    @patch('develop.management.commands.scrape.sync_cosmetic_values')
     @patch('develop.management.commands.scrape.fields_are_same')
     @patch('develop.management.commands.scrape.logger')
-    def test_update_text_change_if_changed_no_update(self, mock_logger, mock_fields_are_same):
+    def test_update_text_change_if_changed_no_update(self, mock_logger, mock_fields_are_same,
+                                                     mock_sync):
         """Test that text change is not updated when fields are the same"""
         mock_fields_are_same.return_value = True
+        mock_sync.return_value = {}
 
         mock_tc = MagicMock()
 
@@ -441,6 +444,14 @@ class TextChangesTestCaseSimple(SimpleTestCase):
 
         self.assertFalse(result)
         mock_tc.save.assert_not_called()
+        # No save(), but the re-typed values are still offered up for a quiet sync.
+        mock_sync.assert_called_once_with(
+            mock_tc,
+            case_url="same_url",
+            project_name="Same Name",
+            description="Same Description",
+            status="Same Status"
+        )
 
     @patch('develop.management.commands.scrape.TextChangeCase.objects.create')
     @patch('develop.management.commands.scrape.logger')
@@ -863,9 +874,11 @@ class NeighborhoodMeetingsTestCaseSimple(SimpleTestCase):
         self.assertEqual(mock_nm.meeting_datetime_details, "New date")
         mock_nm.save.assert_called_once()
 
+    @patch('develop.management.commands.scrape.sync_cosmetic_values')
     @patch('develop.management.commands.scrape.fields_are_same')
     @patch('develop.management.commands.scrape.logger')
-    def test_update_neighborhood_meeting_if_changed_no_update(self, mock_logger, mock_fields_are_same):
+    def test_update_neighborhood_meeting_if_changed_no_update(self, mock_logger,
+                                                              mock_fields_are_same, mock_sync):
         """Test that neighborhood meeting is not updated when fields are the same"""
         mock_fields_are_same.return_value = True
 
@@ -884,6 +897,8 @@ class NeighborhoodMeetingsTestCaseSimple(SimpleTestCase):
 
         self.assertFalse(result)
         mock_nm.save.assert_not_called()
+        # No save(), but the re-typed values are still offered up for a quiet sync.
+        mock_sync.assert_called_once_with(mock_nm, **data)
 
     @patch('develop.management.commands.scrape.NeighborhoodMeeting.objects.create')
     @patch('develop.management.commands.scrape.logger')
@@ -1045,3 +1060,91 @@ class NeighborhoodMeetingsTestCaseDjango(TestCase):
         )
 
         self.assertIsNone(result)
+
+
+class UpdateZoningCosmeticTestCase(TestCase):
+    """A re-typed value should be stored but not announced.
+
+    notify works off modified_date and django-simple-history records, so the test
+    is that neither moves - while our copy still ends up matching the city.
+    """
+
+    def setUp(self):
+        self.zon = Zoning.objects.create(
+            zpyear=2025,
+            zpnum=50,
+            location="2233 & 2321 Capital Blvd",
+            location_url="https://maps.raleighnc.gov/z-50-25",
+            status="City Council Public Hearing 10/6/26",
+            plan_url="https://example.com/Z-050-25.pdf"
+        )
+
+    def test_cosmetic_status_change_is_synced_but_not_announced(self):
+        history_before = self.zon.history.count()
+        modified_before = self.zon.modified_date
+
+        result = update_zoning_if_changed(
+            self.zon,
+            "City Council Public Hearing 10/06/26",
+            self.zon.plan_url,
+            self.zon.location_url
+        )
+
+        self.assertFalse(result)
+
+        self.zon.refresh_from_db()
+
+        # The city's spelling landed...
+        self.assertEqual(self.zon.status, "City Council Public Hearing 10/06/26")
+        # ...without anything notify looks at moving.
+        self.assertEqual(self.zon.history.count(), history_before)
+        self.assertEqual(self.zon.modified_date, modified_before)
+
+    def test_identical_values_write_nothing(self):
+        history_before = self.zon.history.count()
+        modified_before = self.zon.modified_date
+
+        result = update_zoning_if_changed(
+            self.zon,
+            self.zon.status,
+            self.zon.plan_url,
+            self.zon.location_url
+        )
+
+        self.assertFalse(result)
+
+        self.zon.refresh_from_db()
+        self.assertEqual(self.zon.status, "City Council Public Hearing 10/6/26")
+        self.assertEqual(self.zon.history.count(), history_before)
+        self.assertEqual(self.zon.modified_date, modified_before)
+
+    def test_real_status_change_still_saves(self):
+        history_before = self.zon.history.count()
+
+        result = update_zoning_if_changed(
+            self.zon,
+            "City Council Public Hearing 10/20/26",
+            self.zon.plan_url,
+            self.zon.location_url
+        )
+
+        self.assertTrue(result)
+
+        self.zon.refresh_from_db()
+        self.assertEqual(self.zon.status, "City Council Public Hearing 10/20/26")
+        self.assertEqual(self.zon.history.count(), history_before + 1)
+
+    def test_a_real_change_carries_the_cosmetic_one_with_it(self):
+        """A genuine plan_url change saves the re-typed status along with it."""
+        result = update_zoning_if_changed(
+            self.zon,
+            "City Council Public Hearing 10/06/26",
+            "https://example.com/Z-050-25-v2.pdf",
+            self.zon.location_url
+        )
+
+        self.assertTrue(result)
+
+        self.zon.refresh_from_db()
+        self.assertEqual(self.zon.status, "City Council Public Hearing 10/06/26")
+        self.assertEqual(self.zon.plan_url, "https://example.com/Z-050-25-v2.pdf")

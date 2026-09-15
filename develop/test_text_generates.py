@@ -51,3 +51,80 @@ class TextGenTestCaseDjango(TestCase):
         self.assertEqual(create_zoning_case_text(z6), "## Z--\n")
 
 
+class DifferenceTableTestCase(TestCase):
+    """What the UPDATES table reports, and when it reports nothing at all."""
+
+    def setUp(self):
+        self.zon = Zoning.objects.create(
+            zpyear=2025,
+            zpnum=50,
+            location="2233 & 2321 Capital Blvd",
+            status="City Council Public Hearing 10/6/26",
+            plan_url="https://example.com/Z-050-25.pdf"
+        )
+
+    def test_no_previous_record_reports_nothing(self):
+        """One history row means there is nothing to diff against.
+
+        Reporting every field as "None -> value" was the old behaviour, via a
+        swallowed AttributeError in get_field_value.
+        """
+        self.assertEqual(self.zon.history.count(), 1)
+        self.assertEqual(get_difference_rows(self.zon), [])
+        self.assertEqual(difference_table_output(self.zon), "")
+
+    def test_real_status_change_reports_one_row(self):
+        self.zon.status = "City Council Public Hearing 10/20/26"
+        self.zon.save()
+
+        rows = get_difference_rows(self.zon)
+
+        self.assertEqual(len(rows), 1)
+        label, old_value, new_value = rows[0]
+        self.assertEqual(label, "Status")
+        self.assertEqual(old_value, "City Council Public Hearing 10/6/26")
+        self.assertEqual(new_value, "City Council Public Hearing 10/20/26")
+
+        table = difference_table_output(self.zon)
+        self.assertIn("### UPDATES", table)
+        self.assertIn("|Status|City Council Public Hearing 10/6/26|"
+                      "City Council Public Hearing 10/20/26|", table)
+
+    def test_cosmetic_change_in_history_reports_nothing(self):
+        """The scrape should catch these first, but a manual admin edit would not."""
+        self.zon.status = "City Council Public Hearing 10/06/26"
+        self.zon.save()
+
+        self.assertEqual(self.zon.history.count(), 2)
+        self.assertEqual(get_difference_rows(self.zon), [])
+        self.assertEqual(difference_table_output(self.zon), "")
+
+    def test_multiple_changed_fields_each_get_a_row(self):
+        self.zon.status = "Approved 10/20/26"
+        self.zon.location = "2233 Capital Blvd"
+        self.zon.save()
+
+        labels = [row[0] for row in get_difference_rows(self.zon)]
+
+        self.assertCountEqual(labels, ["Status", "Location"])
+
+    def test_pipes_and_newlines_stay_inside_one_row(self):
+        """A raw pipe opens a column and a raw newline ends the row."""
+        self.zon.status = "Approved 10/20/26 | see notes\nSecond line"
+        self.zon.save()
+
+        table = difference_table_output(self.zon)
+        data_rows = [line for line in table.splitlines() if line.startswith("|Status|")]
+
+        self.assertEqual(len(data_rows), 1)
+        self.assertIn("\\|", data_rows[0])
+        self.assertIn("see notes Second line", data_rows[0])
+        # Once the escaped pipes are discounted, the row still has exactly the
+        # four column separators of |label|previous|new|.
+        self.assertEqual(data_rows[0].replace("\\|", "").count("|"), 4)
+
+    def test_escape_table_cell(self):
+        self.assertEqual(escape_table_cell("a|b"), "a\\|b")
+        self.assertEqual(escape_table_cell("a\nb"), "a b")
+        self.assertEqual(escape_table_cell("a\r\nb"), "a b")
+        self.assertEqual(escape_table_cell(None), "None")

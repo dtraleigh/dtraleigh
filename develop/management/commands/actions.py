@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from develop.management.commands.emails import *
+from develop.normalize import is_cosmetic_change, normalize_for_comparison, values_are_equivalent
 
 logger = logging.getLogger("django")
 
@@ -256,12 +257,156 @@ def get_all_ids(url):
 
 
 def fields_are_same(object_item, api_or_web_scrape_item):
-    """Return True if the two objects are the same, False if not"""
+    """Return True if the two values mean the same thing, False if not.
+
+    Values that differ only in how they were typed count as the same - see
+    develop/normalize.py. Two consequences worth knowing: a date the city
+    re-spelled ("10/6/26" -> "10/06/26") no longer counts as a change, and None
+    and "" now compare equal, which ends the null-versus-empty-string churn.
+    """
+    return values_are_equivalent(object_item, api_or_web_scrape_item)
+
+
+# Updates this run decided not to announce, drained into one digest email at the
+# end of the command rather than mailed one at a time. If the city ever reformats
+# its whole table at once - a CMS change re-rendering every status - that is one
+# email instead of one per case.
+#
+# Module-level state in the same vein as _raleigh_session above, and safe for the
+# same reason: the only callers are management commands, one run per process.
+_skipped_updates = []
+
+
+def reset_skipped_updates():
+    """Start a run with an empty collector."""
+    global _skipped_updates
+
+    _skipped_updates = []
+
+
+def record_skipped_update(item, reason, detail=""):
+    """Note that an item changed but no Discourse post was made.
+
+    Nothing is sent here - send_skipped_update_digest() mails the lot at the end
+    of the run.
+    """
+    _skipped_updates.append((f"{item._meta.verbose_name} '{str(item)}'", reason, detail))
+
+
+def describe_cosmetic_changes(changes):
+    """Spell out the value pairs that were judged equivalent.
+
+    Values are repr'd so an admin can see whitespace and &nbsp; for what they
+    are, and each pair is shown next to the canonical form both reduce to -
+    that form is the evidence for the call we made.
+    """
+    detail = ""
+
+    for name, (old_value, new_value) in changes.items():
+        detail += f"  Field: {name}\n"
+        detail += f"    Previous:       {repr(old_value)}\n"
+        detail += f"    New:            {repr(new_value)}\n"
+        detail += f"    Both reduce to: {repr(normalize_for_comparison(new_value))}\n"
+
+    detail += ("\n  The new value was saved so our copy matches the city, but "
+               "modified_date\n  and the history record were left alone.\n")
+
+    return detail
+
+
+def send_skipped_update_digest():
+    """Mail the admins one summary of everything this run chose not to announce.
+
+    Kept non-fatal on purpose. send_email_notice uses fail_silently=False, and
+    this runs at the end of a scrape that otherwise worked - an SMTP outage must
+    not turn a healthy run into a failed one.
+    """
+    skipped = list(_skipped_updates)
+    reset_skipped_updates()
+
+    if not skipped:
+        return
+
+    count = len(skipped)
+    plural = "update" if count == 1 else "updates"
+    verb = "was" if count == 1 else "were"
+
+    message = f"{str(count)} {plural} {verb} not posted to Discourse during this run.\n"
+
+    # Grouped by reason rather than listed flat: a table-wide reformat gives every
+    # entry the same reason, and repeating that paragraph twenty times buries the
+    # part that actually differs between them.
+    by_reason = {}
+
+    for label, reason, detail in skipped:
+        by_reason.setdefault(reason, []).append((label, detail))
+
+    for reason, entries in by_reason.items():
+        message += f"\nReason: {reason}\n"
+
+        for label, detail in entries:
+            message += f"\n{'-' * 68}\n"
+            message += f"{label}\n"
+
+            if detail:
+                message += f"\n{detail}"
+
+    message += f"\n{'-' * 68}\n"
+    message += ("The rules that decide what counts as a significant change are in\n"
+                "develop/normalize.py.\n")
+
     try:
-        return object_item == api_or_web_scrape_item
-    except Exception:
-        n = datetime.datetime.now().strftime("%H:%M %m-%d-%y")
-        logger.info(f"{n}: Error comparing object_item, {str(object_item)}, with json_item, {str(api_or_web_scrape_item)}")
+        send_email_notice(
+            message,
+            email_admins(),
+            subject=f"Develop: {str(count)} {plural} skipped (no significant change)",
+        )
+    except Exception as e:
+        logger.info(f"Could not email the skipped-update digest: {str(e)}")
+
+
+def sync_cosmetic_values(instance, **new_values):
+    """Persist re-typed-but-equivalent values without announcing them.
+
+    A queryset .update() skips save(), so simple-history writes no record and
+    modified_date (auto_now) is left alone - which is what keeps notify, who
+    works off modified_date, from treating a re-typing as news. Our copy still
+    tracks whatever the city is currently publishing.
+
+    Returns the fields it synced, so callers can log them.
+    """
+    # The old values are captured before anything is written, so the notice to
+    # the admins can show the pair that were judged equivalent.
+    changes = {}
+
+    for name, value in new_values.items():
+        old_value = getattr(instance, name)
+
+        if is_cosmetic_change(old_value, value):
+            changes[name] = (old_value, value)
+
+    if not changes:
+        return {}
+
+    cosmetic = {name: new_value for name, (old_value, new_value) in changes.items()}
+
+    type(instance).objects.filter(pk=instance.pk).update(**cosmetic)
+
+    # .update() leaves the in-memory instance alone, so mirror the values onto it.
+    for name, value in cosmetic.items():
+        setattr(instance, name, value)
+
+    logger.info(f"Cosmetic-only change on {instance._meta.verbose_name} "
+                f"({str(instance)}), synced without notifying: {cosmetic}")
+
+    record_skipped_update(
+        instance,
+        "the only differences found were in how the value was typed, not in what "
+        "it says, so the change was treated as not significant.",
+        describe_cosmetic_changes(changes),
+    )
+
+    return cosmetic
 
 
 def get_status_legend_text():
@@ -362,6 +507,15 @@ def create_new_discourse_post(subscriber, item):
         message += f"### *New {item._meta.verbose_name.title()}*\n\n***\n"
         message += get_new_item_text(item)
     else:
+        # Nothing field-level to report means there is nothing to say. Posting an
+        # empty UPDATES table just trains readers to ignore us. The scrape should
+        # already have skipped a re-typed value, so this is the backstop.
+        if not get_difference_rows(item):
+            logger.info(f"No reportable changes on {item._meta.verbose_name} "
+                        f"{str(item)}, skipping the Discourse post.")
+            record_skipped_update(item, no_difference_reason(item))
+            return
+
         message = f"### *Existing {item._meta.verbose_name.title()} Update*\n\n***\n"
         message += get_updated_item_text(item)
 

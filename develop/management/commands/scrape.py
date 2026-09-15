@@ -23,19 +23,29 @@ class Command(BaseCommand):
             n = datetime.now().strftime("%H:%M %m-%d-%y")
             logger.info(f"{n}: Web scrape started.")
 
+            reset_skipped_updates()
+
             sr_page_link = "https://raleighnc.gov/services/zoning-planning-and-development/site-review-cases"
             zon_page_link = "https://raleighnc.gov/planning/services/rezoning-process/rezoning-cases"
             tc_page_link = "https://raleighnc.gov/planning/services/text-changes/text-change-cases"
             neighbor_page_link = "https://raleighnc.gov/planning/services/rezoning-process/neighborhood-meetings"
 
-            zoning_requests(get_page_content(zon_page_link))
-            # admin_alternates(get_page_content(aad_page_link))
-            text_changes_cases(get_page_content(tc_page_link))
-            #site_reviews(get_page_content(sr_page_link)) # Site review moved to the dev portal.
-            neighborhood_meetings(get_page_content(neighbor_page_link))
-            # design_alternate_cases(get_page_content(da_page_link))
+            try:
+                zoning_requests(get_page_content(zon_page_link))
+                # admin_alternates(get_page_content(aad_page_link))
+                text_changes_cases(get_page_content(tc_page_link))
+                #site_reviews(get_page_content(sr_page_link)) # Site review moved to the dev portal.
+                neighborhood_meetings(get_page_content(neighbor_page_link))
+                # design_alternate_cases(get_page_content(da_page_link))
+            finally:
+                # In a finally so a page that blows up halfway still reports the
+                # skips recorded before it did.
+                send_skipped_update_digest()
 
-            logger.info(f"{n}: Web scrape finished.")
+            # Recomputed rather than reusing n, so the pair of lines shows how
+            # long the scrape actually took.
+            finished = datetime.now().strftime("%H:%M %m-%d-%y")
+            logger.info(f"{finished}: Web scrape finished.")
 
 
 # Markers Cloudflare puts in a challenge page. If their bot protection is ever
@@ -274,6 +284,10 @@ def site_reviews(page_content):
                         logger.info("scrape project_name:" + str(project_name))
                         logger.info("**********************")
 
+                    else:
+                        sync_cosmetic_values(known_sr_case, case_url=case_url,
+                                             project_name=project_name, status=status)
+
                 else:
                     # create a new instance
                     logger.info("**********************")
@@ -345,6 +359,10 @@ def admin_alternates(page_content):
                             logger.info("scrape case_number:" + case_number)
                             logger.info("scrape project_name:" + project_name)
                             logger.info("**********************")
+
+                        else:
+                            sync_cosmetic_values(known_aad_case, case_url=case_url,
+                                                 project_name=project_name, status=status)
 
                     else:
                         # create a new instance
@@ -490,6 +508,9 @@ def update_text_change_if_changed(known_tc_case, case_url, project_name, descrip
         logger.info(f"project_name: {project_name}")
         logger.info("**********************")
         return True
+
+    sync_cosmetic_values(known_tc_case, case_url=case_url, project_name=project_name,
+                         description=description, status=status)
 
     return False
 
@@ -763,6 +784,11 @@ def update_zoning_if_changed(known_zon, status, plan_url, location_url):
 
         logger.info("**********************")
         return True
+
+    # Nothing meaningful changed, but the city may have re-typed a value. Keep our
+    # copy current without letting notify announce it.
+    sync_cosmetic_values(known_zon, status=status, plan_url=plan_url,
+                         location_url=location_url)
 
     return False
 
@@ -1165,6 +1191,16 @@ def update_neighborhood_meeting_if_changed(known_nm_case, data):
         logger.info("**********************")
         return True
 
+    sync_cosmetic_values(
+        known_nm_case,
+        meeting_datetime_details=data["meeting_datetime_details"],
+        rezoning_site_address=data["rezoning_site_address"],
+        rezoning_site_address_url=data["rezoning_site_address_url"],
+        meeting_location=data["meeting_location"],
+        rezoning_request=data["rezoning_request"],
+        rezoning_request_url=data["rezoning_request_url"],
+    )
+
     return False
 
 
@@ -1308,6 +1344,10 @@ def design_alternate_cases(page_content):
                             logger.info("scrape case_number:" + case_number)
                             logger.info("scrape project_name:" + project_name)
                             logger.info("**********************")
+
+                        else:
+                            sync_cosmetic_values(known_dac_case, case_url=case_url,
+                                                 project_name=project_name, status=status)
 
                     else:
                         logger.info("**********************")

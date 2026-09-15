@@ -182,7 +182,12 @@ LOGGING = {
         "file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "debug.txt",
+            # Anchored to BASE_DIR on purpose. A bare "debug.txt" resolves
+            # against the process's working directory, so a cron entry that does
+            # not cd into the project first writes its log wherever cron started
+            # - typically the user's home - and the project's debug.txt sits
+            # there looking empty.
+            "filename": BASE_DIR / "debug.txt",
             "formatter": "verbose",
             "maxBytes": 50 * 1024 * 1024,  # 50MB
             "backupCount": 0,  # No backup files - delete old logs
@@ -190,7 +195,7 @@ LOGGING = {
         "newsletter_file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "newsletter-debug.txt",
+            "filename": BASE_DIR / "newsletter-debug.txt",
             "formatter": "verbose",
             "maxBytes": 50 * 1024 * 1024,  # 50MB
             "backupCount": 0,

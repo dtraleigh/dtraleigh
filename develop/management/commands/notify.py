@@ -11,6 +11,8 @@ from django.utils import timezone
 from develop.models import *
 from develop.management.commands.location import *
 from develop.management.commands.actions import create_new_discourse_post
+from develop.management.commands.actions import reset_skipped_updates
+from develop.management.commands.actions import send_skipped_update_digest
 from develop.management.commands.emails import *
 
 logger = logging.getLogger("django")
@@ -62,21 +64,48 @@ def get_everything_that_changed():
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
+        n = datetime.now().strftime("%H:%M %m-%d-%y")
         control = Control.objects.get(id=1)
-        if control.notify:
-            everything_that_changed = get_everything_that_changed()
 
-            if everything_that_changed:
-                # We need to filter everything_that_changed for only the cover areas that each user is subscribed to.
-                # We also need to include None. Rather than pass literally everything_that_changed let's filter it
-                # for each user and then send them an email.
-                all_active_subscribers = Subscriber.objects.filter(send_emails=True)
+        if not control.notify:
+            logger.info(f"{n}: Notify skipped - turned off in Control.")
+            return
 
-                for subscriber in all_active_subscribers:
-                    # Take everything_that_changed and get the items that we want to post to discourse
-                    covered_items = get_itb_items(everything_that_changed)
+        logger.info(f"{n}: Notify started.")
 
-                    # Post to discourse community
-                    if covered_items and subscriber.is_bot:
-                        for item in covered_items:
-                            create_new_discourse_post(subscriber, item)
+        everything_that_changed = get_everything_that_changed()
+
+        if not everything_that_changed:
+            logger.info("Notify finished. Nothing changed in the last hour.")
+            return
+
+        logger.info(f"{str(len(everything_that_changed))} item(s) changed in the last hour: "
+                    f"{str([str(item) for item in everything_that_changed])}")
+
+        # We need to filter everything_that_changed for only the cover areas that each user is subscribed to.
+        # We also need to include None. Rather than pass literally everything_that_changed let's filter it
+        # for each user and then send them an email.
+        all_active_subscribers = Subscriber.objects.filter(send_emails=True)
+
+        reset_skipped_updates()
+
+        try:
+            for subscriber in all_active_subscribers:
+                # Take everything_that_changed and get the items that we want to post to discourse
+                covered_items = get_itb_items(everything_that_changed)
+
+                if not subscriber.is_bot:
+                    continue
+
+                logger.info(f"{str(len(covered_items))} of those are inside the beltline "
+                            f"for {str(subscriber.name)}.")
+
+                # Post to discourse community
+                for item in covered_items:
+                    logger.info(f"Posting {item._meta.verbose_name} ({str(item)}) to Discourse "
+                                f"for {str(subscriber.name)}.")
+                    create_new_discourse_post(subscriber, item)
+        finally:
+            send_skipped_update_digest()
+
+        logger.info("Notify finished.")

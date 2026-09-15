@@ -2,12 +2,16 @@ from django.core.management.base import BaseCommand
 from develop.models import *
 from develop.management.commands.location import *
 from develop.management.commands.actions import create_new_discourse_post
+from develop.management.commands.actions import reset_skipped_updates
+from develop.management.commands.actions import send_skipped_update_digest
 from develop.management.commands.emails import *
 
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
         devbot = Subscriber.objects.get(name="DevBot", role="TEST")
+
+        reset_skipped_updates()
 
         test_items_update = [
             Zoning.objects.get(id=1260),
@@ -61,3 +65,6 @@ class Command(BaseCommand):
         for item in test_items_new.copy():
             create_new_discourse_post(devbot, item)
             item.delete()
+
+        # Same digest the real notify sends, so a manual run shows what it skipped.
+        send_skipped_update_digest()

@@ -1,12 +1,14 @@
 import html
 import logging
 import re
+from datetime import datetime
 from datetime import timedelta
 
 import feedparser
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.core.management.base import OutputWrapper
 from django.utils import timezone
 from django.utils.html import strip_tags
 
@@ -17,6 +19,26 @@ logger = logging.getLogger(__name__)
 
 FEED_URL = "https://dtraleigh.com/feed/"
 RETRY_CUTOFF_HOURS = 24
+
+
+class TimestampedOutputWrapper(OutputWrapper):
+    """Stamp every line this command prints with the time it was printed.
+
+    newsletter-cron.txt is just the shell redirect of this command's stdout and
+    stderr, and it is never rotated - so without a time of their own, "No new
+    posts found" lines pile up for months with no way to tell which run was
+    which, or whether a run happened at all. Wrapping the stream rather than
+    stamping each call means anything printed here later is covered too.
+
+    datetime.now() matches the asctime that the logging formatter writes into
+    newsletter-debug.txt, so the two files can be read side by side.
+    """
+
+    def write(self, msg="", style_func=None, ending=None):
+        stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for line in msg.splitlines() or [""]:
+            super().write(f"[{stamp}] {line}", style_func, ending)
 
 
 class Command(BaseCommand):
@@ -30,6 +52,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # Wrap whatever streams we were handed, so a --stdout passed by a test or
+        # another caller is still honoured.
+        self.stdout = TimestampedOutputWrapper(self.stdout)
+        self.stderr = TimestampedOutputWrapper(self.stderr)
+
         feed = feedparser.parse(FEED_URL)
 
         if feed.bozo and not feed.entries:

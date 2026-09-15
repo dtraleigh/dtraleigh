@@ -16,9 +16,12 @@ def email_admins():
     return [sub.email for sub in admins]
 
 
-def send_email_notice(message, email_to):
-    subject = "Message from Develop."
+def send_email_notice(message, email_to, subject="Message from Develop."):
+    """Email the admins. The default subject is what every existing caller used.
 
+    Pass a subject when the notice is routine rather than a fault, so admins can
+    filter it away from the error mail without reading every one.
+    """
     email_from = "leo@cophead567.opalstacked.com"
     send_mail(
         subject,

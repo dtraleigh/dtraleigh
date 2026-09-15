@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from django.conf import settings
 
 from develop.models import *
+from develop.normalize import values_are_equivalent
 
 logger = logging.getLogger("django")
 
@@ -30,31 +31,87 @@ def get_field_value(tracked_item, model_field):
         logger.info(f"{n}: AttributeError - field is {str(model_field.name)} and item_most_recent = {str(tracked_item)}")
 
 
+def escape_table_cell(value):
+    """Make a value safe to drop into a single markdown table cell.
+
+    A pipe would open a new column and a newline would end the row, so a status
+    containing either one silently breaks the whole table.
+    """
+    text = str(value).replace("|", "\\|")
+
+    return " ".join(text.split("\n")).replace("\r", "").strip()
+
+
+def get_difference_rows(item):
+    """Return the [(label, previous, new)] rows worth reporting for an item.
+
+    An empty list means there is nothing to announce - the caller should skip the
+    post entirely rather than publish a bare UPDATES table.
+    """
+    # The two newest history records, rather than history.first().prev_record:
+    # prev_record filters on history_date__lt, so two saves landing in the same
+    # clock tick make it return None even though a previous record exists. The
+    # manager's ordering ("-history_date", "-history_id") breaks that tie for us.
+    recent_history = list(item.history.all()[:2])
+
+    # Nothing to diff against - a brand new record, or history that has been
+    # pruned. Reporting every field as "None -> value" is worse than saying
+    # nothing, which is what the old swallowed AttributeError amounted to.
+    if len(recent_history) < 2:
+        return []
+
+    item_most_recent, item_previous = recent_history
+
+    ignore_fields = ["created_date", "modified_date", "id", "EditDate", "updated"]
+
+    rows = []
+
+    for field in item._meta.get_fields():
+        if field.name in ignore_fields:
+            continue
+
+        new_value = get_field_value(item_most_recent, field)
+        old_value = get_field_value(item_previous, field)
+
+        # values_are_equivalent rather than != so a value the city merely
+        # re-typed ("10/6/26" -> "10/06/26") is not reported as an update. The
+        # scrape should have caught it first, but a manual admin edit - or a
+        # history record written before that check existed - would not have been.
+        if not values_are_equivalent(old_value, new_value):
+            rows.append((field.verbose_name, old_value, new_value))
+
+    return rows
+
+
+def no_difference_reason(item):
+    """Say why get_difference_rows came back empty, in words an admin can act on.
+
+    The two empty cases have different causes and different fixes, so they are
+    worth telling apart in the notice that goes out.
+    """
+    if item.history.count() < 2:
+        return ("there is only one history record for it, so there is no previous "
+                "version to compare against. That usually means the record was saved "
+                "twice inside a single scrape, or that its history was pruned.")
+
+    return ("every field that differs between the last two saved versions differs "
+            "only in how it was typed, not in what it says, so the change was treated "
+            "as not significant.")
+
+
 def difference_table_output(item):
     """This creates a table showing the previous and new values"""
+    rows = get_difference_rows(item)
+
+    if not rows:
+        return ""
+
     output = "### UPDATES\n"
     output += "||Previous|New|\n"
     output += "|---|---|---|\n"
 
-    # Get the most recent version of the item and the one previously
-    item_most_recent = item.history.first()
-    item_previous = item_most_recent.prev_record
-
-    # Get all the item fields
-    fields = item._meta.get_fields()
-
-    ignore_fields = ["created_date", "modified_date", "id", "EditDate", "updated"]
-
-    # Loop through each field, except created_date, modified_date, and id.
-    # If the fields are not equal, add it to output.
-    for field in fields:
-        if field.name not in ignore_fields:
-            item_most_recent_field_value = get_field_value(item_most_recent, field)
-            item_old_field_value = get_field_value(item_previous, field)
-
-            # If there is a difference...
-            if item_most_recent_field_value != item_old_field_value:
-                output += f"|{field.verbose_name}|{str(item_old_field_value)}|{str(item_most_recent_field_value)}|\n"
+    for label, old_value, new_value in rows:
+        output += f"|{label}|{escape_table_cell(old_value)}|{escape_table_cell(new_value)}|\n"
 
     return output
 
