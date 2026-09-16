@@ -151,7 +151,7 @@ def get_status_text(item):
 
 def get_major_street_text(item):
     try:
-        return f"Major Street: {str(item.major_stre)}\n"
+        return f"Major Street: {str(item.major_street)}\n"
     except AttributeError:
         return ""
 

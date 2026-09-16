@@ -329,7 +329,7 @@ def admin_alternates(page_content):
                                         ["project_name", project_name],
                                         ["status", status]]
                         message = "scrape.admin_alternates: Problem scraping this row"
-                        message += scraped_info
+                        message += str(scraped_info)
                         logger.info(message)
                         send_email_notice(message, email_admins())
 
@@ -1319,7 +1319,7 @@ def design_alternate_cases(page_content):
                                         ["project_name", project_name],
                                         ["status", status]]
                         message = "scrape.design_alternate_cases: Problem scraping this row"
-                        message += scraped_info
+                        message += str(scraped_info)
                         logger.info(message)
                         send_email_notice(message, email_admins())
 

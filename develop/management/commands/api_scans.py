@@ -9,6 +9,127 @@ from develop.models import *
 logger = logging.getLogger("django")
 
 
+# OBJECTIDs whose create() failed this run, so the first failing payload can be
+# logged in full and the rest kept to one line each.
+_failed_creates = set()
+
+
+# The attributes development_api_scan reads out of every feature. This is the
+# written-down half of our contract with the Development Plans service:
+# describe_contract_mismatch refuses to process a response missing any of them,
+# and a test asserts this tuple still matches what the scan actually reads, so
+# the two cannot drift apart. Undetected drift is how a stale "major_stre" name
+# survived long enough to fill debug.txt with 16MB of retries in a day.
+DEVELOPMENT_PLAN_ATTRIBUTES = (
+    "OBJECTID",
+    "submitted",
+    "submitted_yr",
+    "approved",
+    "plan_type",
+    "status",
+    "appealperiodends",
+    "updated",
+    "sunset_date",
+    "acreage",
+    "major_street",
+    "developer",
+    "plan_name",
+    "lots_req",
+    "lots_apprv",
+    "sq_ft_req",
+    "units_apprv",
+    "units_req",
+    "zoning",
+    "plan_number",
+    "GlobalID",
+    "missing_middle",
+)
+
+
+def describe_contract_mismatch(devplan_data):
+    """Say how a response departs from what the scan expects, or "" if it does not.
+
+    Checked before a single attribute is read, because the drift being guarded
+    against is quiet. A renamed key raises nothing on the update path - it just
+    makes that one field stop updating, and nothing says so for months.
+    """
+    if devplan_data is None:
+        return ("The API returned nothing at all - the request failed before any JSON "
+                "was parsed.")
+
+    if not isinstance(devplan_data, dict):
+        # get_api_json hands back the raw response object on a non-200.
+        return (f"The API returned a {type(devplan_data).__name__} rather than a JSON "
+                f"object: {str(devplan_data)[:500]}")
+
+    if "error" in devplan_data:
+        return f"The API returned an error payload: {devplan_data['error']}"
+
+    if "features" not in devplan_data:
+        return (f"The response has no 'features' key. Its top-level keys are: "
+                f"{sorted(devplan_data)}")
+
+    features = devplan_data["features"]
+
+    if not isinstance(features, list):
+        return f"'features' is a {type(features).__name__} rather than a list."
+
+    if not features:
+        return ("'features' came back empty. The query asks for every plan submitted in "
+                "2022 or later, so no matches at all means the query or the dataset "
+                "changed rather than that there is nothing to do.")
+
+    # Counted per attribute rather than stopping at the first bad feature, so a
+    # field the city dropped from only some records still reads as a contract
+    # problem and the notice says how widespread it is.
+    missing = {}
+
+    for feature in features:
+        if not isinstance(feature, dict) or not isinstance(feature.get("attributes"), dict):
+            return f"A feature is not shaped like {{'attributes': {{...}}}}: {str(feature)[:500]}"
+
+        for name in set(DEVELOPMENT_PLAN_ATTRIBUTES) - set(feature["attributes"]):
+            missing[name] = missing.get(name, 0) + 1
+
+    if missing:
+        detail = ", ".join(f"{name} (absent from {str(count)} of {str(len(features))} features)"
+                           for name, count in sorted(missing.items()))
+
+        return f"The scan reads attributes the response does not carry: {detail}"
+
+    return ""
+
+
+def unknown_attributes(devplan_data):
+    """Attributes the API now sends that the scan does not read."""
+    seen = set()
+
+    for feature in devplan_data["features"]:
+        seen |= set(feature["attributes"])
+
+    return sorted(seen - set(DEVELOPMENT_PLAN_ATTRIBUTES))
+
+
+def report_contract_mismatch(mismatch, url):
+    """Tell the admins what changed and where our side of the contract lives."""
+    message = ("The Development Plans API is not shaped the way this scan expects, so "
+               "no plans were processed on this run.\n\n"
+               f"What is different:\n  {mismatch}\n\n"
+               f"URL:\n  {url}\n\n"
+               "Our side of the contract lives in three places that have to agree:\n"
+               "  - DEVELOPMENT_PLAN_ATTRIBUTES in develop/management/commands/api_scans.py\n"
+               "  - DevelopmentPlan.developmentplan_mapping in develop/models.py\n"
+               "  - the field assignments in development_api_scan()\n\n"
+               "Processing stopped rather than carrying on with the fields that still "
+               "line up. A renamed key raises nothing on the update path - it quietly "
+               "stops updating that one field - so continuing would bank wrong data and "
+               "say nothing about it.\n")
+
+    logger.error(message)
+    send_email_notice(message, email_admins(),
+                      subject="Develop: Development Plans API contract mismatch")
+
+
 def clean_unix_date(unix_datetime):
     try:
         if unix_datetime > 1000000000:
@@ -27,12 +148,22 @@ def development_api_scan():
     try:
         devplan_data = get_api_json(url)
 
-        # Check if "features" exists in the response
-        if not isinstance(devplan_data, dict) or "features" not in devplan_data:
-            message = f"The 'features' key is missing from the API response: {devplan_data}"
-            logger.error(message)
-            send_email_notice(message, email_admins())
+        # Validate the shape before reading anything out of it.
+        mismatch = describe_contract_mismatch(devplan_data)
+
+        if mismatch:
+            report_contract_mismatch(mismatch, url)
             return
+
+        added = unknown_attributes(devplan_data)
+
+        if added:
+            # Deliberately not fatal, and deliberately not an email. A column we
+            # do not read breaks nothing, halting over one would mean no plan
+            # updates at all until someone edits code, and mailing about it would
+            # repeat every hour until they did.
+            logger.info(f"The Development Plans API now sends attributes the scan does "
+                        f"not read: {added}")
 
         for dev_plan in devplan_data["features"]:
             attribute_data = dev_plan["attributes"]
@@ -53,7 +184,7 @@ def development_api_scan():
                     known_dev_object.objectid = attribute_data["OBJECTID"]
                     # known_dev_object.devplan_id = attribute_data["devplan_id"]
                     known_dev_object.submitted = clean_unix_date(attribute_data["submitted"])
-                    known_dev_object.submitted_yr = attribute_data["submitted_yr"]
+                    known_dev_object.submitted_field = attribute_data["submitted_yr"]
                     known_dev_object.approved = clean_unix_date(attribute_data["approved"])
                     # known_dev_object.daystoappr = attribute_data["daystoapprove"]
                     known_dev_object.plan_type = attribute_data["plan_type"]
@@ -62,7 +193,7 @@ def development_api_scan():
                     known_dev_object.updated = clean_unix_date(attribute_data["updated"])
                     known_dev_object.sunset_dat = clean_unix_date(attribute_data["sunset_date"])
                     known_dev_object.acreage = attribute_data["acreage"]
-                    known_dev_object.major_stre = attribute_data["major_street"]
+                    known_dev_object.major_street = attribute_data["major_street"]
                     # known_dev_object.cac = attribute_data["cac"]
                     # known_dev_object.engineer = attribute_data["engineer"]
                     # known_dev_object.engineer_p = attribute_data["engineer_phone"]
@@ -108,7 +239,7 @@ def development_api_scan():
                                                    updated=clean_unix_date(attribute_data["updated"]),
                                                    sunset_dat=clean_unix_date(attribute_data["sunset_date"]),
                                                    acreage=attribute_data["acreage"],
-                                                   major_stre=attribute_data["major_street"],
+                                                   major_street=attribute_data["major_street"],
                                                    # cac=attribute_data["cac"],
                                                    # engineer=attribute_data["engineer"],
                                                    # engineer_p=attribute_data["engineer_phone"],
@@ -135,8 +266,17 @@ def development_api_scan():
                                                    geom=geometry_data_point)
                     logger.info(f"Creating new DevelopmentPlan, objectid: {attribute_data['OBJECTID']}")
                 except Exception as e:
-                    logger.info(e)
-                    logger.info(attribute_data)
+                    logger.warning(f"Could not create DevelopmentPlan for OBJECTID "
+                                   f"{attribute_data.get('OBJECTID')}: {e}")
+
+                    # The payload once, not every time. A create that fails on one
+                    # bad field fails for every new plan and keeps failing every
+                    # run - the row never lands, so it is unknown again next hour
+                    # - which spells the whole API response into debug.txt hourly.
+                    if not _failed_creates:
+                        logger.warning(f"First failing payload was: {attribute_data}")
+
+                    _failed_creates.add(attribute_data.get("OBJECTID"))
     except KeyError as e:
             message = f"Unexpected structure in the API response: {e}"
             logger.error(message)

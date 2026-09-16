@@ -28,7 +28,7 @@ developmentplan_mapping = {
     "updated": "updated",
     "sunset_dat": "sunset_dat",
     "acreage": "acreage",
-    "major_stre": "major_stre",
+    "major_street": "major_stre",
     "cac": "cac",
     "engineer": "engineer",
     "engineer_p": "engineer_p",

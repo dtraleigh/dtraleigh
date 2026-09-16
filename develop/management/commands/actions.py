@@ -441,32 +441,63 @@ def get_status_legend_text():
     return "Unable to scrape the status legend."
 
 
+# Fields we could not compare, remembered so a stale mapping or a renamed API key
+# is reported once rather than once for every development plan in the scan.
+# Module-level state in the same vein as _raleigh_session and _skipped_updates
+# above, and safe for the same reason: one command run per process.
+_uncomparable_fields = set()
+
+
+def report_uncomparable_field(field, known_object):
+    """Say once why a field cannot be compared, instead of once per plan.
+
+    Both causes are code-level - our mapping went stale, or the API renamed a key
+    - so the fix is the same either way, and repeating the complaint for every
+    plan in the scan only buries it. A stale "major_stre" mapping key did exactly
+    that: three log lines per plan per hour, one of them the whole API payload.
+    """
+    if field in _uncomparable_fields:
+        return
+
+    _uncomparable_fields.add(field)
+
+    if field not in DevelopmentPlan.developmentplan_mapping:
+        reason = "it has no entry in DevelopmentPlan.developmentplan_mapping"
+    else:
+        reason = (f"the API response has no "
+                  f"'{DevelopmentPlan.developmentplan_mapping[field]}' key")
+
+    logger.warning(f"Cannot compare {field} (first seen on {str(known_object)}) because "
+                   f"{reason}. Skipping that field for the rest of this run.")
+
+
+# Reducing the number of fields here in order to simplify the app. A module
+# constant rather than a local so the contract check in api_scans can be tested
+# against it - every field here has to resolve, through developmentplan_mapping,
+# to an attribute the API actually sends.
+DEVELOPMENT_FIELDS_TO_COMPARE = ["status", "major_street", "plan_name", "zoning"]
+
+
 def api_object_is_different(known_object, item_json):
     """Return False unless any of the individual field compare functions return True"""
     n = datetime.now().strftime("%H:%M %m-%d-%y")
 
-    # Reducing the number of fields here in order to simplify the app.
-    model_field_to_compare = ["status", "major_street", "plan_name", "zoning"]
-
-    for field in model_field_to_compare:
+    for field in DEVELOPMENT_FIELDS_TO_COMPARE:
         try:
-            if not fields_are_same(str(getattr(known_object, field)),
-                                   str(item_json[DevelopmentPlan.developmentplan_mapping[field]])):
-                logger.info(f"{n}: Difference found with {str(field)} on Development {str(known_object)}")
-                logger.info(f"Known_object: {str(getattr(known_object, field))}"
-                            f" ({str(type(getattr(known_object, field)))}),  item_json[{field}]: "
-                            f"{str(item_json[DevelopmentPlan.developmentplan_mapping[field]])}"
-                            f" ({str(type(item_json[DevelopmentPlan.developmentplan_mapping[field]]))})")
-                logger.info("\n")
-                logger.info("known_object------------->")
-                logger.info(known_object)
-                logger.info("\nitem_json-------------->")
-                logger.info(item_json)
-                return True
-        except KeyError as e:
-            logger.info(e)
-            logger.info(field)
-            logger.info(item_json)
+            new_value = item_json[DevelopmentPlan.developmentplan_mapping[field]]
+        except KeyError:
+            report_uncomparable_field(field, known_object)
+            continue
+
+        old_value = getattr(known_object, field)
+
+        if not fields_are_same(str(old_value), str(new_value)):
+            # The pair of values is the whole diagnostic. Dumping the model and
+            # the full API payload alongside it, as this used to, buys nothing
+            # and costs about a kilobyte of debug.txt per changed plan.
+            logger.info(f"{n}: Difference found with {str(field)} on Development "
+                        f"{str(known_object)}: {repr(old_value)} -> {repr(new_value)}")
+            return True
 
     # Returning false here basically means no difference was found
     return False
