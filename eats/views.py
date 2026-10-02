@@ -147,6 +147,18 @@ def edit_business(request, biz_id):
 
             return HttpResponseRedirect("/eats/manage/main/")
 
+        if "delete-button" in request.POST:
+            if business_to_edit.is_food_hall:
+                messages.error(request, f"{business_to_edit.name} is a food hall and cannot be deleted.")
+
+                return HttpResponseRedirect(f"/eats/manage/edit/biz/{biz_id}/")
+
+            business_to_edit.is_deleted = True
+            business_to_edit.save()
+            messages.info(request, f"{business_to_edit.name} has been deleted.")
+
+            return HttpResponseRedirect("/eats/manage/main/")
+
         if form.is_valid():
             form.save()
             messages.success(request, f"Details for {business_to_edit.name} updated.")

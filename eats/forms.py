@@ -6,7 +6,7 @@ from eats.models import *
 class NewBusinessForm(ModelForm):
     class Meta:
         model = Business
-        exclude = ["description", "latitude", "longitude"]
+        exclude = ["description", "latitude", "longitude", "is_deleted"]
         widgets = {"open_date": forms.DateInput(attrs={"type": "date"}),
                    "close_date": forms.DateInput(attrs={"type": "date"})}
 
@@ -14,7 +14,7 @@ class NewBusinessForm(ModelForm):
 class EditBusinessForm(ModelForm):
     class Meta:
         model = Business
-        exclude = ["description", "latitude", "longitude"]
+        exclude = ["description", "latitude", "longitude", "is_deleted"]
         widgets = {"open_date": forms.DateInput(attrs={"type": "date"}),
                    "close_date": forms.DateInput(attrs={"type": "date"})}
 

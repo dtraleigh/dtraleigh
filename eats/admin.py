@@ -8,9 +8,13 @@ class DistrictAdmin(admin.ModelAdmin):
 
 
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ("name", "date_added", "district", "not_local", "open_date", "close_date")
+    list_display = ("name", "date_added", "district", "not_local", "open_date", "close_date", "is_deleted")
+    list_filter = ("is_deleted",)
 
     actions = ["make_not_local", "make_local"]
+
+    def get_queryset(self, request):
+        return Business.all_objects.all()
 
     def make_not_local(self, request, queryset):
         queryset.update(not_local=True)

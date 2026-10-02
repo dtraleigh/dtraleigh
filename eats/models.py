@@ -13,6 +13,11 @@ class District(models.Model):
         return self.name
 
 
+class ActiveBusinessManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 class Business(models.Model):
     date_added = models.DateTimeField(auto_now_add=True, verbose_name="Date added.")
     name = models.CharField(max_length=200)
@@ -30,6 +35,10 @@ class Business(models.Model):
     not_local = models.BooleanField(verbose_name="Not local?")
     open_date = models.DateField()
     close_date = models.DateField(null=True, blank=True, verbose_name="First closed date")
+    is_deleted = models.BooleanField(default=False, verbose_name="Soft deleted?")
+
+    objects = ActiveBusinessManager()
+    all_objects = models.Manager()
 
     @property
     def is_new_biz(self):
