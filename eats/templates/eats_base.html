@@ -22,7 +22,7 @@
 	<link href='https://fonts.googleapis.com/css?family=Cantata+One' rel='stylesheet' type='text/css'>
 
 	<!-- Bootstrap core CSS -->
-	<link href="{% static "eats-css/bootstrap.min.css" %}" rel="stylesheet">
+	{% include "includes/bootstrap_css.html" %}
 
 	<!-- Custom styles for this template -->
 	<link href="{% static "eats-css/eats-custom.css" %}" rel="stylesheet">
@@ -43,9 +43,8 @@
     {% include "dtraleigh_footer.html" %}
   </div> <!-- /container -->
 
-<script src="{% static "eats-js/jquery-1.11.0.min.js" %}"}></script>
-<script src="{% static "eats-js/jquery-migrate-1.2.1.min.js" %}"></script>
-<script src="{% static "eats-js/bootstrap.min.js" %}"}></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
+{% include "includes/bootstrap_js.html" %}
 <script type="text/javascript">
 $(document).ready(function(){
   $("a.jQueryBookmark").click(function(e){

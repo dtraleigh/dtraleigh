@@ -8,8 +8,8 @@
       <p>Get new blog posts delivered to your inbox.</p>
       <form method="post" action="{% url 'newsletter:subscribe' %}">
         {% csrf_token %}
-        <div class="form-group">
-          <label for="id_email">Email address</label>
+        <div class="mb-3">
+          <label for="id_email" class="form-label">Email address</label>
           {{ form.email }}
           {% if form.email.errors %}
             <div class="text-danger">{{ form.email.errors.0 }}</div>

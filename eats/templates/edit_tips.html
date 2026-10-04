@@ -10,22 +10,22 @@
         <li>
           {{ tip_form.name.errors }}
           <label for="{{ tip_form.name.id_for_label }}">Name:</label>
-          {{ tip_form.name|add_class:"input-lg" }}
+          {{ tip_form.name|add_class:"field-lg" }}
         </li>
         <li>
           {{ tip_form.district.errors }}
           <label for="{{ tip_form.district.id_for_label }}">District:</label>
-          {{ tip_form.district|add_class:"input-lg" }}
+          {{ tip_form.district|add_class:"field-lg" }}
         </li>
         <li>
           {{ tip_form.food_hall.errors }}
           <label for="{{ tip_form.food_hall.id_for_label }}">Food Hall:</label>
-          {{ tip_form.food_hall|add_class:"input-lg" }}
+          {{ tip_form.food_hall|add_class:"field-lg" }}
         </li>
         <li>
           {{ tip_form.link.errors }}
           <label for="{{ tip_form.link.id_for_label }}">URL:</label>
-          {{ tip_form.link|add_class:"input-lg" }}
+          {{ tip_form.link|add_class:"field-lg" }}
         </li>
         <li>
           {{ tip_form.description.errors }}
@@ -65,14 +65,14 @@
         <li>
           {{ tip_form.open_date.errors }}
           <label for="{{ tip_form.open_date.id_for_label }}">Open Date:</label>
-          {{ tip_form.open_date|add_class:"input-lg"|attr:"placeholder:YYYY-MM-DD" }}
+          {{ tip_form.open_date|add_class:"field-lg"|attr:"placeholder:YYYY-MM-DD" }}
         </li>
         <li>
           <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
-          <button type="submit" class="btn btn-lg btn-default" name="cancel-button">Cancel</button>
+          <button type="submit" class="btn btn-lg btn-outline-secondary" name="cancel-button">Cancel</button>
           <button type="submit" class="btn btn-lg btn-success" name="create-biz">Create Biz</button>
           <button type="submit" class="btn btn-lg btn-success" name="create-vendor">Create Vendor</button>
-          <button type="submit" class="btn btn-xs btn-danger pull-right" name="delete-button">Delete</button>
+          <button type="submit" class="btn btn-sm btn-danger float-end" name="delete-button">Delete</button>
         </li>
       </ul>
     </form>

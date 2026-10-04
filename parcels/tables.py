@@ -8,5 +8,5 @@ class ParcelHistoryTable(tables.Table):
     class Meta:
         model = Parcel
         attrs = {"class": "table table-bordered table-hover table-sm table-responsive"}
-        template_name = "django_tables2/bootstrap.html"
+        template_name = "django_tables2/bootstrap5.html"
         fields = ("modified_date",)

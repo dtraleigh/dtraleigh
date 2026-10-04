@@ -223,6 +223,8 @@ LOGGING = {
 
 GDAL_LIBRARY_PATH = env("GDAL_LIBRARY_PATH")
 X_FRAME_OPTIONS = "SAMEORIGIN"
+# OSM's tile servers require a Referer; Django's default "same-origin" strips it on cross-origin tile requests.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 LEAFLET_CONFIG = {
     "DEFAULT_CENTER": (35.7785733, -78.6395438),

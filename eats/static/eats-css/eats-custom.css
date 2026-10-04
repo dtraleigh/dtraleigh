@@ -76,6 +76,7 @@ body {
 }
 
 #listOfDistricts{
+	position: relative; /* BS3 columns were position:relative; BS5's aren't, and `left` below needs it */
 	padding-bottom: 20px;
 	left: 12.5%;
 	background-color: #FFF;
@@ -91,13 +92,30 @@ body {
 }
 
 .btn-success{
-	background-color: #F0622E;
-	border-color: #F0622E;
+	--bs-btn-bg: #F0622E;
+	--bs-btn-border-color: #F0622E;
+	--bs-btn-hover-bg: #D8592B;
+	--bs-btn-hover-border-color: #FFF;
+	--bs-btn-active-bg: #D8592B;
+	--bs-btn-active-border-color: #FFF;
+	--bs-btn-focus-shadow-rgb: 240, 98, 46;
 }
 
-.btn-success:hover, .btn-success:focus, .btn-success:active, .btn-success.active, .open .dropdown-toggle.btn-success{
-	background-color: #D8592B;
-	border-color: #FFF;
+/* BS5 underlines links by default; keep the BS3 look (underline on hover only) */
+a {
+	text-decoration: none;
+}
+a:not(.btn, .nav-link, .navbar-brand):hover,
+a:not(.btn, .nav-link, .navbar-brand):focus {
+	text-decoration: underline;
+}
+
+/* Larger form fields (replaces BS3's removed .input-lg) */
+.field-lg {
+	height: 46px;
+	font-size: 18px;
+	line-height: 1.3333333;
+	border-radius: 6px;
 }
 
 .district_link{
@@ -283,14 +301,24 @@ Responsive elements
   }
 }
 
-/* Main marketing message and sign up button */
+/* Main marketing message and sign up button.
+   .jumbotron was removed in BS4/5; base box styles below are ported from BS 3.3.7. */
 .jumbotron {
+  padding: 30px 15px;
+  margin-bottom: 30px;
+  background-color: #eee;
+  border-radius: 6px;
   text-align: center;
   border-bottom: 1px solid #e5e5e5;
 }
 .jumbotron .btn {
   padding: 14px 24px;
   font-size: 21px;
+}
+.jumbotron p {
+  margin-bottom: 15px;
+  font-size: 21px;
+  font-weight: 200;
 }
 .jumbotron h1, .jumbotron p{
 	color:#E5E5E5;
@@ -323,6 +351,10 @@ Responsive elements
   }
   /* Remove the bottom border on the jumbotron for visual effect */
   .jumbotron {
+    padding: 48px 60px;
     border-bottom: 0;
+  }
+  .jumbotron h1 {
+    font-size: 63px;
   }
 }

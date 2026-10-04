@@ -11,19 +11,19 @@
 	</div>
 	<div class="row">
 		{%for tip in all_tips%}
-		<div class="col-sm-6 col-xs-12">
-			<div class="panel panel-primary">
-			  <div class="panel-heading">
+		<div class="col-12 col-sm-6">
+			<div class="card border-primary mb-3">
+			  <div class="card-header text-bg-primary">
 					<strong>{{tip.name}}</strong>
 					{%if today < tip.open_date%}
-						<span class="label label-success pull-right">Coming Soon</span>
+						<span class="badge text-bg-success float-end">Coming Soon</span>
 					{%endif%}
 					{%if tip.is_new_tip%}
-						<span class="label label-warning pull-right">New!</span>
+						<span class="badge text-bg-warning float-end">New!</span>
 					{%endif%}
 				</div>
-			  <div class="panel-body">
-					<div class="well">
+			  <div class="card-body">
+					<div class="p-3 mb-3 bg-light border rounded">
 						{%if tip.description%}
 							<p>{{tip.description}}</p>
 						{%else%}

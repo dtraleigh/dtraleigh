@@ -11,7 +11,7 @@
     <link rel="shortcut icon" type="image/png" href="{% static "img/favicon.png" %}">
 
     <!-- Bootstrap core CSS -->
-    <link href="{% static "css/bootstrap.min.css"%}" rel="stylesheet">
+    {% include "includes/bootstrap_css.html" %}
 
     <!-- Custom styles for this template -->
     <link href="{% static "css/dashboard.css"%}" rel="stylesheet">
@@ -19,13 +19,13 @@
 
   <body>
     <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
-      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/rpd/glenwood">DT Data Things</a>
+      <a class="navbar-brand col-sm-3 col-md-2 me-0 px-3" href="/rpd/glenwood">DT Data Things</a>
     </nav>
 
     <div class="container-fluid">
       <div class="row">
         {%include "sidebar.html"%}
-          <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+          <main role="main" class="col-md-9 ms-sm-auto col-lg-10 pt-3 px-4">
             <div id="map" class="map_embed">
                 <iframe src="/rpd/glenwood/map" title="Map of Glenwood South"></iframe>
             </div>
@@ -141,9 +141,7 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <script src="{% static "js/popper.min.js"%}"></script>
-    <script src="{% static "js/bootstrap.min.js"%}"></script>
+    {% include "includes/bootstrap_js.html" %}
 
     <!-- Icons -->
     <script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
