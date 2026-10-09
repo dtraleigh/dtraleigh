@@ -3,49 +3,63 @@
 {% block content %}
 
 <div class="container">
-  <div class="row" id="business_list">
-    {% if messages %}
-    <div class="alert alert-success" role="alert">
-          {% for message in messages %}
-          <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-          {% endfor %}
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="h3 mb-0">Places</h1>
+    <div class="d-flex gap-2">
+      <a href="/eats/manage/add_business/" class="btn btn-primary">+ Business</a>
+      <a href="/eats/manage/add_vendor/" class="btn btn-outline-primary">+ Vendor</a>
     </div>
-    {% endif %}
+  </div>
 
-    <div class="col-12">
-      <h4 class="text-center">{{recent_snapshot.date}}</h4>
-      <table class="table table-bordered" id="local-table">
-        <tr>
-          <th>Local</th>
-          <th>Not Local</th>
-          <th>Summary</th>
-        </tr>
-        <tr>
-          <td>{{recent_snapshot.local_business_count}}</td>
-          <td>{{recent_snapshot.not_local_business_count}}</td>
-          <td>{{local_percent}}% Local!</td>
-        </tr>
-      </table>
+  <div class="row row-cols-3 g-2 text-center mb-1">
+    <div class="col">
+      <div class="card h-100"><div class="card-body py-3 px-1">
+        <div class="stat-value">{{recent_snapshot.local_business_count}}</div>
+        <div class="stat-label">Local</div>
+      </div></div>
+    </div>
+    <div class="col">
+      <div class="card h-100"><div class="card-body py-3 px-1">
+        <div class="stat-value">{{recent_snapshot.not_local_business_count}}</div>
+        <div class="stat-label">Not local</div>
+      </div></div>
+    </div>
+    <div class="col">
+      <div class="card h-100"><div class="card-body py-3 px-1">
+        <div class="stat-value">{{local_percent}}%</div>
+        <div class="stat-label">Local share</div>
+      </div></div>
+    </div>
+  </div>
+  <p class="text-center small text-body-secondary mb-3">Snapshot from {{recent_snapshot.date}}</p>
+
+  <div id="business_list">
+    <div class="manage-search sticky-top py-2">
+      <label for="place-search" class="visually-hidden">Search places</label>
+      <input type="search" id="place-search" class="search form-control form-control-lg" placeholder="Search places" autocomplete="off">
     </div>
 
-    <ul class="form-style-1">
-      <li><input class="search field-long field-lg" placeholder="Search" />
-      <button class="sort" id="find-button" data-sort="business_name">
-            Find
-          </button>
-      </li>
-    </ul>
-
-    <ul class="list text-center" id="main_business_list">
+    <div class="list list-group place-list">
       {%for place in all_places%}
         {%if place.get_cname == "business"%}
-          <li><a href="/eats/manage/edit/biz/{{place.id}}" class="business_name">{{place.name}}</a></li>
+          <a href="/eats/manage/edit/biz/{{place.id}}/" class="list-group-item list-group-item-action"><span class="business_name">{{place.name}}</span></a>
         {%elif place.get_cname == "vendor"%}
-          <li><a href="/eats/manage/edit/vendor/{{place.id}}" class="business_name">{{place.name}}</a></li>
+          <a href="/eats/manage/edit/vendor/{{place.id}}/" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <span class="business_name">{{place.name}}</span>
+            <span class="badge text-bg-secondary">Vendor</span>
+          </a>
         {%endif%}
       {%endfor%}
-    <ul>
+    </div>
   </div>
 </div>
 
 {%endblock content%}
+
+{% block extra_js %}
+<script>
+  var userList = new List('business_list', {
+    valueNames: [ 'business_name' ]
+  });
+</script>
+{% endblock %}

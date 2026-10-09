@@ -1,0 +1,15 @@
+{% load widget_tweaks %}
+<div class="mb-3">
+  <label for="{{ field.id_for_label }}" class="form-label">{{ label|default:field.label }}</label>
+  {% if field.widget_type == "select" %}
+    {{ field|add_class:"form-select"|add_error_class:"is-invalid" }}
+  {% elif field.widget_type == "selectmultiple" %}
+    {{ field|add_class:"form-select"|add_error_class:"is-invalid"|attr:"size:8" }}
+  {% else %}
+    {{ field|add_class:"form-control"|add_error_class:"is-invalid" }}
+  {% endif %}
+  {% if field.errors %}
+    {# Django points aria-describedby at <auto_id>_error #}
+    <div class="invalid-feedback" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>
+  {% endif %}
+</div>

@@ -1,0 +1,64 @@
+/*
+Styles for the /eats/manage/ pages only. Loaded by base-admin.html after eats-custom.css,
+and scoped to body.manage so nothing leaks onto the public site.
+*/
+.manage {
+  padding-bottom: 2rem;
+}
+
+/* eats-custom.css caps .container at 730px; give the two-column manage pages more room */
+@media (min-width: 992px) {
+  .manage .container {
+    max-width: 960px;
+  }
+}
+
+.manage .card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.manage .form-section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  margin: 1.25rem 0 0.5rem;
+}
+
+/* Helper text that sits under a field's own mb-3 spacing */
+.manage .field-help {
+  margin-top: -0.75rem;
+}
+
+/* eats-custom.css underlines links on hover; list rows shouldn't */
+.manage .list-group-item-action:hover,
+.manage .list-group-item-action:focus {
+  text-decoration: none;
+}
+
+/* Dashboard */
+.manage .stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.manage .stat-label {
+  font-size: 0.85rem;
+  color: var(--bs-secondary-color);
+}
+
+.manage .manage-search {
+  background-color: #F9F9F9;
+}
+
+.manage .place-list .list-group-item,
+.manage .tip-name-li {
+  font-size: 1.1rem;
+}
+
+/* Login */
+.manage .login-card {
+  margin-top: 10vh;
+}

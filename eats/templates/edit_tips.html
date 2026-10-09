@@ -3,79 +3,53 @@
 {% block content %}
 
 <div class="container">
-  <div class="row">
-    <form method="POST" class="tip_form">{% csrf_token %}
-      <ul class="form-style-1">
-        {% load widget_tweaks %}
-        <li>
-          {{ tip_form.name.errors }}
-          <label for="{{ tip_form.name.id_for_label }}">Name:</label>
-          {{ tip_form.name|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ tip_form.district.errors }}
-          <label for="{{ tip_form.district.id_for_label }}">District:</label>
-          {{ tip_form.district|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ tip_form.food_hall.errors }}
-          <label for="{{ tip_form.food_hall.id_for_label }}">Food Hall:</label>
-          {{ tip_form.food_hall|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ tip_form.link.errors }}
-          <label for="{{ tip_form.link.id_for_label }}">URL:</label>
-          {{ tip_form.link|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ tip_form.description.errors }}
-          <label for="{{ tip_form.description.id_for_label }}">Description:</label>
-          {{ tip_form.description }}
-        </li>
-        <li>
-          {{ tip_form.references.errors }}
-          <label for="{{ tip_form.references.id_for_label }}">references:</label>
-          {{ tip_form.references|add_class:"per-100-width" }}
-          <a href="/eats/manage/tips/reference_link/" target="_blank">Create a new link</a>
-        </li>
-        <li>
-          <label for="{{ tip_form.has_outdoor_seating.id_for_label }}">Outdoor Seating:</label>
-          {{tip_form.has_outdoor_seating}}
-        </li>
-        <li>
-          <label for="{{ tip_form.is_temp_closed.id_for_label }}">Temporarily closed:</label>
-          {{tip_form.is_temp_closed}}
-        </li>
-        <li>
-          <label for="{{ tip_form.is_eats.id_for_label }}">Eats:</label>
-          {{tip_form.is_eats}}
-        </li>
-        <li>
-          <label for="{{ tip_form.is_drinks.id_for_label }}">Drinks:</label>
-          {{tip_form.is_drinks}}
-        </li>
-        <li>
-          <label for="{{ tip_form.is_coffee.id_for_label }}">Coffees:</label>
-          {{tip_form.is_coffee}}
-        </li>
-        <li>
-          <label for="{{ tip_form.not_local.id_for_label }}">Not local:</label>
-          {{tip_form.not_local}}
-        </li>
-        <li>
-          {{ tip_form.open_date.errors }}
-          <label for="{{ tip_form.open_date.id_for_label }}">Open Date:</label>
-          {{ tip_form.open_date|add_class:"field-lg"|attr:"placeholder:YYYY-MM-DD" }}
-        </li>
-        <li>
-          <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
-          <button type="submit" class="btn btn-lg btn-outline-secondary" name="cancel-button">Cancel</button>
-          <button type="submit" class="btn btn-lg btn-success" name="create-biz">Create Biz</button>
-          <button type="submit" class="btn btn-lg btn-success" name="create-vendor">Create Vendor</button>
-          <button type="submit" class="btn btn-sm btn-danger float-end" name="delete-button">Delete</button>
-        </li>
-      </ul>
-    </form>
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="h3 mb-3">Edit tip <small class="text-body-secondary">{{ tip_form.instance.name }}</small></h1>
+
+      <form method="POST" class="card">{% csrf_token %}
+        <div class="card-body">
+          {% include "manage/_field.html" with field=tip_form.name label="Name" %}
+          <div class="row">
+            <div class="col-md-6">{% include "manage/_field.html" with field=tip_form.district label="District" %}</div>
+            <div class="col-md-6">{% include "manage/_field.html" with field=tip_form.food_hall label="Food hall" %}</div>
+          </div>
+          {% include "manage/_field.html" with field=tip_form.link label="URL" %}
+          {% include "manage/_field.html" with field=tip_form.description label="Description" %}
+          {% include "manage/_field.html" with field=tip_form.references label="References" %}
+          <div class="form-text field-help mb-3"><a href="/eats/manage/tips/reference_link/" target="_blank">Create a new reference link &nearr;</a></div>
+          <div class="row">
+            <div class="col-md-6">{% include "manage/_field.html" with field=tip_form.open_date label="Open date" %}</div>
+          </div>
+
+          <h2 class="form-section-title">Attributes</h2>
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+            {% include "manage/_check.html" with field=tip_form.is_eats label="Eats" %}
+            {% include "manage/_check.html" with field=tip_form.is_drinks label="Drinks" %}
+            {% include "manage/_check.html" with field=tip_form.is_coffee label="Coffee" %}
+            {% include "manage/_check.html" with field=tip_form.has_outdoor_seating label="Outdoor seating" %}
+            {% include "manage/_check.html" with field=tip_form.is_temp_closed label="Temporarily closed" %}
+            {% include "manage/_check.html" with field=tip_form.not_local label="Not local" %}
+            {% include "manage/_check.html" with field=tip_form.is_food_hall label="Food hall" %}
+            {% include "manage/_check.html" with field=tip_form.added label="Added to Eats" %}
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-primary" name="save-button">Save</button>
+            <button type="submit" class="btn btn-outline-secondary" name="cancel-button" formnovalidate>Cancel</button>
+            <button type="submit" class="btn btn-outline-danger ms-sm-auto" name="delete-button" formnovalidate
+                    onclick="return confirm('Delete this tip?');">Delete</button>
+          </div>
+          <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2 mt-3 pt-3 border-top">
+            <span class="small text-body-secondary">Save and promote to:</span>
+            <button type="submit" class="btn btn-outline-success" name="create-biz">Business</button>
+            <button type="submit" class="btn btn-outline-success" name="create-vendor">Vendor</button>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

@@ -3,59 +3,45 @@
 {% block content %}
 
 <div class="container">
-
-  {% if messages %}
-  <div class="alert alert-success" role="alert">
-        {% for message in messages %}
-        <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
-  </div>
-  {% endif %}
-
-  <div class="row">
-    <div class="col-12 col-sm-6">
-      <h1>Reference Links</h1>
-      {%for link in ref_link_list%}
-        <div class="mb-3">
-          <h5 class="mb-1">{{link.headline}}</h5>
-          <p><a href="{{link.url_link}}">Go to Link</a> | <a href="/eats/manage/tips/reference_link/{{link.id}}">Edit</a></p>
+  <div class="row g-4">
+    <div class="col-lg-6 order-lg-2">
+      <h1 class="h3 mb-3">Add a reference link</h1>
+      <form method="POST" class="card">{% csrf_token %}
+        <div class="card-body">
+          {% include "manage/_field.html" with field=link_form.headline label="Headline" %}
+          {% include "manage/_field.html" with field=link_form.url_link label="URL" %}
+          {% include "manage/_field.html" with field=link_form.description label="Description" %}
+          <div class="row">
+            <div class="col-md-6">{% include "manage/_field.html" with field=link_form.date_published label="Published" %}</div>
+          </div>
         </div>
-      {%empty%}
-        <p>No links at this time.</p>
-      {%endfor%}
-    </div>
-    <div class="col-12 col-sm-6">
-      <h1>Add a Reference Link</h1>
-      <form method="POST" class="link_form">{% csrf_token %}
-        <ul class="form-style-1">
-          {% load widget_tweaks %}
-          <li>
-            {{ link_form.headline.errors }}
-            <label for="{{ link_form.headline.id_for_label }}">Headline:</label>
-            {{ link_form.headline|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.url_link.errors }}
-            <label for="{{ link_form.url_link.id_for_label }}">URL:</label>
-            {{ link_form.url_link|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.description.errors }}
-            <label for="{{ link_form.description.id_for_label }}">Description:</label>
-            {{ link_form.description|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.date_published.errors }}
-            <label for="{{ link_form.date_published.id_for_label }}">Published:</label>
-            {{ link_form.date_published }}
-          </li>
-          <li class="d-grid gap-1">
-            <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
-            <button type="submit" class="btn btn-lg btn-primary" name="save-and-add">Save and Add Another</button>
-            <button type="submit" class="btn btn-lg btn-outline-secondary" name="cancel-button">Cancel</button>
-          </li>
-        </ul>
+
+        <div class="card-footer d-flex flex-column flex-sm-row flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary" name="save-button">Save</button>
+          <button type="submit" class="btn btn-outline-primary" name="save-and-add">Save and add another</button>
+          <button type="submit" class="btn btn-outline-secondary" name="cancel-button" formnovalidate>Cancel</button>
+        </div>
       </form>
+    </div>
+
+    <div class="col-lg-6 order-lg-1">
+      <h2 class="h3 mb-3">Reference links</h2>
+      <div class="list-group">
+        {%for link in ref_link_list%}
+          <div class="list-group-item">
+            <div class="fw-semibold">{{link.headline}}</div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-1">
+              <span class="small text-body-secondary">{% if link.date_published %}Published {{link.date_published}}{% endif %}</span>
+              <span class="d-flex gap-2">
+                <a href="{{link.url_link}}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Open &nearr;</a>
+                <a href="/eats/manage/tips/reference_link/{{link.id}}/" class="btn btn-sm btn-outline-primary">Edit</a>
+              </span>
+            </div>
+          </div>
+        {%empty%}
+          <div class="list-group-item text-body-secondary">No links at this time.</div>
+        {%endfor%}
+      </div>
     </div>
   </div>
 </div>

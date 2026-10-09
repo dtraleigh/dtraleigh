@@ -1,0 +1,7 @@
+{% load widget_tweaks %}
+<div class="col">
+  <div class="form-check form-switch">
+    {{ field|add_class:"form-check-input"|attr:"role:switch" }}
+    <label class="form-check-label" for="{{ field.id_for_label }}">{{ label|default:field.label }}</label>
+  </div>
+</div>

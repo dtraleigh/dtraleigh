@@ -3,37 +3,25 @@
 {% block content %}
 
 <div class="container">
-  <div class="row">
-    <div class="col-12">
-      <h1>Edit Reference Link</h1>
-      <form method="POST" class="link_form">{% csrf_token %}
-        <ul class="form-style-1">
-          {% load widget_tweaks %}
-          <li>
-            {{ link_form.headline.errors }}
-            <label for="{{ link_form.headline.id_for_label }}">Headline:</label>
-            {{ link_form.headline|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.url_link.errors }}
-            <label for="{{ link_form.url_link.id_for_label }}">URL:</label>
-            {{ link_form.url_link|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.description.errors }}
-            <label for="{{ link_form.description.id_for_label }}">Description:</label>
-            {{ link_form.description|add_class:"field-lg" }}
-          </li>
-          <li>
-            {{ link_form.date_published.errors }}
-            <label for="{{ link_form.date_published.id_for_label }}">Published:</label>
-            {{ link_form.date_published }}
-          </li>
-          <li class="d-grid gap-1">
-            <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
-            <button type="submit" class="btn btn-lg btn-outline-secondary" name="cancel-button">Cancel</button>
-          </li>
-        </ul>
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="h3 mb-3">Edit reference link</h1>
+
+      <form method="POST" class="card">{% csrf_token %}
+        <div class="card-body">
+          {% include "manage/_field.html" with field=link_form.headline label="Headline" %}
+          {% include "manage/_field.html" with field=link_form.url_link label="URL" %}
+          {% include "manage/_field.html" with field=link_form.description label="Description" %}
+          <div class="row">
+            <div class="col-md-6">{% include "manage/_field.html" with field=link_form.date_published label="Published" %}</div>
+          </div>
+        </div>
+
+        <div class="card-footer d-flex flex-column flex-sm-row gap-2">
+          <button type="submit" class="btn btn-primary" name="save-button">Save</button>
+          <button type="submit" class="btn btn-outline-secondary" name="cancel-button" formnovalidate>Cancel</button>
+          <a href="{{ ref_link.url_link }}" class="btn btn-outline-secondary ms-sm-auto" target="_blank" rel="noopener">Open link &nearr;</a>
+        </div>
       </form>
     </div>
   </div>

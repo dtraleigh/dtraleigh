@@ -3,50 +3,34 @@
 {% block content %}
 
 <div class="container">
-  <div class="row">
-    <form method="POST" class="edit_vendor_form">{% csrf_token %}
-      <ul class="form-style-1">
-        {% load widget_tweaks %}
-        <li>
-          {{ form.name.errors }}
-          <label for="{{ form.name.id_for_label }}">Name:</label>
-          {{ form.name|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ form.food_hall.errors }}
-          <label for="{{ form.food_hall.id_for_label }}">Food Hall:</label>
-          {{ form.food_hall|add_class:"field-lg" }}
-        </li>
-        <li>
-          {{ form.link.errors }}
-          <label for="{{ form.link.id_for_label }}">URL:</label>
-          {{ form.link|add_class:"field-lg" }}
-        </li>
-        <li>
-          <label for="{{ form.is_temp_closed.id_for_label }}">Temporarily closed:</label>
-          {{form.is_temp_closed}}
-        </li>
-        <li>
-          <label for="{{ form.not_local.id_for_label }}">Not local:</label>
-          {{form.not_local}}
-        </li>
-        <li>
-          {{ form.open_date.errors }}
-          <label for="{{ form.open_date.id_for_label }}">Open Date:</label>
-          {{ form.open_date|add_class:"field-lg"|attr:"placeholder:YYYY-MM-DD" }}
-        </li>
-        <li>
-          {{ form.close_date.errors }}
-          <label for="{{ form.close_date.id_for_label }}">Close Date:</label>
-          {{ form.close_date|add_class:"field-lg"|attr:"placeholder:YYYY-MM-DD" }}
-        </li>
-        <li>
-          <button type="submit" class="btn btn-lg btn-primary" name="save-button">Save</button>
-          <button type="submit" class="btn btn-lg btn-primary" name="save-logout-button">Save and Logout</button>
-          <button type="submit" class="btn btn-lg btn-outline-secondary" name="cancel-button">Cancel</button>
-        </li>
-      </ul>
-    </form>
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="h3 mb-3">Edit vendor <small class="text-body-secondary">{{ form.instance.name }}</small></h1>
+
+      <form method="POST" class="card">{% csrf_token %}
+        <div class="card-body">
+          {% include "manage/_field.html" with field=form.name label="Name" %}
+          {% include "manage/_field.html" with field=form.food_hall label="Food hall" %}
+          {% include "manage/_field.html" with field=form.link label="URL" %}
+          <div class="row">
+            <div class="col-md-6">{% include "manage/_field.html" with field=form.open_date label="Open date" %}</div>
+            <div class="col-md-6">{% include "manage/_field.html" with field=form.close_date label="Close date" %}</div>
+          </div>
+
+          <h2 class="form-section-title">Attributes</h2>
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+            {% include "manage/_check.html" with field=form.is_temp_closed label="Temporarily closed" %}
+            {% include "manage/_check.html" with field=form.not_local label="Not local" %}
+          </div>
+        </div>
+
+        <div class="card-footer d-flex flex-column flex-sm-row gap-2">
+          <button type="submit" class="btn btn-primary" name="save-button">Save</button>
+          <button type="submit" class="btn btn-outline-primary" name="save-logout-button">Save and log out</button>
+          <button type="submit" class="btn btn-outline-secondary" name="cancel-button" formnovalidate>Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

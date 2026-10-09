@@ -4,18 +4,37 @@
 
 {% block content %}
 
-<div class="login-wrapper">
-  <form class="form-signin" method="post">
-    {% csrf_token %}
-    <h2 class="form-signin-heading">{{message}}</h2>
-    <input type="text" class="form-control" name="username" placeholder="Username" required="" autofocus="" />
-    <input type="password" class="form-control" name="password" placeholder="Password" required=""/>
-    <div class="d-grid gap-1">
-      <button class="btn btn-lg btn-primary" type="submit">Login</button>
-      <a href="/eats/" class="btn btn-lg btn-primary" role="button">Go to Eats</a>
-    </div>
-  </form>
-</div>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-11 col-sm-8 col-md-6 col-lg-4">
+      <div class="card login-card">
+        <div class="card-body p-4">
+          <h1 class="h4 mb-1 text-center">DT Eats</h1>
+          <p class="text-center text-body-secondary mb-4">Manage</p>
 
+          {% if message != "Log in" %}
+          <div class="alert alert-danger py-2" role="alert">{{ message }}</div>
+          {% endif %}
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-floating mb-2">
+              <input type="text" class="form-control" id="username" name="username" placeholder="Username" autocomplete="username" autocapitalize="none" required autofocus>
+              <label for="username">Username</label>
+            </div>
+            <div class="form-floating mb-3">
+              <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="current-password" required>
+              <label for="password">Password</label>
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-lg btn-primary" type="submit">Log in</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <p class="text-center mt-3"><a href="/eats/">&larr; Back to the Eats site</a></p>
+    </div>
+  </div>
+</div>
 
 {%endblock content%}
